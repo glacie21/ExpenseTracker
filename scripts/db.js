@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const EmbeddedPostgres = require("embedded-postgres").default || require("embedded-postgres");
 const path = require("path");
 const fs = require("fs");
