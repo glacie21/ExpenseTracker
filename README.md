@@ -1,12 +1,12 @@
 # 💰 Expense Tracker
 
-Aplikasi web untuk mencatat dan memantau kondisi keuangan pribadi: pemasukan, pengeluaran, kategori, dan ringkasan saldo. Dibangun dengan **Next.js (App Router)**, **TypeScript**, **Tailwind CSS**, **PostgreSQL**, dan **Prisma ORM**.
+Aplikasi web untuk mencatat dan memantau kondisi keuangan pribadi: pemasukan, pengeluaran, kategori, analitik, laporan, dan anggaran bulanan. Dibangun dengan **Next.js (App Router)**, **TypeScript**, **Tailwind CSS**, **PostgreSQL**, dan **Prisma ORM**.
 
 | Tahap | Cakupan | Status |
 | :--- | :--- | :--- |
 | **Tahap 1** | Fondasi, autentikasi, database, layout dashboard | ✅ Selesai |
 | **Tahap 2** | Transaksi, kategori, dashboard keuangan, search & filter | ✅ Selesai |
-| Tahap 3 | Budgeting, export laporan, grafik analitik lanjutan | Belum dikerjakan |
+| **Tahap 3** | Dashboard analitik, laporan, anggaran, export CSV/PDF, kesiapan produksi | ✅ Selesai |
 
 ---
 
@@ -20,8 +20,10 @@ Aplikasi web untuk mencatat dan memantau kondisi keuangan pribadi: pemasukan, pe
 | **Database** | [PostgreSQL](https://www.postgresql.org/) | Sumber data utama |
 | **ORM** | [Prisma](https://www.prisma.io/) v6 | Type-safe query & migration |
 | **Autentikasi** | `bcryptjs` + `jose` (JWT) | Hash password & cookie sesi HTTP-only |
+| **Grafik** | SVG buatan sendiri | Tanpa library chart tambahan |
+| **PDF** | [`pdf-lib`](https://pdf-lib.js.org/) | Laporan PDF di server (pure JS, MIT) |
 | **Icons** | [Lucide React](https://lucide.dev/) | Icon set |
-| **Testing** | `node:test` (bawaan Node.js) | Test end-to-end API |
+| **Testing** | `node:test` (bawaan Node.js) | Unit test & test integrasi API |
 
 ---
 
@@ -32,201 +34,256 @@ Aplikasi web untuk mencatat dan memantau kondisi keuangan pribadi: pemasukan, pe
 - **Registrasi** (`/register`): validasi nama, email, password (min. 6 karakter), konfirmasi password, dan cek email duplikat. Password di-hash dengan **bcrypt** (10 salt rounds).
 - **Login** (`/login`): opsi *Remember Me* (sesi 30 hari vs 1 hari) dan tombol **"Gunakan Akun Demo"**.
 - **Sesi**: JWT (HS256) di cookie HTTP-only `expense_tracker_session` (`SameSite=Lax`, `Secure` di produksi).
-- **Proteksi rute** via `src/proxy.ts`: `/dashboard`, `/transactions`, `/categories` hanya untuk pengguna login. Pengguna yang sudah login diarahkan dari `/login`/`/register` ke `/dashboard`.
+- **Proteksi rute** via `src/proxy.ts`: `/dashboard`, `/transactions`, `/categories`, `/reports`, `/budgets` hanya untuk pengguna login. Pengguna yang sudah login diarahkan dari `/login`/`/register` ke `/dashboard`.
 - **Logout** yang menghapus cookie sesi di server.
 - **Komponen UI reusable** (`src/components/ui`): `Button`, `Input`, `Card`, `Modal`, `ConfirmDialog`, `Alert`, `Avatar`, `Badge`.
 
 ### Tahap 2 — Core Features
-- **Dashboard keuangan** (`/dashboard`) dengan data aktual dari database:
-  - Kartu **Total Balance**, **Total Income**, **Total Expense**, **Net Savings** (pengguna baru mulai dari `Rp0`).
-  - **5 transaksi terbaru** dengan tombol **View All**.
-  - **Quick actions**: Add Income, Add Expense, View Transactions.
-  - Loading skeleton, empty state, dan error state.
 - **Manajemen transaksi** (`/transactions`):
-  - Tabel berisi tanggal, nama, kategori, tipe (badge), nominal (hijau untuk pemasukan, merah untuk pengeluaran), dan aksi.
-  - Tambah/edit lewat modal: tipe, judul, nominal, kategori, tanggal, deskripsi opsional. Ada validasi, loading state, dan pencegahan submit ganda.
+  - Tabel berisi tanggal, nama, kategori, tipe (badge), nominal, dan aksi.
+  - Tambah/edit lewat modal (tipe, judul, nominal, kategori, tanggal, deskripsi opsional) dengan validasi, loading state, dan pencegahan submit ganda.
   - Hapus dengan dialog konfirmasi.
-  - **Search** berdasarkan nama/deskripsi (dengan debounce).
-  - **Filter**: tipe (All/Income/Expense), kategori, rentang tanggal, tahun, dan bulan.
-  - **Sorting** terbaru/terlama dan **pagination di server** (10 per halaman).
-  - Filter tersimpan di URL, jadi tetap ada saat reload dan saat berpindah halaman.
+  - **Search** (dengan debounce), **filter** tipe/kategori/rentang tanggal/tahun/bulan, **sorting**, dan **pagination di server**. Filter tersimpan di URL.
+  - **Export CSV** sesuai filter aktif (Tahap 3).
 - **Manajemen kategori** (`/categories`):
-  - Lihat kategori per tab (Semua/Income/Expense), lengkap dengan jumlah transaksinya.
-  - Tambah, ubah nama dan warna, hapus.
+  - Tab Semua/Income/Expense, tambah, ubah nama/warna, hapus.
   - **13 kategori default** dibuat otomatis per pengguna, tanpa duplikasi.
-  - Kategori yang masih dipakai **tidak bisa dihapus**. Pengguna diarahkan ke daftar transaksinya (tautan "Lihat transaksi") untuk memindahkannya lebih dulu. Transaksi tidak pernah ikut terhapus.
+  - Kategori yang masih dipakai transaksi atau anggaran **tidak bisa dihapus**. Transaksi tidak pernah ikut terhapus.
+- **Quick actions** di dashboard: Add Income, Add Expense, View Transactions; plus **5 transaksi terbaru** dengan **View All**.
 
-**Definisi perhitungan:** Total Income = jumlah semua pemasukan; Total Expense = jumlah semua pengeluaran; **Total Balance = Net Savings = Total Income − Total Expense**. Total Balance adalah saldo bersih dari transaksi yang tercatat, **bukan saldo rekening bank aktual**.
+### Tahap 3 — Advanced Features
+- **Dashboard analitik** (`/dashboard`):
+  - **Pemilih periode**: This Week, This Month, Last Month, Last 3 Months, This Year, Custom Range. Semua kartu dan grafik mengikuti periode yang dipilih, dan label periodenya selalu ditampilkan.
+  - **Kartu ringkasan periode**: Total Income, Total Expense, Net Balance, Savings Rate.
+  - **Tren** dibanding periode sebelumnya, untuk pemasukan, pengeluaran, dan saldo bersih: selisih nominal dan persentase. Jika periode pembanding bernilai nol, ditampilkan "Belum ada data pembanding", bukan persentase yang menyesatkan.
+  - **Grafik Income vs Expense**: harian, mingguan, atau bulanan tergantung panjang periode. Tooltip menampilkan tanggal dan nominal Rupiah, tersedia lewat mouse maupun keyboard, ukurannya responsif, dan ada tabel data sebagai alternatif.
+  - **Expense Breakdown**: bar per kategori dengan nominal, persentase, warna kategori, dan tooltip.
+  - Saldo bersih seluruh transaksi tetap ditampilkan di bagian sapaan.
+- **Laporan** (`/reports`):
+  - Periode mingguan, bulanan, tahunan, atau rentang khusus, dengan navigasi sebelumnya/berikutnya. Filter jenis transaksi dan kategori.
+  - Ringkasan: total pemasukan, pengeluaran, saldo bersih, savings rate, jumlah transaksi, dan kategori pengeluaran terbesar.
+  - **Category insights**: distribusi pengeluaran dan kategori yang pengeluarannya naik dibanding periode sebelumnya.
+  - Tabel transaksi sesuai filter dengan pagination di server.
+  - **Export CSV** dan **Download PDF** dengan filter yang sama.
+- **Anggaran** (`/budgets`):
+  - Anggaran bulanan per kategori pengeluaran: buat, edit, dan hapus (dengan konfirmasi), plus daftar per bulan/tahun.
+  - Progres per anggaran: batas, pengeluaran aktual, sisa, persentase penggunaan, dan progress bar yang tetap rapi di atas 100%.
+  - **Peringatan dalam aplikasi**: *Mendekati batas* (≥ 80%), *Anggaran habis* (= 100%), *Over budget* (> 100%). Tidak ada email atau push notification.
+- **Export**:
+  - **CSV** dalam UTF-8 (dengan BOM agar terbaca benar di Excel). Kolom: tanggal (`YYYY-MM-DD`), judul, tipe, kategori, nominal (`5000000.00`), dan deskripsi. Koma, tanda kutip, dan baris baru di-escape. Teks yang menyerupai rumus (`=`, `+`, `-`, `@`) diberi awalan `'` untuk mencegah CSV/formula injection.
+  - **PDF** A4: judul, periode, filter, waktu pembuatan, ringkasan, pengeluaran per kategori, dan tabel transaksi. Header tabel diulang di tiap halaman dan setiap halaman bernomor. Maksimal 2.000 baris transaksi; untuk data lengkap gunakan CSV.
+
+### Definisi perhitungan
+| Istilah | Rumus |
+| :--- | :--- |
+| Total Income | Jumlah transaksi `INCOME` dalam periode |
+| Total Expense | Jumlah transaksi `EXPENSE` dalam periode |
+| Net Balance | Total Income − Total Expense |
+| Savings Rate | (Total Income − Total Expense) ÷ Total Income × 100%; **0% jika Total Income = 0**; bisa negatif bila pengeluaran melebihi pemasukan |
+| Perubahan periode | (nilai sekarang − nilai sebelumnya) ÷ \|nilai sebelumnya\| × 100%; tanpa persentase jika nilai sebelumnya 0 |
+| Penggunaan anggaran | Pengeluaran kategori pada bulan tersebut ÷ anggaran × 100% |
+| Sisa anggaran | Anggaran − pengeluaran aktual (negatif = melebihi anggaran) |
+
+**Periode pembanding:** minggu, bulan, 3 bulan, atau tahun sebelumnya untuk preset; untuk rentang khusus dipakai jumlah hari yang sama tepat sebelum rentang. Preset selalu mencakup periode kalender penuh (misalnya This Month = tanggal 1 sampai akhir bulan), dan minggu dimulai hari Senin. "Hari ini" ditentukan berdasarkan `APP_TIMEZONE` (default `Asia/Jakarta`).
+
+Saldo bersih adalah selisih transaksi yang tercatat, **bukan saldo rekening bank aktual**. Semua uang dihitung dengan `Decimal` di database dan satuan sen (integer) di aplikasi, sehingga hasilnya eksak.
 
 ---
 
 ## 🗄️ 3. Database Schema
 
-Didefinisikan di [`prisma/schema.prisma`](prisma/schema.prisma). Migration: `prisma/migrations/20261009154848_init_phase2`.
+Didefinisikan di [`prisma/schema.prisma`](prisma/schema.prisma).
 
 | Model | Field utama | Catatan |
 | :--- | :--- | :--- |
-| `User` (`users`) | `id`, `name`, `email` (unik), `password` | Dari Tahap 1 |
-| `Category` (`categories`) | `id`, `userId`, `name`, `type`, `color` | Unik per `(userId, name, type)`; ikut terhapus jika user dihapus |
-| `Transaction` (`transactions`) | `id`, `userId`, `categoryId`, `type`, `amount`, `title`, `description?`, `date` | `amount` = `Decimal(15,2)`; relasi ke kategori `onDelete: Restrict` |
+| `User` (`users`) | `id`, `name`, `email` (unik), `password` | Tahap 1 |
+| `Category` (`categories`) | `id`, `userId`, `name`, `type`, `color` | Unik per `(userId, name, type)` |
+| `Transaction` (`transactions`) | `id`, `userId`, `categoryId`, `type`, `amount`, `title`, `description?`, `date` | `amount` = `Decimal(15,2)`; kategori `onDelete: Restrict` |
+| `Budget` (`budgets`) | `id`, `userId`, `categoryId`, `amount`, `month`, `year` | **Tahap 3**. Unik per `(userId, categoryId, year, month)`; `CHECK month 1–12` dan `amount > 0`; kategori `onDelete: Restrict` |
 
-- `type` memakai enum `TransactionType` (`INCOME` | `EXPENSE`).
-- Nominal disimpan sebagai **Decimal**, bukan floating-point. Total dihitung dengan agregasi PostgreSQL dan aritmetika Decimal.
-- `date` adalah **tanggal kalender** yang disimpan sebagai pukul 00:00 UTC dan selalu diformat dalam UTC, sehingga transaksi tidak bergeser ke hari sebelum/sesudahnya di zona waktu mana pun.
-- Index: `(userId, date)`, `(userId, type)`, `categoryId`.
+Migration:
+| Migration | Isi |
+| :--- | :--- |
+| `20261009154848_init_phase2` | Tabel `users`, `categories`, `transactions` |
+| `20261010154238_add_budgets_and_analytics_indexes` | Tabel `budgets`; index `transactions (userId, type, date)` dan `(userId, categoryId, date)` untuk query analitik dan anggaran (menggantikan index `(userId, type)` yang sudah tercakup). **Tidak menghapus data.** |
+
+Catatan desain:
+- Anggaran **hanya untuk kategori pengeluaran**. Aturan ini dicek di API, karena tipe disimpan di kategori, bukan di anggaran.
+- `date` adalah **tanggal kalender** yang disimpan sebagai 00:00 UTC dan selalu diformat dalam UTC, sehingga transaksi tidak bergeser hari di zona waktu mana pun.
+- Statistik dihitung dengan agregasi PostgreSQL (`groupBy`, `date_trunc`), bukan dengan mengambil semua transaksi ke aplikasi.
 
 ---
 
-## ⚙️ 4. Instalasi & Menjalankan Aplikasi
+## ⚙️ 4. Menjalankan Secara Lokal
 
 ### Prasyarat
-- Node.js v20+ dan npm
-- PostgreSQL (lokal, Docker, atau cloud). Bisa juga memakai PostgreSQL bawaan project lewat `npm run db:start`.
+- Node.js **v20.19+** (disarankan v22 atau v24) dan npm. Unit test memakai fitur Node untuk menjalankan file `.ts` secara langsung (bawaan sejak Node 22.18 / 23.6).
+- PostgreSQL (lokal, Docker, atau cloud), **atau** PostgreSQL bawaan project lewat `npm run db:start`.
 
 ### Langkah
-
-1. **Install dependensi**
+1. **Install dependensi** (otomatis menjalankan `prisma generate`):
    ```bash
    npm install
    ```
-
-2. **Siapkan environment**: salin `.env.example` ke `.env`, lalu isi:
-   ```env
-   DATABASE_URL="postgresql://USERNAME:PASSWORD@localhost:5432/expense_tracker?schema=public"
-   JWT_SECRET="ganti-dengan-string-acak-minimal-32-karakter"
-   ```
-   Untuk PostgreSQL bawaan (`npm run db:start`), kredensialnya `postgres:postgres` di port `5432`.
-
-3. **(Opsional) Jalankan PostgreSQL bawaan** di terminal terpisah:
+2. **Environment**: salin `.env.example` ke `.env`, lalu isi (lihat [Environment variables](#-6-environment-variables)).
+3. **(Opsional) PostgreSQL bawaan** di terminal terpisah:
    ```bash
    npm run db:start
    ```
-   Data disimpan di `.db-data/` dan dipakai ulang di setiap start.
-
-4. **Jalankan migration**
+   Data disimpan di `.db-data/` dan dipakai ulang setiap start. Kredensialnya `postgres:postgres` di port `5432`.
+4. **Migration**:
    ```bash
-   # Development: menerapkan migration yang belum dijalankan
-   npm run db:migrate
-
-   # Produksi / CI: hanya menerapkan migration yang ada
-   npx prisma migrate deploy
+   npm run db:migrate   # development: menerapkan migration yang belum dijalankan
    ```
-   Migration Tahap 2 hanya menambah tabel dan tidak menghapus data. **Jangan** menjalankan `prisma migrate reset` pada database berisi data, karena perintah itu menghapus seluruh isi database.
+   **Jangan** menjalankan `prisma migrate reset` pada database berisi data, karena perintah itu menghapus seluruh isi database.
+5. **(Opsional) Akun demo**: `npm run seed` membuat `demo@example.com` / `Password123!` beserta kategori default (tanpa transaksi dummy).
+6. **Jalankan**: `npm run dev`, lalu buka [http://localhost:3000](http://localhost:3000).
 
-5. **(Opsional) Seed akun demo**
-   ```bash
-   npm run seed
-   ```
-   Membuat/memperbarui akun demo beserta 13 kategori default (tidak membuat transaksi dummy):
-   - Email: `demo@example.com`
-   - Password: `Password123!`
+### Database lokal & encoding
+Mulai Tahap 3, `npm run db:start` membuat data directory **baru** dengan encoding **UTF-8** (locale `C.UTF-8`). Data directory yang dibuat sebelumnya di Windows bisa saja memakai **WIN1252**. Akibatnya teks dengan emoji atau huruf non-Latin ditolak (API mengembalikan pesan yang jelas, bukan error 500). Saat start, script akan menampilkan peringatan jika hal ini terjadi. Untuk pindah ke UTF-8:
+1. Hentikan `npm run db:start`, lalu **ganti nama** `.db-data` (simpan sebagai cadangan, jangan langsung dihapus).
+2. Jalankan `npm run db:start` lagi untuk membuat data directory UTF-8 yang baru.
+3. Jalankan `npm run db:deploy`, lalu `npm run seed` jika perlu akun demo.
+4. Jika data lama perlu dipindahkan, ekspor dulu (misalnya dengan `pg_dump`) dari cadangan sebelum memulai langkah ini.
 
-6. **Jalankan aplikasi**
-   ```bash
-   npm run dev
-   ```
-   Buka [http://localhost:3000](http://localhost:3000).
+Database produksi pada umumnya sudah memakai UTF-8.
 
 ---
 
 ## 🧪 5. Testing
 
-Test end-to-end API ada di [`tests/api.test.mjs`](tests/api.test.mjs) dan memakai test runner bawaan Node.js. Test berjalan terhadap aplikasi dan database sungguhan. Setiap run membuat pengguna uji baru dan menghapusnya di akhir.
+| Jenis | Lokasi | Perintah | Butuh aplikasi berjalan? |
+| :--- | :--- | :--- | :--- |
+| Unit test | `tests/unit/*.test.mjs` | `npm run test:unit` | Tidak |
+| Integration (API end-to-end) | `tests/api.test.mjs` (Tahap 2), `tests/stage3.test.mjs` (Tahap 3) | `npm run test:integration` | Ya |
+| Semua | | `npm test` | Ya |
 
 ```bash
-# 1. Pastikan database berjalan dan migration sudah diterapkan
-# 2. Jalankan aplikasi (dev atau produksi)
+# 1. Database berjalan dan migration sudah diterapkan
+# 2. Jalankan aplikasi
 npm run dev            # atau: npm run build && npm start
 # 3. Di terminal lain
 npm test               # BASE_URL default: http://localhost:3000
 ```
 
-Skenario yang diuji:
-- Tambah pemasukan, tambah pengeluaran, edit, dan hapus transaksi milik sendiri.
-- Search, filter (tipe, kategori, rentang tanggal, bulan/tahun), sorting, dan pagination.
-- Pengguna tidak dapat membaca, mengedit, atau menghapus transaksi dan kategori milik pengguna lain.
-- Nominal nol, negatif, atau tidak valid ditolak; kategori tidak valid, kategori milik pengguna lain, atau kategori dengan tipe berbeda ditolak.
-- Ringkasan dashboard berubah sesuai transaksi.
-- Data tetap ada setelah reload.
-- Pengguna yang belum login mendapat `401` (API) atau diarahkan ke `/login` (halaman).
-- Kategori default tanpa duplikasi; kategori yang masih dipakai tidak bisa dihapus.
+Test integrasi membuat pengguna uji dengan email `*@test.expense-tracker.local` dan **hanya menghapus pengguna tersebut** di akhir. Data lain tidak disentuh. Meski begitu, sebaiknya jalankan terhadap database development atau database test, **jangan terhadap database produksi**.
 
-Pemeriksaan lain:
+Cakupan:
+- **Unit**: total, saldo bersih, savings rate (termasuk pemasukan nol dan nilai negatif), perubahan antarperiode (pembanding nol, basis negatif), penggunaan dan sisa anggaran serta statusnya (80%, 100%, >100%), resolusi periode (minggu Senin, pergantian tahun, Februari kabisat, zona waktu), bucket grafik, dan penulisan CSV (escaping, formula injection).
+- **Integrasi Tahap 2**: CRUD transaksi, filter, validasi nominal dan kategori, isolasi antar pengguna, ringkasan, persistensi, dan akses tanpa login.
+- **Integrasi Tahap 3**: analitik per periode (termasuk transaksi di hari pertama/terakhir rentang), laporan dengan filter, validasi backend, ekspor CSV (isi, escaping, BOM, hanya data sendiri, 404 bila kosong), PDF (valid, periode kosong), anggaran (progres dari pengeluaran aktual, berubah saat transaksi diedit/dihapus, duplikat, kategori pemasukan ditolak), isolasi anggaran/laporan/ekspor antar pengguna, dan semua endpoint/halaman baru menolak akses tanpa login.
+
+Belum ada test browser (Playwright). Skenario end-to-end diuji di level HTTP. Lihat bagian [Keterbatasan](#-12-keterbatasan--rencana-berikutnya).
+
+Pemeriksaan lain: `npm run lint`, `npm run typecheck`, `npm run build`.
+
+---
+
+## 🔐 6. Environment Variables
+
+| Variabel | Wajib | Keterangan |
+| :--- | :--- | :--- |
+| `DATABASE_URL` | Ya | Connection string PostgreSQL. Gunakan database ber-encoding UTF-8. |
+| `JWT_SECRET` | Ya (produksi) | Minimal 32 karakter acak. Di produksi, aplikasi menolak berjalan tanpa nilai ini. Contoh pembuatan: `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"` |
+| `APP_TIMEZONE` | Tidak | Zona waktu untuk menentukan "hari ini" pada filter periode. Default `Asia/Jakarta`. |
+| `BASE_URL` | Tidak | URL aplikasi untuk test integrasi. Default `http://localhost:3000`. |
+
+`NODE_ENV` diatur otomatis oleh `next dev` / `next build` / `next start`. Template ada di [`.env.example`](.env.example) (tanpa secret).
+
+---
+
+## 🚢 7. Deployment
+
+Langkah umum untuk server Node.js (VPS, Docker, Railway, Render, dan sejenisnya):
 ```bash
-npm run lint
-npm run typecheck
-npm run build
+npm ci                      # install + prisma generate
+npm run build               # build produksi
+npm run db:deploy           # prisma migrate deploy: hanya menerapkan migration yang ada, non-destruktif
+npm start                   # jalankan di port 3000 (atur PORT bila perlu)
 ```
+- Set `DATABASE_URL` dan `JWT_SECRET` di environment platform. Jangan commit `.env`.
+- Jalankan `npm run db:deploy` sebagai langkah rilis **sebelum** versi baru menerima traffic. Jangan pernah memakai `migrate dev`, `migrate reset`, atau `db push` di produksi.
+- Untuk platform serverless (misalnya Vercel), gunakan PostgreSQL terkelola dengan connection pooling (misalnya PgBouncer atau pooler bawaan penyedia), lalu jalankan `prisma migrate deploy` di pipeline rilis.
+- Aplikasi mengirim header keamanan dasar (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`) dan `Cache-Control: no-store` untuk seluruh API, sehingga data keuangan tidak di-cache.
+- PostgreSQL embedded (`npm run db:start`) hanya untuk development.
 
 ---
 
-## 📖 6. Panduan Penggunaan
+## 📖 8. Panduan Penggunaan
 
-**Mencatat transaksi**
-1. Buka **Dashboard**, lalu klik **Add Income** atau **Add Expense**. Bisa juga dari **Transactions → Add Transaction**.
-2. Pilih tipe, isi judul, nominal (lebih dari 0, maksimal 2 angka desimal), kategori yang sesuai tipe, tanggal, dan deskripsi bila perlu.
-3. Klik **Tambah Transaksi**. Daftar dan ringkasan langsung diperbarui.
+**Dashboard:** pilih periode di baris tombol (This Week … Custom Range). Kartu, tren, dan grafik ikut berubah, dan label periode tampil di bawah tombol. Arahkan kursor atau fokus keyboard ke batang grafik untuk melihat nominal, atau buka "Lihat tabel data".
 
-**Mengedit / menghapus transaksi:** di tabel **Transactions**, klik ikon pensil untuk mengedit atau ikon tempat sampah untuk menghapus (ada konfirmasi).
+**Transaksi:** catat lewat **Add Income** / **Add Expense** di dashboard atau **Add Transaction** di `/transactions`. Edit lewat ikon pensil, hapus lewat ikon tempat sampah (ada konfirmasi). **Export CSV** mengunduh semua transaksi yang sesuai filter aktif, tidak hanya halaman yang sedang tampil.
 
-**Mencari & memfilter:** gunakan kolom pencarian, tombol tipe, pilihan kategori, rentang tanggal, tahun/bulan, dan urutan. Tombol **Reset** mengembalikan semua filter.
+**Laporan:** buka **Reports**, pilih Mingguan/Bulanan/Tahunan/Rentang Khusus, lalu atur periode (tombol ‹ › untuk mundur/maju), jenis transaksi, dan kategori. **Export CSV** dan **Download PDF** memakai filter yang sama.
 
-**Mengelola kategori:** buka **Categories** untuk menambah kategori, mengubah nama/warna, atau menghapus kategori. Tipe kategori tidak dapat diubah setelah dibuat. Untuk menghapus kategori yang masih dipakai, klik **Lihat transaksi**, pindahkan transaksinya ke kategori lain lewat edit, lalu hapus kategorinya.
+**Anggaran:** buka **Budgets**, pilih bulan, lalu klik **Buat Anggaran** dan isi kategori pengeluaran, nominal, bulan, dan tahun. Kartu anggaran menunjukkan progres dan statusnya, dan peringatan muncul di atas daftar bila ada anggaran yang mendekati atau melewati batas. Satu kategori hanya bisa punya satu anggaran per bulan.
+
+**Kategori:** di **Categories** Anda bisa menambah, mengubah nama/warna, dan menghapus kategori. Kategori yang masih dipakai transaksi atau anggaran perlu dikosongkan dulu sebelum dihapus.
 
 ---
 
-## 🔌 7. API Endpoint
+## 🔌 9. API Endpoint
 
-Semua endpoint di bawah membutuhkan sesi login. Identitas pengguna diambil dari cookie sesi yang diverifikasi di server, bukan dari `userId` kiriman client. Semua query dibatasi ke pengguna tersebut.
+Semua endpoint di bawah (kecuali register/login/logout) membutuhkan sesi login. Identitas pengguna diambil dari cookie sesi yang diverifikasi di server, bukan dari `userId` kiriman client. Semua query dibatasi ke pengguna tersebut. Data milik pengguna lain diperlakukan sebagai "tidak ditemukan" (`404`), dan error internal tidak pernah dikirim ke client.
 
 | Method | Endpoint | Deskripsi |
 | :--- | :--- | :--- |
-| `POST` | `/api/auth/register` · `/api/auth/login` · `/api/auth/logout` | Autentikasi (tanpa sesi) |
+| `POST` | `/api/auth/register` · `/api/auth/login` · `/api/auth/logout` | Autentikasi |
 | `GET` | `/api/auth/me` | Profil pengguna aktif |
-| `GET` | `/api/transactions` | Daftar transaksi. Query: `search`, `type`, `categoryId`, `startDate`, `endDate` (YYYY-MM-DD), `year`, `month`, `sort` (`newest`/`oldest`), `page`, `limit` (maks. 100) |
-| `POST` | `/api/transactions` | Tambah transaksi |
-| `GET` / `PUT` / `DELETE` | `/api/transactions/[id]` | Detail / ubah / hapus transaksi |
-| `GET` | `/api/categories` | Daftar kategori (`?type=INCOME\|EXPENSE`), sekaligus membuat kategori default bila belum ada |
-| `POST` | `/api/categories` | Tambah kategori |
-| `PUT` / `DELETE` | `/api/categories/[id]` | Ubah nama/warna / hapus kategori (ditolak bila masih dipakai) |
-| `GET` | `/api/dashboard/summary` | Ringkasan keuangan + 5 transaksi terbaru |
-
-Transaksi/kategori milik pengguna lain diperlakukan sebagai "tidak ditemukan" (`404`). Error database tidak pernah ditampilkan ke pengguna.
+| `GET` / `POST` | `/api/transactions` | Daftar (query: `search`, `type`, `categoryId`, `startDate`, `endDate`, `year`, `month`, `sort`, `page`, `limit` ≤ 100) / tambah |
+| `GET` / `PUT` / `DELETE` | `/api/transactions/[id]` | Detail / ubah / hapus |
+| `GET` | `/api/transactions/export` | **CSV** dengan filter yang sama seperti daftar (maks. 100.000 baris; `404` bila kosong) |
+| `GET` / `POST` | `/api/categories` | Daftar (`?type=`) / tambah |
+| `PUT` / `DELETE` | `/api/categories/[id]` | Ubah / hapus (ditolak bila dipakai transaksi atau anggaran) |
+| `GET` | `/api/dashboard/summary` | Ringkasan seluruh transaksi + 5 transaksi terbaru |
+| `GET` | `/api/analytics` | Statistik periode: `period` (`this_week`, `this_month`, `last_month`, `last_3_months`, `this_year`, `custom`), `start`, `end` |
+| `GET` | `/api/reports` | Laporan: `startDate`, `endDate` (wajib, maks. 5 tahun), `periodType` (`week`/`month`/`year`/`custom`), `type`, `categoryId` |
+| `GET` | `/api/reports/pdf` | Laporan **PDF**, parameter sama dengan `/api/reports` |
+| `GET` / `POST` | `/api/budgets` | Anggaran + progres untuk `?month=&year=` (default bulan ini) / buat |
+| `PUT` / `DELETE` | `/api/budgets/[id]` | Ubah / hapus anggaran (`409` bila duplikat) |
 
 ---
 
-## 📁 8. Struktur Project
+## 📁 10. Struktur Project
 
 ```text
 ExpenseTracker/
 ├── prisma/
-│   ├── schema.prisma          # User, Category, Transaction
+│   ├── schema.prisma          # User, Category, Transaction, Budget
 │   ├── migrations/            # Migration Prisma
 │   └── seed.js                # Akun demo + kategori default
-├── scripts/db.js              # PostgreSQL embedded untuk development
-├── tests/api.test.mjs         # Test end-to-end API
+├── scripts/db.js              # PostgreSQL embedded (UTF-8) untuk development
+├── tests/
+│   ├── unit/                  # Unit test perhitungan, periode, CSV
+│   ├── api.test.mjs           # Integrasi Tahap 2
+│   └── stage3.test.mjs        # Integrasi Tahap 3
 ├── src/
 │   ├── app/
 │   │   ├── (auth)/            # /login, /register
-│   │   ├── (dashboard)/       # /dashboard, /transactions, /categories (+ layout terproteksi)
-│   │   ├── api/               # Route handlers (auth, transactions, categories, dashboard)
+│   │   ├── (dashboard)/       # /dashboard, /transactions, /categories, /reports, /budgets
+│   │   ├── api/               # Route handlers
 │   │   └── page.tsx           # Landing page
 │   ├── components/
+│   │   ├── budgets/           # BudgetCard, BudgetModal
 │   │   ├── categories/        # CategoryModal
-│   │   ├── dashboard/         # DashboardShell, StatCard, RecentTransactions, EmptyState, UserProfileModal
+│   │   ├── charts/            # IncomeExpenseChart, ExpenseBreakdown, chartTheme
+│   │   ├── dashboard/         # DashboardShell, StatCard, PeriodFilter, TrendLine, RecentTransactions, ...
 │   │   ├── layout/            # Navbar, Sidebar, Header
+│   │   ├── reports/           # ReportTransactionsTable
 │   │   ├── transactions/      # TransactionTable, TransactionFilters, TransactionModal
 │   │   └── ui/                # Komponen UI reusable
 │   ├── lib/
-│   │   ├── auth.ts            # Hash password, sign JWT, getCurrentUser
-│   │   ├── jwt.ts             # Verifikasi sesi (edge-safe), validasi redirect
-│   │   ├── categories.ts      # Kategori default per pengguna
-│   │   ├── transactions.ts    # Parsing & validasi kepemilikan transaksi
-│   │   ├── dashboard.ts       # Agregasi ringkasan keuangan
-│   │   ├── dates.ts           # Penanganan tanggal kalender (UTC)
-│   │   ├── formatters.ts      # Format Rupiah & tanggal
-│   │   ├── validations.ts     # Validasi input server & client
-│   │   └── prisma.ts          # PrismaClient singleton
+│   │   ├── analytics.ts       # Agregasi periode, deret waktu, breakdown, tren
+│   │   ├── reports.ts         # Laporan & insight kategori
+│   │   ├── pdfReport.ts       # Pembuat PDF (pdf-lib)
+│   │   ├── budgets.ts         # Progres anggaran
+│   │   ├── finance.ts         # Rumus keuangan murni (unit-tested)
+│   │   ├── dates.ts           # Tanggal kalender & periode (unit-tested)
+│   │   ├── csv.ts             # Penulis CSV aman (unit-tested)
+│   │   ├── transactions.ts    # Validasi & filter transaksi bersama
+│   │   ├── auth.ts / jwt.ts   # Sesi & autentikasi
+│   │   └── ...                # config, money, dbErrors, formatters, validations, prisma
 │   ├── types/index.ts
 │   └── proxy.ts               # Proteksi rute (Next.js 16 Proxy)
 └── README.md
@@ -234,7 +291,7 @@ ExpenseTracker/
 
 ---
 
-## 📜 9. Script npm
+## 📜 11. Script npm
 
 | Script | Deskripsi |
 | :--- | :--- |
@@ -242,20 +299,34 @@ ExpenseTracker/
 | `npm run build` / `npm start` | Build & jalankan produksi |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | Pemeriksaan tipe TypeScript |
-| `npm test` | Test end-to-end API (aplikasi harus berjalan) |
+| `npm test` | Unit + integrasi (aplikasi harus berjalan) |
+| `npm run test:unit` | Unit test saja |
+| `npm run test:integration` | Test integrasi API saja |
 | `npm run db:start` | PostgreSQL embedded untuk development |
 | `npm run db:migrate` | Membuat/menerapkan migration (development) |
-| `npm run db:push` | Sinkronisasi skema tanpa migration |
+| `npm run db:deploy` | Menerapkan migration yang ada (produksi/CI) |
+| `npm run db:push` | Sinkronisasi skema tanpa migration (development saja) |
 | `npm run db:generate` | Generate Prisma Client |
 | `npm run db:studio` | Prisma Studio |
 | `npm run seed` | Seed akun demo |
 
 ---
 
-## 🔒 10. Keamanan
+## 🧭 12. Keterbatasan & Rencana Berikutnya
 
-- Password tidak pernah disimpan sebagai plaintext (bcrypt, 10 salt rounds).
-- Token sesi ditandatangani HS256 dan disimpan di cookie HTTP-only. **Set `JWT_SECRET` yang kuat di produksi.**
-- `src/proxy.ts` melakukan pengecekan awal di setiap rute terproteksi. Layout dashboard dan setiap endpoint API memverifikasi ulang sesi beserta keberadaan pengguna di database.
+- **Belum ada test browser** (Playwright). Alur UI (klik, modal, unduhan di browser) belum diuji otomatis; yang diuji adalah API dan HTML yang dirender server. Menambahkan Playwright adalah langkah berikutnya yang disarankan.
+- PDF memakai font standar Helvetica (WinAnsi). Karakter di luar Latin, seperti emoji atau aksara non-Latin, diganti `?` di PDF, tetapi tetap utuh di aplikasi dan CSV.
+- Ekspor dibatasi 100.000 baris (CSV) dan 2.000 baris transaksi (PDF).
+- Perbandingan "This Month" memakai bulan penuh sebelumnya, sehingga di awal bulan angka bulan berjalan wajar terlihat lebih kecil.
+- Ide lanjutan: anggaran berulang otomatis tiap bulan, rate limiting untuk login, pengaturan zona waktu per pengguna, dan halaman Settings.
+
+---
+
+## 🔒 13. Keamanan
+
+- Password di-hash dengan bcrypt (10 salt rounds) dan tidak pernah disimpan sebagai plaintext.
+- Token sesi ditandatangani HS256 dan disimpan di cookie HTTP-only. Di produksi, `JWT_SECRET` wajib diisi minimal 32 karakter.
+- `src/proxy.ts` mengecek setiap rute terproteksi. Layout dashboard dan setiap endpoint API memverifikasi ulang sesi beserta keberadaan pengguna di database.
 - Parameter `redirect` setelah login hanya menerima path relatif di domain yang sama (mencegah open redirect).
-- Semua query Prisma dibatasi `userId` dari sesi. ID dan input divalidasi di server. Prisma memakai query berparameter, sehingga aman dari SQL injection.
+- Semua query dibatasi `userId` dari sesi. ID, filter, dan input divalidasi di server. Prisma dan raw query memakai parameter, sehingga aman dari SQL injection.
+- Ekspor CSV dilindungi dari formula injection, dan respons API tidak di-cache.
