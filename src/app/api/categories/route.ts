@@ -74,8 +74,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
-    const validation = validateCategoryInput(body);
+    const body = await request.json().catch(() => ({}));
+    const validation = validateCategoryInput(body ?? {});
 
     if (!validation.isValid) {
       return NextResponse.json(
@@ -90,16 +90,14 @@ export async function POST(request: NextRequest) {
 
     const name = body.name.trim();
     const type = body.type as TransactionType;
-    const color = body.color?.trim() || "#64748b";
+    const color = (typeof body.color === "string" && body.color.trim()) || "#64748b";
 
-    // Cek duplikasi kategori untuk pengguna ini
-    const existing = await prisma.category.findUnique({
+    // Cek duplikasi kategori untuk pengguna ini (tidak peka huruf besar/kecil)
+    const existing = await prisma.category.findFirst({
       where: {
-        userId_name_type: {
-          userId: user.id,
-          name,
-          type,
-        },
+        userId: user.id,
+        type,
+        name: { equals: name, mode: "insensitive" },
       },
     });
 
