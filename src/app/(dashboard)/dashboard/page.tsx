@@ -1,9 +1,13 @@
+import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
+import { getDashboardSummary } from "@/lib/dashboard";
+import { formatRupiah } from "@/lib/formatters";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { EmptyState } from "@/components/dashboard/EmptyState";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
-import { Database, ShieldCheck, CheckCircle2, Calendar } from "lucide-react";
+import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
+import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
+import { ArrowDownLeft, ArrowUpRight, Calendar, List } from "lucide-react";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
@@ -13,20 +17,28 @@ export default async function DashboardPage() {
     year: "numeric",
     month: "long",
     day: "numeric",
+    timeZone: "Asia/Jakarta",
   });
+
+  let data: Awaited<ReturnType<typeof getDashboardSummary>> | null = null;
+  if (user) {
+    try {
+      data = await getDashboardSummary(user.id);
+    } catch (error) {
+      console.error("Dashboard summary error:", error);
+    }
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       {/* Greeting Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200/80 dark:border-slate-800">
         <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
-              Halo, {user?.name || "Pengguna"} 👋
-            </h2>
-          </div>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+            Halo, {user?.name || "Pengguna"} 👋
+          </h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Berikut adalah ringkasan kondisi keuangan pribadi Anda hari ini.
+            Berikut adalah ringkasan kondisi keuangan pribadi Anda.
           </p>
         </div>
 
@@ -36,163 +48,83 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Summary Stat Cards */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Ringkasan Saldo & Alur Kas
-          </h3>
-          <Badge variant="neutral">Placeholder Tahap 1</Badge>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          <StatCard
-            title="Total Saldo"
-            value="Rp 0"
-            description="Akumulasi saldo kas dan rekening aktif Anda."
-            type="balance"
-            badgeText="Rp 0"
-          />
-
-          <StatCard
-            title="Pemasukan"
-            value="Rp 0"
-            description="Total pemasukan tercatat bulan ini."
-            type="income"
-            badgeText="Bulan Ini"
-          />
-
-          <StatCard
-            title="Pengeluaran"
-            value="Rp 0"
-            description="Total pengeluaran tercatat bulan ini."
-            type="expense"
-            badgeText="Bulan Ini"
-          />
-
-          <StatCard
-            title="Estimasi Tabungan"
-            value="Rp 0"
-            description="Selisih surplus kas yang dapat ditabung."
-            type="savings"
-            badgeText="Target: 20%"
-          />
-        </div>
+      {/* Quick Actions */}
+      <section aria-label="Aksi cepat" className="flex flex-wrap gap-3">
+        <Link href="/transactions?add=INCOME">
+          <Button variant="primary" leftIcon={<ArrowDownLeft className="h-4 w-4" />}>
+            Add Income
+          </Button>
+        </Link>
+        <Link href="/transactions?add=EXPENSE">
+          <Button variant="danger" leftIcon={<ArrowUpRight className="h-4 w-4" />}>
+            Add Expense
+          </Button>
+        </Link>
+        <Link href="/transactions">
+          <Button variant="outline" leftIcon={<List className="h-4 w-4" />}>
+            View Transactions
+          </Button>
+        </Link>
       </section>
 
-      {/* Main Empty State & Transactions Area */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Riwayat Transaksi Terbaru
-          </h3>
-        </div>
+      {!data ? (
+        <Alert variant="error" title="Gagal memuat data">
+          Ringkasan keuangan tidak dapat dimuat saat ini. Silakan muat ulang halaman beberapa saat
+          lagi.
+        </Alert>
+      ) : (
+        <>
+          {/* Summary Stat Cards */}
+          <section>
+            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Ringkasan Keuangan
+            </h3>
 
-        <EmptyState />
-      </section>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              <StatCard
+                title="Total Balance"
+                value={formatRupiah(data.summary.totalBalance)}
+                description="Pemasukan dikurangi pengeluaran dari seluruh transaksi tercatat."
+                type="balance"
+                badgeText={`${data.summary.totalCount} transaksi`}
+              />
 
-      {/* System Readiness & Phase 2 Checklist */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Status Fondasi Tahap 1 */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-emerald-600" />
-                Fondasi Sistem & Keamanan (Tahap 1)
-              </CardTitle>
-              <Badge variant="success">Selesai</Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex items-start gap-3 text-slate-600 dark:text-slate-300">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-              <div>
-                <strong className="text-slate-800 dark:text-slate-200">Autentikasi Terproteksi:</strong>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Register, login, dan logout dengan bcrypt hash dan cookie JWT httpOnly.
-                </p>
-              </div>
-            </div>
+              <StatCard
+                title="Total Income"
+                value={formatRupiah(data.summary.totalIncome)}
+                description="Total seluruh pemasukan yang tercatat."
+                type="income"
+                badgeText={`${data.summary.incomeCount} transaksi`}
+              />
 
-            <div className="flex items-start gap-3 text-slate-600 dark:text-slate-300">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-              <div>
-                <strong className="text-slate-800 dark:text-slate-200">Database & ORM:</strong>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  PostgreSQL terintegrasi dengan skema Prisma User yang tervalidasi.
-                </p>
-              </div>
-            </div>
+              <StatCard
+                title="Total Expense"
+                value={formatRupiah(data.summary.totalExpense)}
+                description="Total seluruh pengeluaran yang tercatat."
+                type="expense"
+                badgeText={`${data.summary.expenseCount} transaksi`}
+              />
 
-            <div className="flex items-start gap-3 text-slate-600 dark:text-slate-300">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-              <div>
-                <strong className="text-slate-800 dark:text-slate-200">Arsitektur Modular:</strong>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Komponen UI reusable (Button, Input, Card, Modal, Alert, Avatar, Badge).
-                </p>
-              </div>
+              <StatCard
+                title="Net Savings"
+                value={formatRupiah(data.summary.netSavings)}
+                description="Selisih pemasukan dan pengeluaran yang dapat ditabung."
+                type="savings"
+                badgeText={data.summary.netSavings < 0 ? "Defisit" : "Surplus"}
+              />
             </div>
-          </CardContent>
-        </Card>
+          </section>
 
-        {/* Roadmap Tahap 2 */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Database className="w-5 h-5 text-teal-600" />
-                Roadmap Pengembangan (Tahap 2)
-              </CardTitle>
-              <Badge variant="neutral">Berikutnya</Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex items-start gap-3 text-slate-500">
-              <span className="h-4 w-4 rounded-full border border-slate-300 flex items-center justify-center text-[10px] shrink-0 mt-0.5">
-                1
-              </span>
-              <div>
-                <span className="font-medium text-slate-700 dark:text-slate-300">
-                  Pencatatan Transaksi (Income & Expense)
-                </span>
-                <p className="text-xs text-slate-400">
-                  Model Transaction dengan nominal, tipe, tanggal, dan deskripsi.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3 text-slate-500">
-              <span className="h-4 w-4 rounded-full border border-slate-300 flex items-center justify-center text-[10px] shrink-0 mt-0.5">
-                2
-              </span>
-              <div>
-                <span className="font-medium text-slate-700 dark:text-slate-300">
-                  Pengelolaan Kategori
-                </span>
-                <p className="text-xs text-slate-400">
-                  Kategori custom dengan icon dan warna pilihan.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3 text-slate-500">
-              <span className="h-4 w-4 rounded-full border border-slate-300 flex items-center justify-center text-[10px] shrink-0 mt-0.5">
-                3
-              </span>
-              <div>
-                <span className="font-medium text-slate-700 dark:text-slate-300">
-                  Grafik & Laporan Keuangan
-                </span>
-                <p className="text-xs text-slate-400">
-                  Visualisasi perbandingan pengeluaran dan ringkasan bulanan.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
+          {/* Recent Transactions */}
+          <section className="space-y-4">
+            {data.recentTransactions.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <RecentTransactions transactions={data.recentTransactions} />
+            )}
+          </section>
+        </>
+      )}
     </div>
   );
 }

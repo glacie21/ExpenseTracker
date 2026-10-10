@@ -15,7 +15,7 @@ export function StatCard({
   value,
   description,
   type,
-  badgeText = "Placeholder",
+  badgeText,
 }: StatCardProps) {
   const configs = {
     balance: {
@@ -59,13 +59,15 @@ export function StatCard({
           </div>
         </div>
 
-        <div className="mt-4 flex items-baseline justify-between">
-          <div className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+        <div className="mt-4 flex items-baseline justify-between gap-2">
+          <div className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white break-all">
             {value}
           </div>
-          <span className="text-[11px] font-medium text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
-            {badgeText}
-          </span>
+          {badgeText && (
+            <span className="shrink-0 text-[11px] font-medium text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+              {badgeText}
+            </span>
+          )}
         </div>
 
         <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">

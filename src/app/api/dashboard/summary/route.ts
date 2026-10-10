@@ -1,16 +1,11 @@
 import { NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
 import { getCurrentUser } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { TRANSACTION_CATEGORY_SELECT, serializeTransaction } from "@/lib/transactions";
+import { getDashboardSummary } from "@/lib/dashboard";
 
 /**
  * GET /api/dashboard/summary
  * Mengambil ringkasan saldo, pemasukan, pengeluaran, tabungan,
  * serta 5 transaksi terbaru langsung dihitung dari database PostgreSQL.
- *
- * Total Balance = Net Savings = Total Income - Total Expense (seluruh transaksi
- * yang tercatat, bukan saldo rekening bank aktual).
  */
 export async function GET() {
   try {
@@ -22,47 +17,9 @@ export async function GET() {
       );
     }
 
-    const [totals, recentTransactions] = await Promise.all([
-      prisma.transaction.groupBy({
-        by: ["type"],
-        where: { userId: user.id },
-        _sum: { amount: true },
-        _count: { _all: true },
-      }),
-      prisma.transaction.findMany({
-        where: { userId: user.id },
-        include: { category: { select: TRANSACTION_CATEGORY_SELECT } },
-        orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-        take: 5,
-      }),
-    ]);
+    const data = await getDashboardSummary(user.id);
 
-    const income = totals.find((t) => t.type === "INCOME");
-    const expense = totals.find((t) => t.type === "EXPENSE");
-
-    // Hitung dengan Decimal agar tidak terjadi error pembulatan floating-point
-    const totalIncome = income?._sum.amount ?? new Prisma.Decimal(0);
-    const totalExpense = expense?._sum.amount ?? new Prisma.Decimal(0);
-    const balance = totalIncome.minus(totalExpense);
-
-    const incomeCount = income?._count._all ?? 0;
-    const expenseCount = expense?._count._all ?? 0;
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        summary: {
-          totalIncome: totalIncome.toNumber(),
-          totalExpense: totalExpense.toNumber(),
-          totalBalance: balance.toNumber(),
-          netSavings: balance.toNumber(),
-          incomeCount,
-          expenseCount,
-          totalCount: incomeCount + expenseCount,
-        },
-        recentTransactions: recentTransactions.map(serializeTransaction),
-      },
-    });
+    return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error("GET /api/dashboard/summary error:", error);
     return NextResponse.json(

@@ -35,6 +35,8 @@ export interface Category {
   };
 }
 
+export type CategorySummary = Pick<Category, "id" | "name" | "type" | "color">;
+
 export interface Transaction {
   id: string;
   userId: string;
@@ -46,7 +48,7 @@ export interface Transaction {
   date: string | Date;
   createdAt: string | Date;
   updatedAt: string | Date;
-  category?: Category;
+  category?: CategorySummary;
 }
 
 export interface TransactionSummary {
