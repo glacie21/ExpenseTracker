@@ -1,13 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { validateTransactionInput } from "@/lib/validations";
-import { TransactionType } from "@/types";
-import { Prisma } from "@prisma/client";
+import { endOfDayUTC, monthRangeUTC, parseDateOnly } from "@/lib/dates";
+import { isValidId } from "@/lib/validations";
+import {
+  TRANSACTION_CATEGORY_SELECT,
+  parseTransactionBody,
+  serializeTransaction,
+} from "@/lib/transactions";
 
 /**
  * GET /api/transactions
  * Mengambil daftar transaksi dengan search, filter, sorting, dan server-side pagination.
+ *
+ * Query: search, type (INCOME|EXPENSE), categoryId, startDate, endDate (YYYY-MM-DD),
+ * month (1-12), year, sort (newest|oldest), page, limit (max 100).
  */
 export async function GET(request: NextRequest) {
   try {
@@ -20,25 +28,34 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get("search")?.trim() || "";
+    const search = searchParams.get("search")?.trim().slice(0, 100) || "";
     const typeParam = searchParams.get("type");
     const categoryId = searchParams.get("categoryId")?.trim() || "";
-    const startDate = searchParams.get("startDate")?.trim() || "";
-    const endDate = searchParams.get("endDate")?.trim() || "";
+    const startDate = parseDateOnly(searchParams.get("startDate"));
+    const endDate = parseDateOnly(searchParams.get("endDate"));
+    const month = parseInt(searchParams.get("month") || "", 10);
+    const year = parseInt(searchParams.get("year") || "", 10);
     const sort = searchParams.get("sort") === "oldest" ? "asc" : "desc";
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "10", 10) || 10));
 
-    // Susun filter query
+    // Selalu dibatasi ke pengguna yang login
     const where: Prisma.TransactionWhereInput = {
       userId: user.id,
     };
+    const dateFilters: Prisma.TransactionWhereInput[] = [];
 
     if (typeParam === "INCOME" || typeParam === "EXPENSE") {
-      where.type = typeParam as TransactionType;
+      where.type = typeParam;
     }
 
     if (categoryId) {
+      if (!isValidId(categoryId)) {
+        return NextResponse.json(
+          { success: false, message: "Filter kategori tidak valid." },
+          { status: 400 }
+        );
+      }
       where.categoryId = categoryId;
     }
 
@@ -49,52 +66,44 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    if (startDate || endDate) {
-      where.date = {};
-      if (startDate) {
-        where.date.gte = new Date(startDate);
-      }
-      if (endDate) {
-        // Akhir hari (23:59:59.999)
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-        where.date.lte = end;
-      }
+    if (startDate) {
+      dateFilters.push({ date: { gte: startDate } });
+    }
+    if (endDate) {
+      dateFilters.push({ date: { lte: endOfDayUTC(endDate) } });
     }
 
-    // Hitung total data yang cocok untuk pagination
+    const hasYear = Number.isInteger(year) && year >= 1900 && year <= 9999;
+    const hasMonth = Number.isInteger(month) && month >= 1 && month <= 12;
+    if (hasYear && hasMonth) {
+      dateFilters.push({ date: monthRangeUTC(year, month) });
+    } else if (hasYear) {
+      dateFilters.push({
+        date: { gte: monthRangeUTC(year, 1).gte, lte: monthRangeUTC(year, 12).lte },
+      });
+    }
+
+    if (dateFilters.length > 0) {
+      where.AND = dateFilters;
+    }
+
     const [total, transactions] = await Promise.all([
       prisma.transaction.count({ where }),
       prisma.transaction.findMany({
         where,
-        include: {
-          category: {
-            select: {
-              id: true,
-              name: true,
-              type: true,
-              color: true,
-            },
-          },
-        },
-        orderBy: [{ date: sort }, { createdAt: "desc" }],
+        include: { category: { select: TRANSACTION_CATEGORY_SELECT } },
+        orderBy: [{ date: sort }, { createdAt: sort }],
         skip: (page - 1) * limit,
         take: limit,
       }),
     ]);
-
-    // Format Decimal amount menjadi number agar serializable secara aman
-    const formattedTransactions = transactions.map((t) => ({
-      ...t,
-      amount: Number(t.amount),
-    }));
 
     const totalPages = Math.ceil(total / limit) || 1;
 
     return NextResponse.json({
       success: true,
       data: {
-        transactions: formattedTransactions,
+        transactions: transactions.map(serializeTransaction),
         pagination: {
           page,
           limit,
@@ -126,86 +135,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
-    const validation = validateTransactionInput(body);
+    const body = await request.json().catch(() => null);
+    const parsed = await parseTransactionBody(body, user.id);
 
-    if (!validation.isValid) {
+    if (!parsed.ok) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "Data transaksi tidak valid",
-          errors: validation.errors,
-        },
-        { status: 400 }
-      );
-    }
-
-    const type = body.type as TransactionType;
-    const title = body.title.trim();
-    const amountNum = parseFloat(body.amount);
-    const categoryId = body.categoryId.trim();
-    const description = body.description ? body.description.trim() : null;
-    const date = new Date(body.date);
-
-    // Verifikasi kategori: harus milik user ini dan sesuai tipe transaksi
-    const category = await prisma.category.findUnique({
-      where: { id: categoryId },
-    });
-
-    if (!category || category.userId !== user.id) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Kategori tidak ditemukan atau Anda tidak memiliki akses ke kategori ini.",
-          errors: { categoryId: "Kategori tidak valid" },
-        },
-        { status: 400 }
-      );
-    }
-
-    if (category.type !== type) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: `Kategori "${category.name}" adalah kategori ${category.type}, tidak dapat digunakan untuk transaksi ${type}.`,
-          errors: { categoryId: "Tipe kategori tidak cocok dengan tipe transaksi" },
-        },
-        { status: 400 }
+        { success: false, message: parsed.message, errors: parsed.errors },
+        { status: parsed.status }
       );
     }
 
     const transaction = await prisma.transaction.create({
       data: {
+        ...parsed.data,
         userId: user.id,
-        categoryId,
-        type,
-        amount: new Prisma.Decimal(amountNum.toFixed(2)),
-        title,
-        description,
-        date,
       },
-      include: {
-        category: {
-          select: {
-            id: true,
-            name: true,
-            type: true,
-            color: true,
-          },
-        },
-      },
+      include: { category: { select: TRANSACTION_CATEGORY_SELECT } },
     });
 
     return NextResponse.json(
       {
         success: true,
         message: "Transaksi berhasil dicatat.",
-        data: {
-          transaction: {
-            ...transaction,
-            amount: Number(transaction.amount),
-          },
-        },
+        data: { transaction: serializeTransaction(transaction) },
       },
       { status: 201 }
     );

@@ -1,13 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { validateTransactionInput } from "@/lib/validations";
-import { TransactionType } from "@/types";
-import { Prisma } from "@prisma/client";
+import { isValidId } from "@/lib/validations";
+import {
+  TRANSACTION_CATEGORY_SELECT,
+  parseTransactionBody,
+  serializeTransaction,
+} from "@/lib/transactions";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
+
+const UNAUTHORIZED = {
+  success: false,
+  message: "Akses ditolak. Sesi tidak valid atau telah berakhir.",
+};
+
+// Same response for "does not exist" and "belongs to another user" so ids cannot be probed
+const NOT_FOUND = {
+  success: false,
+  message: "Transaksi tidak ditemukan atau Anda tidak memiliki akses.",
+};
 
 /**
  * GET /api/transactions/[id]
@@ -17,35 +31,26 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Akses ditolak. Sesi tidak valid atau telah berakhir." },
-        { status: 401 }
-      );
+      return NextResponse.json(UNAUTHORIZED, { status: 401 });
     }
 
     const { id } = await params;
-    const transaction = await prisma.transaction.findUnique({
-      where: { id },
-      include: {
-        category: true,
-      },
+    if (!isValidId(id)) {
+      return NextResponse.json(NOT_FOUND, { status: 404 });
+    }
+
+    const transaction = await prisma.transaction.findFirst({
+      where: { id, userId: user.id },
+      include: { category: { select: TRANSACTION_CATEGORY_SELECT } },
     });
 
-    if (!transaction || transaction.userId !== user.id) {
-      return NextResponse.json(
-        { success: false, message: "Transaksi tidak ditemukan atau Anda tidak memiliki akses." },
-        { status: 404 }
-      );
+    if (!transaction) {
+      return NextResponse.json(NOT_FOUND, { status: 404 });
     }
 
     return NextResponse.json({
       success: true,
-      data: {
-        transaction: {
-          ...transaction,
-          amount: Number(transaction.amount),
-        },
-      },
+      data: { transaction: serializeTransaction(transaction) },
     });
   } catch (error) {
     console.error("GET /api/transactions/[id] error:", error);
@@ -64,103 +69,52 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Akses ditolak. Sesi tidak valid atau telah berakhir." },
-        { status: 401 }
-      );
+      return NextResponse.json(UNAUTHORIZED, { status: 401 });
     }
 
     const { id } = await params;
-    const existing = await prisma.transaction.findUnique({
-      where: { id },
+    if (!isValidId(id)) {
+      return NextResponse.json(NOT_FOUND, { status: 404 });
+    }
+
+    const existing = await prisma.transaction.findFirst({
+      where: { id, userId: user.id },
+      select: { id: true },
     });
 
-    if (!existing || existing.userId !== user.id) {
+    if (!existing) {
+      return NextResponse.json(NOT_FOUND, { status: 404 });
+    }
+
+    const body = await request.json().catch(() => null);
+    const parsed = await parseTransactionBody(body, user.id);
+
+    if (!parsed.ok) {
       return NextResponse.json(
-        { success: false, message: "Transaksi tidak ditemukan atau Anda tidak memiliki akses." },
-        { status: 404 }
+        { success: false, message: parsed.message, errors: parsed.errors },
+        { status: parsed.status }
       );
     }
 
-    const body = await request.json();
-    const validation = validateTransactionInput(body);
-
-    if (!validation.isValid) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Data transaksi tidak valid",
-          errors: validation.errors,
-        },
-        { status: 400 }
-      );
-    }
-
-    const type = body.type as TransactionType;
-    const title = body.title.trim();
-    const amountNum = parseFloat(body.amount);
-    const categoryId = body.categoryId.trim();
-    const description = body.description ? body.description.trim() : null;
-    const date = new Date(body.date);
-
-    // Verifikasi kategori
-    const category = await prisma.category.findUnique({
-      where: { id: categoryId },
+    // updateMany scoped by userId keeps the ownership check atomic
+    const result = await prisma.transaction.updateMany({
+      where: { id, userId: user.id },
+      data: parsed.data,
     });
 
-    if (!category || category.userId !== user.id) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Kategori tidak ditemukan atau Anda tidak memiliki akses ke kategori ini.",
-          errors: { categoryId: "Kategori tidak valid" },
-        },
-        { status: 400 }
-      );
+    if (result.count === 0) {
+      return NextResponse.json(NOT_FOUND, { status: 404 });
     }
 
-    if (category.type !== type) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: `Kategori "${category.name}" adalah kategori ${category.type}, tidak dapat digunakan untuk transaksi ${type}.`,
-          errors: { categoryId: "Tipe kategori tidak cocok dengan tipe transaksi" },
-        },
-        { status: 400 }
-      );
-    }
-
-    const updated = await prisma.transaction.update({
-      where: { id },
-      data: {
-        type,
-        title,
-        amount: new Prisma.Decimal(amountNum.toFixed(2)),
-        categoryId,
-        description,
-        date,
-      },
-      include: {
-        category: {
-          select: {
-            id: true,
-            name: true,
-            type: true,
-            color: true,
-          },
-        },
-      },
+    const updated = await prisma.transaction.findFirstOrThrow({
+      where: { id, userId: user.id },
+      include: { category: { select: TRANSACTION_CATEGORY_SELECT } },
     });
 
     return NextResponse.json({
       success: true,
       message: "Transaksi berhasil diperbarui.",
-      data: {
-        transaction: {
-          ...updated,
-          amount: Number(updated.amount),
-        },
-      },
+      data: { transaction: serializeTransaction(updated) },
     });
   } catch (error) {
     console.error("PUT /api/transactions/[id] error:", error);
@@ -179,27 +133,21 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Akses ditolak. Sesi tidak valid atau telah berakhir." },
-        { status: 401 }
-      );
+      return NextResponse.json(UNAUTHORIZED, { status: 401 });
     }
 
     const { id } = await params;
-    const existing = await prisma.transaction.findUnique({
-      where: { id },
-    });
-
-    if (!existing || existing.userId !== user.id) {
-      return NextResponse.json(
-        { success: false, message: "Transaksi tidak ditemukan atau Anda tidak memiliki akses." },
-        { status: 404 }
-      );
+    if (!isValidId(id)) {
+      return NextResponse.json(NOT_FOUND, { status: 404 });
     }
 
-    await prisma.transaction.delete({
-      where: { id },
+    const result = await prisma.transaction.deleteMany({
+      where: { id, userId: user.id },
     });
+
+    if (result.count === 0) {
+      return NextResponse.json(NOT_FOUND, { status: 404 });
+    }
 
     return NextResponse.json({
       success: true,
