@@ -1,5 +1,6 @@
 const EmbeddedPostgres = require("embedded-postgres").default || require("embedded-postgres");
 const path = require("path");
+const fs = require("fs");
 
 async function start() {
   const dbPath = path.join(__dirname, "..", ".db-data");
@@ -11,8 +12,13 @@ async function start() {
     persistent: true,
   });
 
-  console.log("Checking / initialising PostgreSQL database...");
-  await pg.initialise();
+  // Only run initdb on a fresh data directory; reuse existing data otherwise.
+  if (fs.existsSync(path.join(dbPath, "PG_VERSION"))) {
+    console.log("Existing PostgreSQL data directory found, reusing it.");
+  } else {
+    console.log("Initialising new PostgreSQL data directory...");
+    await pg.initialise();
+  }
   console.log("Starting PostgreSQL on port 5432...");
   await pg.start();
   console.log("PostgreSQL started successfully.");
