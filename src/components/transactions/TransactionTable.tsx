@@ -3,7 +3,6 @@
 import React from "react";
 import { Transaction } from "@/types";
 import { formatRupiah, formatDate } from "@/lib/formatters";
-import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import {
   Edit2,
@@ -14,11 +13,15 @@ import {
   ChevronRight,
   Receipt,
   Plus,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 
 export interface TransactionTableProps {
   transactions: Transaction[];
   isLoading: boolean;
+  error?: string | null;
+  onRetry?: () => void;
   onEdit: (tx: Transaction) => void;
   onDelete: (tx: Transaction) => void;
   pagination: {
@@ -34,12 +37,33 @@ export interface TransactionTableProps {
 export function TransactionTable({
   transactions,
   isLoading,
+  error,
+  onRetry,
   onEdit,
   onDelete,
   pagination,
   onPageChange,
   onAddNew,
 }: TransactionTableProps) {
+  if (error && !isLoading) {
+    return (
+      <div className="rounded-2xl border border-rose-200 bg-white p-8 sm:p-12 text-center shadow-sm dark:border-rose-900/60 dark:bg-slate-900">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400 mb-4">
+          <AlertCircle className="h-7 w-7" />
+        </div>
+        <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">
+          Gagal Memuat Transaksi
+        </h3>
+        <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-6">{error}</p>
+        {onRetry && (
+          <Button onClick={onRetry} variant="outline" leftIcon={<RefreshCw className="h-4 w-4" />}>
+            Coba Lagi
+          </Button>
+        )}
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden">

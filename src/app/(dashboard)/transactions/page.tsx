@@ -1,42 +1,72 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { Suspense, useState, useEffect, useMemo } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { TransactionTable } from "@/components/transactions/TransactionTable";
 import { TransactionFilters } from "@/components/transactions/TransactionFilters";
 import { TransactionModal } from "@/components/transactions/TransactionModal";
-import { Category, Transaction, TransactionType } from "@/types";
-import { Plus, Download, RefreshCw } from "lucide-react";
+import { Category, PaginatedTransactions, Transaction, TransactionType } from "@/types";
+import { Plus, RefreshCw } from "lucide-react";
 
-export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+const PAGE_SIZE = 10;
+const SEARCH_DEBOUNCE_MS = 400;
+
+const EMPTY_PAGINATION: PaginatedTransactions["pagination"] = {
+  page: 1,
+  limit: PAGE_SIZE,
+  total: 0,
+  totalPages: 1,
+};
+
+function parseType(value: string | null): "ALL" | TransactionType | null {
+  return value === "INCOME" || value === "EXPENSE" ? value : null;
+}
+
+interface LoadResult {
+  key: string;
+  transactions: Transaction[];
+  pagination: PaginatedTransactions["pagination"];
+  error: string | null;
+}
+
+function TransactionsView() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [feedback, setFeedback] = useState<{
     type: "success" | "error";
     message: string;
   } | null>(null);
 
-  // Filter & Search states
-  const [search, setSearch] = useState("");
-  const [type, setType] = useState<"ALL" | TransactionType>("ALL");
-  const [categoryId, setCategoryId] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [sort, setSort] = useState<"newest" | "oldest">("newest");
-  const [page, setPage] = useState(1);
-  const [limit] = useState(10);
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 10,
-    total: 0,
-    totalPages: 1,
-  });
+  // Filter & Search states (diinisialisasi dari URL agar bertahan saat reload)
+  const [searchInput, setSearchInput] = useState(searchParams.get("search") || "");
+  const [search, setSearch] = useState(searchParams.get("search") || "");
+  const [type, setType] = useState<"ALL" | TransactionType>(
+    parseType(searchParams.get("type")) ?? "ALL"
+  );
+  const [categoryId, setCategoryId] = useState(searchParams.get("categoryId") || "");
+  const [startDate, setStartDate] = useState(searchParams.get("startDate") || "");
+  const [endDate, setEndDate] = useState(searchParams.get("endDate") || "");
+  const [month, setMonth] = useState(searchParams.get("month") || "");
+  const [year, setYear] = useState(searchParams.get("year") || "");
+  const [sort, setSort] = useState<"newest" | "oldest">(
+    searchParams.get("sort") === "oldest" ? "oldest" : "newest"
+  );
+  const [page, setPage] = useState(Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1));
+  const [reloadToken, setReloadToken] = useState(0);
+  const [result, setResult] = useState<LoadResult | null>(null);
 
-  // Modal states
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // Quick action dari dashboard: /transactions?add=INCOME|EXPENSE langsung membuka form
+  const addType = parseType(searchParams.get("add"));
+  const [isModalOpen, setIsModalOpen] = useState(addType === "INCOME" || addType === "EXPENSE");
+  const [modalDefaultType, setModalDefaultType] = useState<TransactionType>(
+    addType === "INCOME" ? "INCOME" : "EXPENSE"
+  );
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{
     isOpen: boolean;
@@ -48,75 +78,126 @@ export default function TransactionsPage() {
     isDeleting: false,
   });
 
+  // Debounce search agar tidak memanggil API di setiap ketikan
+  useEffect(() => {
+    if (searchInput === search) return;
+    const timer = setTimeout(() => {
+      setSearch(searchInput);
+      setPage(1);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchInput, search]);
+
+  // Parameter filter yang dikirim ke API dan disimpan di URL
+  const filterQuery = useMemo(() => {
+    const params = new URLSearchParams();
+    if (search.trim()) params.set("search", search.trim());
+    if (type !== "ALL") params.set("type", type);
+    if (categoryId) params.set("categoryId", categoryId);
+    if (startDate) params.set("startDate", startDate);
+    if (endDate) params.set("endDate", endDate);
+    if (year) params.set("year", year);
+    if (year && month) params.set("month", month);
+    if (sort !== "newest") params.set("sort", sort);
+    if (page > 1) params.set("page", String(page));
+    return params.toString();
+  }, [search, type, categoryId, startDate, endDate, month, year, sort, page]);
+
+  // Simpan filter di URL (tanpa menambah history atau request server) agar bertahan saat reload
+  useEffect(() => {
+    window.history.replaceState(null, "", filterQuery ? `${pathname}?${filterQuery}` : pathname);
+  }, [filterQuery, pathname]);
+
   // Load categories
-  const fetchCategories = useCallback(async () => {
-    try {
-      const res = await fetch("/api/categories");
-      const json = await res.json();
-      if (json.success && json.data?.categories) {
-        setCategories(json.data.categories);
-      }
-    } catch (err) {
-      console.error("Failed to load categories:", err);
-    }
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/categories", { signal: controller.signal })
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && json.data?.categories) {
+          setCategories(json.data.categories);
+        }
+      })
+      .catch((err) => {
+        if (err?.name !== "AbortError") console.error("Failed to load categories:", err);
+      });
+    return () => controller.abort();
   }, []);
 
-  // Load transactions
-  const fetchTransactions = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (search.trim()) params.set("search", search.trim());
-      if (type !== "ALL") params.set("type", type);
-      if (categoryId) params.set("categoryId", categoryId);
-      if (startDate) params.set("startDate", startDate);
-      if (endDate) params.set("endDate", endDate);
-      params.set("sort", sort);
-      params.set("page", String(page));
-      params.set("limit", String(limit));
+  // Load transactions; isLoading diturunkan dari key sehingga respons lama diabaikan
+  const requestKey = `${filterQuery}#${reloadToken}`;
+  useEffect(() => {
+    const controller = new AbortController();
+    const params = new URLSearchParams(filterQuery);
+    params.set("page", String(page));
+    params.set("limit", String(PAGE_SIZE));
 
-      const res = await fetch(`/api/transactions?${params.toString()}`);
-      const json = await res.json();
-
-      if (json.success && json.data) {
-        setTransactions(json.data.transactions);
-        setPagination(json.data.pagination);
-      } else {
-        setFeedback({
-          type: "error",
-          message: json.message || "Gagal memuat transaksi.",
+    fetch(`/api/transactions?${params.toString()}`, { signal: controller.signal })
+      .then(async (res) => ({ res, json: await res.json() }))
+      .then(({ res, json }) => {
+        if (res.ok && json.success && json.data) {
+          // Jika halaman saat ini sudah kosong (misal setelah hapus), mundur ke halaman terakhir
+          if (json.data.transactions.length === 0 && page > json.data.pagination.totalPages) {
+            setPage(json.data.pagination.totalPages);
+            return;
+          }
+          setResult({
+            key: requestKey,
+            transactions: json.data.transactions,
+            pagination: json.data.pagination,
+            error: null,
+          });
+        } else {
+          setResult({
+            key: requestKey,
+            transactions: [],
+            pagination: EMPTY_PAGINATION,
+            error: json.message || "Gagal memuat transaksi.",
+          });
+        }
+      })
+      .catch((err) => {
+        if (err?.name === "AbortError") return;
+        setResult({
+          key: requestKey,
+          transactions: [],
+          pagination: EMPTY_PAGINATION,
+          error: "Terjadi kesalahan jaringan saat mengambil data transaksi.",
         });
-      }
-    } catch {
-      setFeedback({
-        type: "error",
-        message: "Terjadi kesalahan jaringan saat mengambil data transaksi.",
       });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [search, type, categoryId, startDate, endDate, sort, page, limit]);
 
-  useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
+    return () => controller.abort();
+  }, [filterQuery, page, requestKey]);
 
-  useEffect(() => {
-    fetchTransactions();
-  }, [fetchTransactions]);
+  const isLoading = result?.key !== requestKey;
+  const transactions = result?.transactions ?? [];
+  const pagination = result?.pagination ?? EMPTY_PAGINATION;
+  const reload = () => setReloadToken((t) => t + 1);
 
   const handleResetFilters = () => {
+    setSearchInput("");
     setSearch("");
     setType("ALL");
     setCategoryId("");
     setStartDate("");
     setEndDate("");
+    setMonth("");
+    setYear("");
     setSort("newest");
     setPage(1);
   };
 
+  // Setiap perubahan filter mengembalikan ke halaman 1
+  const withPageReset =
+    <T,>(setter: (value: T) => void) =>
+    (value: T) => {
+      setter(value);
+      setPage(1);
+    };
+
   const handleOpenAddModal = () => {
     setEditingTransaction(null);
+    setModalDefaultType(type === "INCOME" ? "INCOME" : "EXPENSE");
     setIsModalOpen(true);
   };
 
@@ -149,7 +230,8 @@ export default function TransactionsPage() {
           message: `Transaksi "${deleteConfirm.transaction.title}" berhasil dihapus.`,
         });
         setDeleteConfirm({ isOpen: false, transaction: null, isDeleting: false });
-        fetchTransactions();
+        reload();
+        router.refresh();
       } else {
         setFeedback({
           type: "error",
@@ -183,7 +265,7 @@ export default function TransactionsPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => fetchTransactions()}
+            onClick={reload}
             leftIcon={<RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />}
             title="Muat ulang data"
           >
@@ -214,36 +296,22 @@ export default function TransactionsPage() {
 
       {/* Filter and Search Bar */}
       <TransactionFilters
-        search={search}
-        onSearchChange={(val) => {
-          setSearch(val);
-          setPage(1);
-        }}
+        search={searchInput}
+        onSearchChange={setSearchInput}
         type={type}
-        onTypeChange={(val) => {
-          setType(val);
-          setPage(1);
-        }}
+        onTypeChange={withPageReset(setType)}
         categoryId={categoryId}
-        onCategoryChange={(val) => {
-          setCategoryId(val);
-          setPage(1);
-        }}
+        onCategoryChange={withPageReset(setCategoryId)}
         startDate={startDate}
-        onStartDateChange={(val) => {
-          setStartDate(val);
-          setPage(1);
-        }}
+        onStartDateChange={withPageReset(setStartDate)}
         endDate={endDate}
-        onEndDateChange={(val) => {
-          setEndDate(val);
-          setPage(1);
-        }}
+        onEndDateChange={withPageReset(setEndDate)}
+        month={month}
+        onMonthChange={withPageReset(setMonth)}
+        year={year}
+        onYearChange={withPageReset(setYear)}
         sort={sort}
-        onSortChange={(val) => {
-          setSort(val);
-          setPage(1);
-        }}
+        onSortChange={withPageReset(setSort)}
         categories={categories}
         onReset={handleResetFilters}
       />
@@ -252,6 +320,8 @@ export default function TransactionsPage() {
       <TransactionTable
         transactions={transactions}
         isLoading={isLoading}
+        error={result?.error}
+        onRetry={reload}
         onEdit={handleEdit}
         onDelete={handleDeletePrompt}
         pagination={pagination}
@@ -259,25 +329,30 @@ export default function TransactionsPage() {
         onAddNew={handleOpenAddModal}
       />
 
-      {/* Add / Edit Transaction Modal */}
-      <TransactionModal
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setEditingTransaction(null);
-        }}
-        onSuccess={() => {
-          setFeedback({
-            type: "success",
-            message: editingTransaction
-              ? "Transaksi berhasil diperbarui."
-              : "Transaksi baru berhasil ditambahkan.",
-          });
-          fetchTransactions();
-        }}
-        initialData={editingTransaction}
-        categories={categories}
-      />
+      {/* Add / Edit Transaction Modal (key me-reset isi form setiap dibuka) */}
+      {isModalOpen && (
+        <TransactionModal
+          key={editingTransaction?.id ?? `new-${modalDefaultType}`}
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setEditingTransaction(null);
+          }}
+          onSuccess={() => {
+            setFeedback({
+              type: "success",
+              message: editingTransaction
+                ? "Transaksi berhasil diperbarui."
+                : "Transaksi baru berhasil ditambahkan.",
+            });
+            reload();
+            router.refresh();
+          }}
+          initialData={editingTransaction}
+          defaultType={modalDefaultType}
+          categories={categories}
+        />
+      )}
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
@@ -293,5 +368,17 @@ export default function TransactionsPage() {
         variant="danger"
       />
     </div>
+  );
+}
+
+export default function TransactionsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="h-64 rounded-2xl border border-slate-200/80 bg-white animate-pulse dark:border-slate-800 dark:bg-slate-900" />
+      }
+    >
+      <TransactionsView />
+    </Suspense>
   );
 }

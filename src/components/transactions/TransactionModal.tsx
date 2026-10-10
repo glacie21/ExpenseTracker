@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
 import { Category, Transaction, TransactionType } from "@/types";
 import { formatRupiah, formatDateForInput } from "@/lib/formatters";
+import { normalizeAmount } from "@/lib/validations";
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
 
 export interface TransactionModalProps {
@@ -28,12 +29,13 @@ export function TransactionModal({
 }: TransactionModalProps) {
   const isEditing = Boolean(initialData);
 
-  const [type, setType] = useState<TransactionType>(defaultType);
-  const [title, setTitle] = useState("");
-  const [amount, setAmount] = useState<string>("");
-  const [categoryId, setCategoryId] = useState("");
-  const [date, setDate] = useState(formatDateForInput(new Date()));
-  const [description, setDescription] = useState("");
+  // State diinisialisasi dari props; parent memberi `key` baru setiap form dibuka
+  const [type, setType] = useState<TransactionType>(initialData?.type ?? defaultType);
+  const [title, setTitle] = useState(initialData?.title ?? "");
+  const [amount, setAmount] = useState<string>(initialData ? String(initialData.amount) : "");
+  const [chosenCategoryId, setCategoryId] = useState(initialData?.categoryId ?? "");
+  const [date, setDate] = useState(formatDateForInput(initialData?.date));
+  const [description, setDescription] = useState(initialData?.description ?? "");
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState<string | null>(null);
@@ -42,43 +44,15 @@ export function TransactionModal({
   // Filter kategori berdasarkan tipe yang dipilih
   const filteredCategories = categories.filter((cat) => cat.type === type);
 
-  // Sync state saat modal dibuka atau initialData berubah
-  useEffect(() => {
-    if (isOpen) {
-      setErrors({});
-      setApiError(null);
-      setIsSubmitting(false);
+  // Kategori terpilih harus sesuai tipe; jika belum/ tidak cocok, pakai kategori pertama.
+  // Diturunkan saat render sehingga tetap benar walau kategori baru selesai dimuat.
+  const categoryId = filteredCategories.some((c) => c.id === chosenCategoryId)
+    ? chosenCategoryId
+    : (filteredCategories[0]?.id ?? "");
 
-      if (initialData) {
-        setType(initialData.type);
-        setTitle(initialData.title);
-        setAmount(String(initialData.amount));
-        setCategoryId(initialData.categoryId);
-        setDate(formatDateForInput(initialData.date));
-        setDescription(initialData.description || "");
-      } else {
-        const initialType = defaultType || "EXPENSE";
-        setType(initialType);
-        setTitle("");
-        setAmount("");
-        setDate(formatDateForInput(new Date()));
-        setDescription("");
-
-        // Set default category untuk tipe tersebut jika tersedia
-        const matchingCats = categories.filter((c) => c.type === initialType);
-        setCategoryId(matchingCats.length > 0 ? matchingCats[0].id : "");
-      }
-    }
-  }, [isOpen, initialData, defaultType, categories]);
-
-  // Saat tipe berganti, sesuaikan pilihan kategori
   const handleTypeChange = (newType: TransactionType) => {
     setType(newType);
     setErrors((prev) => ({ ...prev, categoryId: "" }));
-    const matching = categories.filter((c) => c.type === newType);
-    if (!matching.some((c) => c.id === categoryId)) {
-      setCategoryId(matching.length > 0 ? matching[0].id : "");
-    }
   };
 
   const validate = (): boolean => {
@@ -91,10 +65,12 @@ export function TransactionModal({
     }
 
     const num = parseFloat(amount);
-    if (!amount || isNaN(num)) {
+    if (!amount.trim() || isNaN(num)) {
       newErrors.amount = "Nominal transaksi wajib diisi dengan angka valid";
     } else if (num <= 0) {
-      newErrors.amount = "Nominal harus lebih besar dari Rp 0";
+      newErrors.amount = "Nominal harus lebih besar dari Rp0";
+    } else if (normalizeAmount(amount) === null) {
+      newErrors.amount = "Nominal maksimal 13 digit dengan 2 angka desimal";
     }
 
     if (!categoryId) {
@@ -127,9 +103,10 @@ export function TransactionModal({
       const payload = {
         type,
         title: title.trim(),
-        amount: parseFloat(amount),
+        // Dikirim sebagai string desimal & tanggal kalender (YYYY-MM-DD) agar eksak
+        amount: amount.trim(),
         categoryId,
-        date: new Date(date).toISOString(),
+        date,
         description: description.trim() || undefined,
       };
 
@@ -228,6 +205,7 @@ export function TransactionModal({
             if (errors.title) setErrors((prev) => ({ ...prev, title: "" }));
           }}
           error={errors.title}
+          maxLength={100}
           required
         />
 
@@ -236,8 +214,9 @@ export function TransactionModal({
           <Input
             label="Nominal (Rp)"
             type="number"
-            min="1"
-            step="any"
+            min="0.01"
+            step="0.01"
+            inputMode="decimal"
             placeholder="Contoh: 50000"
             value={amount}
             onChange={(e) => {
@@ -318,8 +297,12 @@ export function TransactionModal({
             placeholder="Catatan tambahan, rincian pembelian, dll."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            maxLength={500}
             className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 resize-none"
           />
+          {errors.description && (
+            <p className="mt-1 text-xs text-rose-500">{errors.description}</p>
+          )}
         </div>
 
         {/* Footer Buttons */}
