@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib/dbErrors";
 import {
   TRANSACTION_CATEGORY_SELECT,
   buildTransactionFilter,
@@ -62,6 +63,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    if (isUnsupportedCharacterError(error)) return unsupportedCharacterResponse();
     console.error("GET /api/transactions error:", error);
     return NextResponse.json(
       { success: false, message: "Gagal mengambil daftar transaksi." },
@@ -111,6 +113,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
+    if (isUnsupportedCharacterError(error)) return unsupportedCharacterResponse();
     console.error("POST /api/transactions error:", error);
     return NextResponse.json(
       { success: false, message: "Gagal menyimpan transaksi." },

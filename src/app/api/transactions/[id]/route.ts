@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib/dbErrors";
 import { isValidId } from "@/lib/validations";
 import {
   TRANSACTION_CATEGORY_SELECT,
@@ -117,6 +118,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       data: { transaction: serializeTransaction(updated) },
     });
   } catch (error) {
+    if (isUnsupportedCharacterError(error)) return unsupportedCharacterResponse();
     console.error("PUT /api/transactions/[id] error:", error);
     return NextResponse.json(
       { success: false, message: "Gagal memperbarui transaksi." },

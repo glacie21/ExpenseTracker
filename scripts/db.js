@@ -11,6 +11,15 @@ async function start() {
     user: "postgres",
     password: "postgres",
     persistent: true,
+    // UTF-8 regardless of the OS locale (Windows would otherwise pick WIN1252,
+    // which rejects emoji and non-Latin text). The builtin C.UTF-8 locale keeps
+    // case-insensitive search Unicode-aware.
+    initdbFlags: [
+      "--encoding=UTF8",
+      "--locale=C",
+      "--locale-provider=builtin",
+      "--builtin-locale=C.UTF-8",
+    ],
   });
 
   // Only run initdb on a fresh data directory; reuse existing data otherwise.
@@ -35,8 +44,10 @@ async function start() {
     }
   }
 
+  await warnIfNotUtf8(pg);
+
   console.log("PostgreSQL is running and ready for connections!");
-  
+
   // Keep process alive if run directly
   process.on("SIGINT", async () => {
     console.log("Stopping PostgreSQL...");
@@ -48,6 +59,34 @@ async function start() {
     await pg.stop();
     process.exit(0);
   });
+}
+
+/**
+ * Data directories created before UTF-8 was enforced may use WIN1252. Warn
+ * instead of converting automatically, so no existing data is touched.
+ */
+async function warnIfNotUtf8(pg) {
+  const client = pg.getPgClient("expense_tracker");
+  try {
+    await client.connect();
+    const { rows } = await client.query(
+      "SELECT pg_encoding_to_char(encoding) AS encoding FROM pg_database WHERE datname = current_database()"
+    );
+    const encoding = rows[0] && rows[0].encoding;
+    if (encoding && encoding !== "UTF8") {
+      console.warn(
+        `\n⚠️  Database 'expense_tracker' uses ${encoding} encoding, so emoji and non-Latin text cannot be saved.\n` +
+          "   To switch to UTF-8 (see README, 'Database lokal & encoding'):\n" +
+          "   1. Stop this process and rename .db-data (keep it as a backup).\n" +
+          "   2. Run npm run db:start again to create a UTF-8 data directory.\n" +
+          "   3. Run npm run db:deploy (and npm run seed if you want the demo account).\n"
+      );
+    }
+  } catch (err) {
+    console.log("Could not check database encoding:", err.message);
+  } finally {
+    await client.end().catch(() => {});
+  }
 }
 
 start().catch((err) => {

@@ -16,7 +16,8 @@
     "test": "npm run test:unit && npm run test:integration",
     "typecheck": "tsc --noEmit",
     "test:unit": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"tests/unit/*.test.mjs\"",
-    "test:integration": "node --test \"tests/*.test.mjs\""
+    "test:integration": "node --test \"tests/*.test.mjs\"",
+    "db:deploy": "prisma migrate deploy"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib/dbErrors";
 import { ensureUserCategories } from "@/lib/categories";
 import { validateCategoryInput } from "@/lib/validations";
 import { TransactionType } from "@/types";
@@ -130,6 +131,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
+    if (isUnsupportedCharacterError(error)) return unsupportedCharacterResponse();
     console.error("POST /api/categories error:", error);
     return NextResponse.json(
       { success: false, message: "Gagal membuat kategori baru." },

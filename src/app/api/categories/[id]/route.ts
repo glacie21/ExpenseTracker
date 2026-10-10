@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib/dbErrors";
 import { isValidId, validateCategoryInput } from "@/lib/validations";
 
 interface RouteParams {
@@ -99,6 +100,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       data: { category: updated },
     });
   } catch (error) {
+    if (isUnsupportedCharacterError(error)) return unsupportedCharacterResponse();
     console.error("PUT /api/categories/[id] error:", error);
     return NextResponse.json(
       { success: false, message: "Gagal memperbarui kategori." },

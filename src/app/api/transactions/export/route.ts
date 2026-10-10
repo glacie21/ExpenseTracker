@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib/dbErrors";
 import { buildTransactionFilter } from "@/lib/transactions";
 import { CSV_BOM, CsvColumn, csvHeader, csvRows } from "@/lib/csv";
 import { toDateOnlyString } from "@/lib/dates";
@@ -94,6 +95,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    if (isUnsupportedCharacterError(error)) return unsupportedCharacterResponse();
     console.error("GET /api/transactions/export error:", error);
     return NextResponse.json(
       { success: false, message: "Gagal mengekspor transaksi." },
