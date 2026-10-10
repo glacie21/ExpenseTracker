@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
 
 export interface ModalProps {
@@ -20,6 +20,17 @@ export function Modal({
   children,
   maxWidth = "md",
 }: ModalProps) {
+  const titleId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // Move keyboard focus into the dialog when it opens, restore it on close
+  useEffect(() => {
+    if (!isOpen) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    dialogRef.current?.focus();
+    return () => previouslyFocused?.focus?.();
+  }, [isOpen]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen) {
@@ -56,14 +67,17 @@ export function Modal({
 
       {/* Modal Dialog Content */}
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        className={`relative w-full ${maxWidthStyles[maxWidth]} rounded-2xl bg-white shadow-2xl border border-slate-100 p-6 dark:bg-slate-900 dark:border-slate-800 z-10 transition-all transform animate-in fade-in zoom-in-95 duration-200`}
+        aria-labelledby={title ? titleId : undefined}
+        tabIndex={-1}
+        className={`relative w-full outline-none ${maxWidthStyles[maxWidth]} rounded-2xl bg-white shadow-2xl border border-slate-100 p-6 dark:bg-slate-900 dark:border-slate-800 z-10 transition-all transform animate-in fade-in zoom-in-95 duration-200`}
       >
         <div className="flex items-start justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
           <div>
             {title && (
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              <h3 id={titleId} className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                 {title}
               </h3>
             )}

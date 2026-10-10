@@ -236,10 +236,10 @@ export function TransactionModal({
         {/* Category & Date Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            <label htmlFor="transaction-category" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               Kategori <span className="text-rose-500">*</span>
             </label>
-            <select
+            <select id="transaction-category"
               value={categoryId}
               onChange={(e) => {
                 setCategoryId(e.target.value);
@@ -289,10 +289,10 @@ export function TransactionModal({
 
         {/* Description (Optional) */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+          <label htmlFor="transaction-description" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
             Deskripsi (Opsional)
           </label>
-          <textarea
+          <textarea id="transaction-description"
             rows={2}
             placeholder="Catatan tambahan, rincian pembelian, dll."
             value={description}

@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import { SignJWT } from "jose";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import { AUTH_COOKIE_NAME, JWT_SECRET, verifyToken } from "@/lib/jwt";
+import { AUTH_COOKIE_NAME, getJwtSecret, verifyToken } from "@/lib/jwt";
 import { AuthSessionPayload, SafeUser } from "@/types";
 
 export { AUTH_COOKIE_NAME, verifyToken };
@@ -35,7 +35,7 @@ export async function signToken(
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(expirationTime)
-    .sign(JWT_SECRET);
+    .sign(getJwtSecret());
 }
 
 /**

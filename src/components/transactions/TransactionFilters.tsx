@@ -91,6 +91,7 @@ export function TransactionFilters({
           <input
             type="text"
             placeholder="Cari transaksi berdasarkan nama atau deskripsi..."
+            aria-label="Cari transaksi"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:bg-slate-900"
@@ -148,10 +149,10 @@ export function TransactionFilters({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
         {/* Category Select */}
         <div>
-          <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
+          <label htmlFor="filter-category" className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
             Kategori
           </label>
-          <select
+          <select id="filter-category"
             value={categoryId}
             onChange={(e) => onCategoryChange(e.target.value)}
             className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs text-slate-800 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
@@ -167,10 +168,10 @@ export function TransactionFilters({
 
         {/* Start Date */}
         <div>
-          <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
+          <label htmlFor="filter-start-date" className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
             Dari Tanggal
           </label>
-          <input
+          <input id="filter-start-date"
             type="date"
             value={startDate}
             onChange={(e) => onStartDateChange(e.target.value)}
@@ -180,10 +181,10 @@ export function TransactionFilters({
 
         {/* End Date */}
         <div>
-          <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
+          <label htmlFor="filter-end-date" className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
             Sampai Tanggal
           </label>
-          <input
+          <input id="filter-end-date"
             type="date"
             value={endDate}
             onChange={(e) => onEndDateChange(e.target.value)}
@@ -193,10 +194,10 @@ export function TransactionFilters({
 
         {/* Year */}
         <div>
-          <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
+          <label htmlFor="filter-year" className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
             Tahun
           </label>
-          <select
+          <select id="filter-year"
             value={year}
             onChange={(e) => {
               onYearChange(e.target.value);
@@ -215,10 +216,10 @@ export function TransactionFilters({
 
         {/* Month (requires year) */}
         <div>
-          <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
+          <label htmlFor="filter-month" className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
             Bulan
           </label>
-          <select
+          <select id="filter-month"
             value={month}
             onChange={(e) => onMonthChange(e.target.value)}
             disabled={!year}
@@ -237,10 +238,10 @@ export function TransactionFilters({
         {/* Sort & Reset Actions */}
         <div className="flex items-end gap-2">
           <div className="flex-1">
-            <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
+            <label htmlFor="filter-sort" className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
               Urutan
             </label>
-            <select
+            <select id="filter-sort"
               value={sort}
               onChange={(e) => onSortChange(e.target.value as "newest" | "oldest")}
               className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs text-slate-800 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
