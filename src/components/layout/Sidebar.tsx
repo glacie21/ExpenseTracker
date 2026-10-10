@@ -8,6 +8,7 @@ import {
   Receipt,
   Tags,
   BarChart3,
+  PiggyBank,
   Settings,
   Wallet,
   Lock,
@@ -58,6 +59,12 @@ export function Sidebar({ user, isOpen = false, onClose, onLogout }: SidebarProp
       name: "Reports",
       href: "/reports",
       icon: BarChart3,
+      disabled: false,
+    },
+    {
+      name: "Budgets",
+      href: "/budgets",
+      icon: PiggyBank,
       disabled: false,
     },
     {
@@ -182,7 +189,7 @@ export function Sidebar({ user, isOpen = false, onClose, onLogout }: SidebarProp
               Data Tersinkron
             </div>
             <p className="mt-1 text-[11px] text-emerald-700 dark:text-emerald-300/80 leading-relaxed">
-              Transaksi, Kategori, dan Ringkasan Finansial tersinkronisasi langsung ke database.
+              Transaksi, kategori, anggaran, dan laporan dihitung langsung dari database.
             </p>
           </div>
         </div>

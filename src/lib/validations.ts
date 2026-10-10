@@ -206,3 +206,48 @@ export function validateCategoryInput(data: {
     errors,
   };
 }
+
+export const BUDGET_MIN_YEAR = 2000;
+export const BUDGET_MAX_YEAR = 2100;
+
+export function validateBudgetInput(data: {
+  categoryId?: unknown;
+  amount?: unknown;
+  month?: unknown;
+  year?: unknown;
+}): ValidationResult {
+  const errors: Record<string, string> = {};
+
+  if (!isValidId(data.categoryId)) {
+    errors.categoryId = "Kategori pengeluaran wajib dipilih";
+  }
+
+  if (data.amount === undefined || data.amount === null || data.amount === "") {
+    errors.amount = "Nominal anggaran wajib diisi";
+  } else {
+    const normalized = normalizeAmount(data.amount);
+    if (normalized === null) {
+      errors.amount =
+        typeof data.amount === "number" && data.amount <= 0
+          ? "Nominal anggaran harus lebih besar dari 0"
+          : "Nominal harus berupa angka valid (maksimal 2 angka desimal)";
+    } else if (!/[1-9]/.test(normalized)) {
+      errors.amount = "Nominal anggaran harus lebih besar dari 0";
+    }
+  }
+
+  const month = Number(data.month);
+  if (!Number.isInteger(month) || month < 1 || month > 12) {
+    errors.month = "Bulan harus antara 1 dan 12";
+  }
+
+  const year = Number(data.year);
+  if (!Number.isInteger(year) || year < BUDGET_MIN_YEAR || year > BUDGET_MAX_YEAR) {
+    errors.year = `Tahun harus antara ${BUDGET_MIN_YEAR} dan ${BUDGET_MAX_YEAR}`;
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+}
