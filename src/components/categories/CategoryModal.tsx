@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -40,31 +40,16 @@ export function CategoryModal({
 }: CategoryModalProps) {
   const isEditing = Boolean(initialData);
 
-  const [name, setName] = useState("");
-  const [type, setType] = useState<TransactionType>(defaultType);
-  const [color, setColor] = useState("#10b981");
+  // State diinisialisasi dari props; parent memberi `key` baru setiap form dibuka
+  const [name, setName] = useState(initialData?.name ?? "");
+  const [type, setType] = useState<TransactionType>(initialData?.type ?? defaultType);
+  const [color, setColor] = useState(
+    initialData?.color || (defaultType === "INCOME" ? "#10b981" : "#f97316")
+  );
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      setErrors({});
-      setApiError(null);
-      setIsSubmitting(false);
-
-      if (initialData) {
-        setName(initialData.name);
-        setType(initialData.type);
-        setColor(initialData.color || "#10b981");
-      } else {
-        setName("");
-        setType(defaultType || "EXPENSE");
-        setColor(defaultType === "INCOME" ? "#10b981" : "#f97316");
-      }
-    }
-  }, [isOpen, initialData, defaultType]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,6 +166,7 @@ export function CategoryModal({
             if (errors.name) setErrors((prev) => ({ ...prev, name: "" }));
           }}
           error={errors.name}
+          maxLength={50}
           required
         />
 

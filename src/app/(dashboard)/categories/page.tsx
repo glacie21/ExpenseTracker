@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CategoryModal } from "@/components/categories/CategoryModal";
 import { Category, TransactionType } from "@/types";
 import {
-  Tags,
+  AlertCircle,
   Plus,
   Edit2,
   Trash2,
@@ -18,9 +19,13 @@ import {
 } from "lucide-react";
 
 export default function CategoriesPage() {
-  const [categories, setCategories] = useState<Category[]>([]);
   const [activeTab, setActiveTab] = useState<"ALL" | TransactionType>("ALL");
-  const [isLoading, setIsLoading] = useState(true);
+  const [reloadToken, setReloadToken] = useState(0);
+  const [result, setResult] = useState<{
+    token: number;
+    categories: Category[];
+    error: string | null;
+  } | null>(null);
   const [feedback, setFeedback] = useState<{
     type: "success" | "error";
     message: string;
@@ -42,32 +47,37 @@ export default function CategoriesPage() {
     isDeleting: false,
   });
 
-  const fetchCategories = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch("/api/categories");
-      const json = await res.json();
-      if (json.success && json.data?.categories) {
-        setCategories(json.data.categories);
-      } else {
-        setFeedback({
-          type: "error",
-          message: json.message || "Gagal memuat kategori.",
-        });
-      }
-    } catch {
-      setFeedback({
-        type: "error",
-        message: "Terjadi gangguan jaringan saat memuat daftar kategori.",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
+  // isLoading diturunkan dari token sehingga respons lama diabaikan
   useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
+    const controller = new AbortController();
+    fetch("/api/categories", { signal: controller.signal })
+      .then(async (res) => ({ res, json: await res.json() }))
+      .then(({ res, json }) => {
+        if (res.ok && json.success && json.data?.categories) {
+          setResult({ token: reloadToken, categories: json.data.categories, error: null });
+        } else {
+          setResult({
+            token: reloadToken,
+            categories: [],
+            error: json.message || "Gagal memuat kategori.",
+          });
+        }
+      })
+      .catch((err) => {
+        if (err?.name === "AbortError") return;
+        setResult({
+          token: reloadToken,
+          categories: [],
+          error: "Terjadi gangguan jaringan saat memuat daftar kategori.",
+        });
+      });
+    return () => controller.abort();
+  }, [reloadToken]);
+
+  const isLoading = result?.token !== reloadToken;
+  const categories = result?.categories ?? [];
+  const loadError = result?.error ?? null;
+  const fetchCategories = () => setReloadToken((t) => t + 1);
 
   const filteredCategories =
     activeTab === "ALL"
@@ -229,7 +239,26 @@ export default function CategoriesPage() {
       </div>
 
       {/* Category Grid */}
-      {isLoading ? (
+      {loadError && !isLoading ? (
+        <div className="rounded-2xl border border-rose-200 bg-white p-8 sm:p-12 text-center shadow-sm dark:border-rose-900/60 dark:bg-slate-900">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400 mb-4">
+            <AlertCircle className="h-7 w-7" />
+          </div>
+          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">
+            Gagal Memuat Kategori
+          </h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-6">
+            {loadError}
+          </p>
+          <Button
+            onClick={fetchCategories}
+            variant="outline"
+            leftIcon={<RefreshCw className="h-4 w-4" />}
+          >
+            Coba Lagi
+          </Button>
+        </div>
+      ) : isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div
@@ -299,6 +328,17 @@ export default function CategoriesPage() {
                       {txCount}
                     </strong>{" "}
                     transaksi
+                    {txCount > 0 && (
+                      <>
+                        {" · "}
+                        <Link
+                          href={`/transactions?type=${cat.type}&categoryId=${cat.id}`}
+                          className="font-medium text-emerald-600 hover:underline dark:text-emerald-400"
+                        >
+                          Lihat transaksi
+                        </Link>
+                      </>
+                    )}
                   </p>
                 </div>
 
@@ -327,25 +367,28 @@ export default function CategoriesPage() {
         </div>
       )}
 
-      {/* Category Modal (Add / Edit) */}
-      <CategoryModal
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setEditingCategory(null);
-        }}
-        onSuccess={() => {
-          setFeedback({
-            type: "success",
-            message: editingCategory
-              ? "Kategori berhasil diperbarui."
-              : "Kategori baru berhasil ditambahkan.",
-          });
-          fetchCategories();
-        }}
-        initialData={editingCategory}
-        defaultType={defaultModalType}
-      />
+      {/* Category Modal (Add / Edit); key me-reset isi form setiap dibuka */}
+      {isModalOpen && (
+        <CategoryModal
+          key={editingCategory?.id ?? `new-${defaultModalType}`}
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setEditingCategory(null);
+          }}
+          onSuccess={() => {
+            setFeedback({
+              type: "success",
+              message: editingCategory
+                ? "Kategori berhasil diperbarui."
+                : "Kategori baru berhasil ditambahkan.",
+            });
+            fetchCategories();
+          }}
+          initialData={editingCategory}
+          defaultType={defaultModalType}
+        />
+      )}
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
