@@ -128,7 +128,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       where: { id, userId: user.id },
       include: {
         _count: {
-          select: { transactions: true },
+          select: { transactions: true, budgets: true },
         },
       },
     });
@@ -137,18 +137,21 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json(NOT_FOUND, { status: 404 });
     }
 
-    const inUseResponse = (count: number) =>
-      NextResponse.json(
-        {
-          success: false,
-          message: `Kategori "${category.name}" tidak dapat dihapus karena masih digunakan oleh ${count} transaksi. Silakan pindahkan transaksi tersebut ke kategori lain terlebih dahulu.`,
-        },
-        { status: 400 }
-      );
+    const inUseResponse = (message: string) =>
+      NextResponse.json({ success: false, message }, { status: 400 });
 
     // Cek apakah kategori masih dipakai oleh transaksi
     if (category._count.transactions > 0) {
-      return inUseResponse(category._count.transactions);
+      return inUseResponse(
+        `Kategori "${category.name}" tidak dapat dihapus karena masih digunakan oleh ${category._count.transactions} transaksi. Silakan pindahkan transaksi tersebut ke kategori lain terlebih dahulu.`
+      );
+    }
+
+    // Cek apakah kategori masih memiliki anggaran
+    if (category._count.budgets > 0) {
+      return inUseResponse(
+        `Kategori "${category.name}" tidak dapat dihapus karena masih memiliki ${category._count.budgets} anggaran. Hapus anggaran tersebut di halaman Budgets terlebih dahulu.`
+      );
     }
 
     try {
@@ -156,9 +159,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         where: { id: category.id },
       });
     } catch (error) {
-      // Transaksi ditambahkan di antara pengecekan dan penghapusan (FK Restrict)
+      // Transaksi/anggaran ditambahkan di antara pengecekan dan penghapusan (FK Restrict)
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
-        return inUseResponse(1);
+        return inUseResponse(
+          `Kategori "${category.name}" tidak dapat dihapus karena masih digunakan. Muat ulang halaman dan coba lagi.`
+        );
       }
       throw error;
     }

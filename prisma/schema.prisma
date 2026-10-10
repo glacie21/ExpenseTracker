@@ -24,21 +24,23 @@ model User {
   updatedAt    DateTime      @updatedAt
   categories   Category[]
   transactions Transaction[]
+  budgets      Budget[]
 
   @@map("users")
 }
 
 model Category {
-  id           String          @id @default(cuid())
-  userId       String
-  name         String
-  type         TransactionType
-  color        String?
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  id        String          @id @default(cuid())
+  userId    String
+  name      String
+  type      TransactionType
+  color     String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
 
-  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
+  budgets      Budget[]
 
   @@unique([userId, name, type])
   @@index([userId])
@@ -57,11 +59,36 @@ model Transaction {
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
-  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category    Category        @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
   @@index([userId, date])
-  @@index([userId, type])
+  // Period analytics filter by user + type + date range (supersedes [userId, type])
+  @@index([userId, type, date])
+  // Budget progress sums expenses per user + category + month
+  @@index([userId, categoryId, date])
   @@index([categoryId])
   @@map("transactions")
+}
+
+// Monthly spending limit for one EXPENSE category (type is enforced in the API).
+model Budget {
+  id         String   @id @default(cuid())
+  userId     String
+  categoryId String
+  amount     Decimal  @db.Decimal(15, 2)
+  month      Int // 1-12
+  year       Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Restrict: a category with budgets must have them removed before deletion
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  // One budget per category per month for each user
+  @@unique([userId, categoryId, year, month])
+  @@index([userId, year, month])
+  @@index([categoryId])
+  @@map("budgets")
 }
