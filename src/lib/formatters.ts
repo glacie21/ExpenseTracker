@@ -25,6 +25,27 @@ export function formatRupiah(amount: number | string | null | undefined): string
   return rupiahFormatter.format(numericValue).replace(/\s+/g, "");
 }
 
+const compactFormatter = new Intl.NumberFormat("id-ID", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
+/**
+ * Short Rupiah for chart axes, e.g. 1500000 -> "Rp1,5 jt", 25000 -> "Rp25 rb".
+ */
+export function formatRupiahCompact(amount: number): string {
+  const sign = amount < 0 ? "-" : "";
+  return `${sign}Rp${compactFormatter.format(Math.abs(amount))}`;
+}
+
+/**
+ * Signed Rupiah for changes, e.g. +Rp25.000 / -Rp25.000 / Rp0.
+ */
+export function formatRupiahSigned(amount: number): string {
+  if (amount > 0) return `+${formatRupiah(amount)}`;
+  return formatRupiah(amount);
+}
+
 /**
  * Format a transaction date (stored as UTC midnight) to a readable Indonesian string.
  * Example: 2026-10-08 -> "08 Okt 2026"

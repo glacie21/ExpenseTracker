@@ -8,6 +8,7 @@ interface StatCardProps {
   description: string;
   type: "balance" | "income" | "expense" | "savings";
   badgeText?: string;
+  footer?: React.ReactNode;
 }
 
 export function StatCard({
@@ -16,6 +17,7 @@ export function StatCard({
   description,
   type,
   badgeText,
+  footer,
 }: StatCardProps) {
   const configs = {
     balance: {
@@ -73,6 +75,9 @@ export function StatCard({
         <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
           {description}
         </p>
+        {footer && (
+          <div className="mt-3 border-t border-slate-100 pt-3 dark:border-slate-800">{footer}</div>
+        )}
       </CardContent>
     </Card>
   );
