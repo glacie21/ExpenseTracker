@@ -56,10 +56,9 @@ export function Sidebar({ user, isOpen = false, onClose, onLogout }: SidebarProp
     },
     {
       name: "Reports",
-      href: "#",
+      href: "/reports",
       icon: BarChart3,
-      disabled: true,
-      badge: "Segera",
+      disabled: false,
     },
     {
       name: "Settings",

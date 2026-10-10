@@ -7,12 +7,20 @@ const rupiahFormatter = new Intl.NumberFormat("id-ID", {
   style: "currency",
   currency: "IDR",
   minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+
+// Amounts with sen always show two decimals ("Rp150.000,50", not ",5")
+const rupiahWithSenFormatter = new Intl.NumberFormat("id-ID", {
+  style: "currency",
+  currency: "IDR",
+  minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
 
 /**
  * Format number to Indonesian Rupiah currency string.
- * Example: 1250000 -> "Rp1.250.000", -25000 -> "-Rp25.000"
+ * Example: 1250000 -> "Rp1.250.000", 150000.5 -> "Rp150.000,50", -25000 -> "-Rp25.000"
  */
 export function formatRupiah(amount: number | string | null | undefined): string {
   if (amount === null || amount === undefined || isNaN(Number(amount))) {
@@ -21,8 +29,11 @@ export function formatRupiah(amount: number | string | null | undefined): string
 
   const numericValue = typeof amount === "string" ? parseFloat(amount) : amount;
 
+  const hasSen = Math.round(numericValue * 100) % 100 !== 0;
+  const formatter = hasSen ? rupiahWithSenFormatter : rupiahFormatter;
+
   // Intl inserts a (non-breaking) space after "Rp"; the app style is "Rp1.250.000"
-  return rupiahFormatter.format(numericValue).replace(/\s+/g, "");
+  return formatter.format(numericValue).replace(/\s+/g, "");
 }
 
 const compactFormatter = new Intl.NumberFormat("id-ID", {

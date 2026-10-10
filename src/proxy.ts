@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { AUTH_COOKIE_NAME, verifyToken } from "@/lib/jwt";
 
-const PROTECTED_PREFIXES = ["/dashboard", "/transactions", "/categories"];
+const PROTECTED_PREFIXES = ["/dashboard", "/transactions", "/categories", "/reports", "/budgets"];
 
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
@@ -32,6 +32,8 @@ export const config = {
     "/dashboard/:path*",
     "/transactions/:path*",
     "/categories/:path*",
+    "/reports/:path*",
+    "/budgets/:path*",
     "/login",
     "/register",
   ],

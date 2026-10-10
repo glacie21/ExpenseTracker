@@ -24,6 +24,12 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
   if (pathname.startsWith("/transactions")) {
     pageTitle = "Transaksi";
     pageSubtitle = "Kelola catatan pemasukan dan pengeluaran";
+  } else if (pathname.startsWith("/reports")) {
+    pageTitle = "Laporan";
+    pageSubtitle = "Ringkasan dan ekspor laporan keuangan";
+  } else if (pathname.startsWith("/budgets")) {
+    pageTitle = "Anggaran";
+    pageSubtitle = "Batas pengeluaran bulanan per kategori";
   } else if (pathname.startsWith("/categories")) {
     pageTitle = "Kategori";
     pageSubtitle = "Kelola kategori transaksi keuangan Anda";
