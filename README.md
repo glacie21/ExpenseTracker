@@ -1,9 +1,12 @@
-# 💰 Expense Tracker (Tahap 1: Fondasi, Autentikasi, Database & Layout)
+# 💰 Expense Tracker
 
-Aplikasi web modern untuk membantu pengguna mencatat dan memantau kondisi keuangan pribadi. Project ini dibangun dengan arsitektur bersih, modular, dan terstruktur menggunakan **Next.js (App Router)**, **TypeScript**, **Tailwind CSS**, **PostgreSQL**, dan **Prisma ORM**.
+Aplikasi web untuk mencatat dan memantau kondisi keuangan pribadi: pemasukan, pengeluaran, kategori, dan ringkasan saldo. Dibangun dengan **Next.js (App Router)**, **TypeScript**, **Tailwind CSS**, **PostgreSQL**, dan **Prisma ORM**.
 
-> **Catatan Tahap Pengembangan:**  
-> Tahap pertama ini berfokus secara eksklusif pada fondasi sistem, autentikasi aman, skema database, proteksi rute, dan antarmuka dashboard dasar. Fitur pencatatan transaksi, analitik, dan kategori akan diimplementasikan pada **Tahap 2**.
+| Tahap | Cakupan | Status |
+| :--- | :--- | :--- |
+| **Tahap 1** | Fondasi, autentikasi, database, layout dashboard | ✅ Selesai |
+| **Tahap 2** | Transaksi, kategori, dashboard keuangan, search & filter | ✅ Selesai |
+| Tahap 3 | Budgeting, export laporan, grafik analitik lanjutan | Belum dikerjakan |
 
 ---
 
@@ -11,227 +14,248 @@ Aplikasi web modern untuk membantu pengguna mencatat dan memantau kondisi keuang
 
 | Layer | Teknologi | Deskripsi |
 | :--- | :--- | :--- |
-| **Framework** | [Next.js](https://nextjs.org/) (v16 App Router) | SSR, Route Handlers, Server Components |
+| **Framework** | [Next.js](https://nextjs.org/) 16 (App Router) | Server Components, Route Handlers, Proxy |
 | **Bahasa** | [TypeScript](https://www.typescriptlang.org/) | Strict static typing |
-| **Styling** | [Tailwind CSS](https://tailwindcss.com/) (v4) | Utility-first modern CSS framework |
-| **Database** | [PostgreSQL](https://www.postgresql.org/) | Relational database production-ready |
-| **ORM** | [Prisma](https://www.prisma.io/) (v6) | Type-safe query builder & migration |
-| **Autentikasi** | `bcryptjs` + `jose` (JWT) | Password hashing (10 salt rounds) & HTTP-Only cookie session |
-| **Icons** | [Lucide React](https://lucide.dev/) | Konsistensi icon set modern |
-| **Package Manager** | `npm` | Manajemen dependensi |
+| **Styling** | [Tailwind CSS](https://tailwindcss.com/) v4 | Utility-first CSS |
+| **Database** | [PostgreSQL](https://www.postgresql.org/) | Sumber data utama |
+| **ORM** | [Prisma](https://www.prisma.io/) v6 | Type-safe query & migration |
+| **Autentikasi** | `bcryptjs` + `jose` (JWT) | Hash password & cookie sesi HTTP-only |
+| **Icons** | [Lucide React](https://lucide.dev/) | Icon set |
+| **Testing** | `node:test` (bawaan Node.js) | Test end-to-end API |
 
 ---
 
-## 🚀 2. Fitur yang Tersedia (Tahap 1)
+## 🚀 2. Fitur
 
-1. **Landing Page Modern**:
-   - Navbar interaktif dengan link navigasi dan CTA.
-   - Hero section dengan ringkasan nilai aplikasi, badge status fondasi, dan tombol aksi.
-   - Interactive preview mockup kartu status finansial.
-   - Seksi fitur dan arsitektur sistem.
-   - Desain responsif (Mobile, Tablet, Desktop).
+### Tahap 1 — Fondasi & Autentikasi
+- **Landing page** responsif dengan navbar, hero, dan ringkasan fitur.
+- **Registrasi** (`/register`): validasi nama, email, password (min. 6 karakter), konfirmasi password, dan cek email duplikat. Password di-hash dengan **bcrypt** (10 salt rounds).
+- **Login** (`/login`): opsi *Remember Me* (sesi 30 hari vs 1 hari) dan tombol **"Gunakan Akun Demo"**.
+- **Sesi**: JWT (HS256) di cookie HTTP-only `expense_tracker_session` (`SameSite=Lax`, `Secure` di produksi).
+- **Proteksi rute** via `src/proxy.ts`: `/dashboard`, `/transactions`, `/categories` hanya untuk pengguna login. Pengguna yang sudah login diarahkan dari `/login`/`/register` ke `/dashboard`.
+- **Logout** yang menghapus cookie sesi di server.
+- **Komponen UI reusable** (`src/components/ui`): `Button`, `Input`, `Card`, `Modal`, `ConfirmDialog`, `Alert`, `Avatar`, `Badge`.
 
-2. **Sistem Autentikasi**:
-   - **Halaman Registrasi (`/register`)**:
-     - Form: Nama Lengkap, Email, Password, Konfirmasi Password.
-     - Toggle Show/Hide password.
-     - Validasi menyeluruh (nama minimal 2 huruf, validasi email RFC, minimal password 6 karakter, kesamaan konfirmasi password, serta pengecekan duplikasi email).
-     - Password di-hash menggunakan **Bcrypt** (salt rounds = 10) sebelum disimpan ke PostgreSQL.
-   - **Halaman Login (`/login`)**:
-     - Form: Email, Password, Remember Me (opsi sesi 30 hari vs 1 hari).
-     - Toggle Show/Hide password.
-     - Tombol cepat **"Gunakan Akun Demo"** untuk pengujian langsung.
-     - Penanganan pesan kesalahan yang aman dan ramah pengguna.
-   - **Sistem Sesi & Keamanan**:
-     - Cookie HTTP-Only (`expense_tracker_session`) yang aman terhadap serangan XSS.
-     - Middleware proteksi rute otomatis:
-       - Rute `/dashboard` hanya dapat diakses pengguna yang telah terautentikasi (pengguna belum login diarahkan ke `/login?redirect=...`).
-       - Pengguna yang sudah login yang membuka `/login` atau `/register` otomatis diarahkan ke `/dashboard`.
-   - **Logout**:
-     - Menghapus cookie sesi secara aman dari sisi server dan mengalihkan pengguna kembali ke `/login`.
+### Tahap 2 — Core Features
+- **Dashboard keuangan** (`/dashboard`) dengan data aktual dari database:
+  - Kartu **Total Balance**, **Total Income**, **Total Expense**, **Net Savings** (pengguna baru mulai dari `Rp0`).
+  - **5 transaksi terbaru** dengan tombol **View All**.
+  - **Quick actions**: Add Income, Add Expense, View Transactions.
+  - Loading skeleton, empty state, dan error state.
+- **Manajemen transaksi** (`/transactions`):
+  - Tabel berisi tanggal, nama, kategori, tipe (badge), nominal (hijau untuk pemasukan, merah untuk pengeluaran), dan aksi.
+  - Tambah/edit lewat modal: tipe, judul, nominal, kategori, tanggal, deskripsi opsional. Ada validasi, loading state, dan pencegahan submit ganda.
+  - Hapus dengan dialog konfirmasi.
+  - **Search** berdasarkan nama/deskripsi (dengan debounce).
+  - **Filter**: tipe (All/Income/Expense), kategori, rentang tanggal, tahun, dan bulan.
+  - **Sorting** terbaru/terlama dan **pagination di server** (10 per halaman).
+  - Filter tersimpan di URL, jadi tetap ada saat reload dan saat berpindah halaman.
+- **Manajemen kategori** (`/categories`):
+  - Lihat kategori per tab (Semua/Income/Expense), lengkap dengan jumlah transaksinya.
+  - Tambah, ubah nama dan warna, hapus.
+  - **13 kategori default** dibuat otomatis per pengguna, tanpa duplikasi.
+  - Kategori yang masih dipakai **tidak bisa dihapus**. Pengguna diarahkan ke daftar transaksinya (tautan "Lihat transaksi") untuk memindahkannya lebih dulu. Transaksi tidak pernah ikut terhapus.
 
-3. **Dashboard Terproteksi (`/dashboard`)**:
-   - Greeting personal: menyapa nama pengguna yang sedang aktif.
-   - 4 Kartu Metrik Ringkasan Finansial:
-     - **Total Saldo** (Placeholder)
-     - **Pemasukan Bulan Ini** (Placeholder)
-     - **Pengeluaran Bulan Ini** (Placeholder)
-     - **Estimasi Tabungan** (Placeholder)
-   - Empty State yang elegan dengan penjelasan kesiapan sistem menuju Tahap 2.
-   - Kartu roadmap checklist untuk fitur tahap berikutnya.
-
-4. **Navigasi & Layout**:
-   - **Sidebar**:
-     - Menu Dashboard (aktif).
-     - Menu placeholder non-aktif (Transactions, Categories, Reports, Settings) dengan badge status `Tahap 2`.
-     - Drawer responsif untuk tampilan layar seluler / mobile.
-   - **Header**:
-     - Judul halaman dinamis.
-     - Profil ringkas pengguna dengan modal popup detail akun.
-     - Tombol Logout.
-
-5. **Komponen UI Reusable (`src/components/ui`)**:
-   - `Button`: Variasi warna (primary, secondary, outline, ghost, danger, soft), ukuran (sm, md, lg), state loading spinner.
-   - `Input`: Label, error message, helper text, slot icon kiri & kanan.
-   - `Card`: Compound components (`Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`).
-   - `Modal`: Dialog dengan animasi backdrop blur, event listener ESC, dan tombol tutup.
-   - `Alert`: Notifikasi varian info, success, warning, dan error.
-   - `Avatar`: Inisial otomatis pengguna dengan ring aksen warna.
-   - `Badge`: Label penanda status (success, warning, danger, neutral, primary).
+**Definisi perhitungan:** Total Income = jumlah semua pemasukan; Total Expense = jumlah semua pengeluaran; **Total Balance = Net Savings = Total Income − Total Expense**. Total Balance adalah saldo bersih dari transaksi yang tercatat, **bukan saldo rekening bank aktual**.
 
 ---
 
-## 🚫 3. Fitur yang Sengaja Ditunda (Untuk Tahap 2)
+## 🗄️ 3. Database Schema
 
-Sesuai instruksi, fitur berikut belum diimplementasikan pada tahap ini:
-- ❌ Pencatatan transaksi (Add/Edit/Delete expense & income)
-- ❌ Riwayat transaksi dan tabel data
-- ❌ Manajemen kategori (makanan, tagihan, hiburan, gaji, dll.)
-- ❌ Grafik dan visualisasi aliran dana
-- ❌ Laporan keuangan bulanan & budgeting
-- ❌ Fitur Export (CSV / PDF)
-- ❌ Integrasi AI
+Didefinisikan di [`prisma/schema.prisma`](prisma/schema.prisma). Migration: `prisma/migrations/20261009154848_init_phase2`.
 
----
+| Model | Field utama | Catatan |
+| :--- | :--- | :--- |
+| `User` (`users`) | `id`, `name`, `email` (unik), `password` | Dari Tahap 1 |
+| `Category` (`categories`) | `id`, `userId`, `name`, `type`, `color` | Unik per `(userId, name, type)`; ikut terhapus jika user dihapus |
+| `Transaction` (`transactions`) | `id`, `userId`, `categoryId`, `type`, `amount`, `title`, `description?`, `date` | `amount` = `Decimal(15,2)`; relasi ke kategori `onDelete: Restrict` |
 
-## 📁 4. Struktur Project
-
-```text
-ExpenseTracker/
-├── prisma/
-│   ├── schema.prisma       # Skema database Prisma (Model User PostgreSQL)
-│   └── seed.js             # Seeder data akun demo
-├── public/                 # Static assets & favicon
-├── src/
-│   ├── app/
-│   │   ├── (auth)/         # Auth route group
-│   │   │   ├── login/      # Halaman Login
-│   │   │   └── register/   # Halaman Register
-│   │   ├── (dashboard)/    # Protected route group
-│   │   │   ├── dashboard/  # Halaman Utama Dashboard
-│   │   │   └── layout.tsx  # Server Layout Proteksi Sesi
-│   │   ├── api/
-│   │   │   └── auth/
-│   │   │       ├── login/  # Route handler POST login
-│   │   │       ├── logout/ # Route handler POST logout
-│   │   │       ├── me/     # Route handler GET profil sesi
-│   │   │       └── register/# Route handler POST register
-│   │   ├── globals.css     # Tailwind CSS styles & variabel tema
-│   │   ├── layout.tsx      # Root HTML Layout & Font configuration
-│   │   └── page.tsx        # Landing Page publik
-│   ├── components/
-│   │   ├── dashboard/      # Komponen khusus dashboard (StatCard, EmptyState, UserProfileModal)
-│   │   ├── layout/         # Komponen layout (Navbar, Sidebar, Header)
-│   │   └── ui/             # Reusable atomic UI (Button, Input, Card, Modal, Alert, Avatar, Badge)
-│   ├── lib/
-│   │   ├── auth.ts         # Logic Bcrypt hashing, Jose JWT, dan session helpers
-│   │   ├── prisma.ts       # PrismaClient Singleton instance
-│   │   └── validations.ts  # Input validation logic
-│   ├── types/
-│   │   └── index.ts        # TypeScript interface & type definitions
-│   └── middleware.ts       # Next.js Route Protection & Redirection Middleware
-├── .env.example            # Template variabel environment
-├── .env                    # Variabel environment aktif
-├── next.config.ts          # Konfigurasi Next.js & Turbopack
-├── package.json            # Daftar dependensi & script npm
-├── tsconfig.json           # Konfigurasi TypeScript
-└── README.md               # Dokumentasi lengkap
-```
+- `type` memakai enum `TransactionType` (`INCOME` | `EXPENSE`).
+- Nominal disimpan sebagai **Decimal**, bukan floating-point. Total dihitung dengan agregasi PostgreSQL dan aritmetika Decimal.
+- `date` adalah **tanggal kalender** yang disimpan sebagai pukul 00:00 UTC dan selalu diformat dalam UTC, sehingga transaksi tidak bergeser ke hari sebelum/sesudahnya di zona waktu mana pun.
+- Index: `(userId, date)`, `(userId, type)`, `categoryId`.
 
 ---
 
-## ⚙️ 5. Prasyarat & Instalasi
+## ⚙️ 4. Instalasi & Menjalankan Aplikasi
 
 ### Prasyarat
-- Node.js (v18.17+ atau v20+)
-- npm (v9+)
-- Database PostgreSQL (Lokal, Docker, atau penyedia cloud seperti Supabase/Neon/Render)
+- Node.js v20+ dan npm
+- PostgreSQL (lokal, Docker, atau cloud). Bisa juga memakai PostgreSQL bawaan project lewat `npm run db:start`.
 
-### Langkah Instalasi
+### Langkah
 
-1. **Clone atau buka direktori project**:
-   ```bash
-   cd d:\Project\ExpenseTracker
-   ```
-
-2. **Install Dependensi**:
+1. **Install dependensi**
    ```bash
    npm install
    ```
 
-3. **Konfigurasi Environment Variable**:
-   Salin `.env.example` ke `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-
-   Buka file `.env` dan sesuaikan koneksi database PostgreSQL Anda:
+2. **Siapkan environment**: salin `.env.example` ke `.env`, lalu isi:
    ```env
-   # PostgreSQL Connection String
    DATABASE_URL="postgresql://USERNAME:PASSWORD@localhost:5432/expense_tracker?schema=public"
-
-   # Secret Key untuk penandatanganan JWT (minimal 32 karakter)
-   JWT_SECRET="dev-super-secret-key-expense-tracker-2026-secure"
-
-   NODE_ENV="development"
+   JWT_SECRET="ganti-dengan-string-acak-minimal-32-karakter"
    ```
+   Untuk PostgreSQL bawaan (`npm run db:start`), kredensialnya `postgres:postgres` di port `5432`.
 
-4. **Siapkan Database dengan Prisma**:
-   Jalankan perintah sinkronisasi skema ke database PostgreSQL Anda:
+3. **(Opsional) Jalankan PostgreSQL bawaan** di terminal terpisah:
    ```bash
-   # Push skema tabel User ke database PostgreSQL
-   npm run db:push
-
-   # Atau menggunakan migration:
-   # npm run db:migrate
+   npm run db:start
    ```
+   Data disimpan di `.db-data/` dan dipakai ulang di setiap start.
 
-5. **Generate Prisma Client**:
+4. **Jalankan migration**
    ```bash
-   npm run db:generate
-   ```
+   # Development: menerapkan migration yang belum dijalankan
+   npm run db:migrate
 
-6. **Jalankan Database Seed (Opsional, untuk membuat akun demo)**:
+   # Produksi / CI: hanya menerapkan migration yang ada
+   npx prisma migrate deploy
+   ```
+   Migration Tahap 2 hanya menambah tabel dan tidak menghapus data. **Jangan** menjalankan `prisma migrate reset` pada database berisi data, karena perintah itu menghapus seluruh isi database.
+
+5. **(Opsional) Seed akun demo**
    ```bash
    npm run seed
    ```
-   *Akun demo default yang terbuat:*
-   - **Email**: `demo@example.com`
-   - **Password**: `Password123!`
+   Membuat/memperbarui akun demo beserta 13 kategori default (tidak membuat transaksi dummy):
+   - Email: `demo@example.com`
+   - Password: `Password123!`
 
-7. **Jalankan Development Server**:
+6. **Jalankan aplikasi**
    ```bash
    npm run dev
    ```
-   Buka browser di: [http://localhost:3000](http://localhost:3000)
+   Buka [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## 📜 6. Perintah Script Tersedia
+## 🧪 5. Testing
+
+Test end-to-end API ada di [`tests/api.test.mjs`](tests/api.test.mjs) dan memakai test runner bawaan Node.js. Test berjalan terhadap aplikasi dan database sungguhan. Setiap run membuat pengguna uji baru dan menghapusnya di akhir.
+
+```bash
+# 1. Pastikan database berjalan dan migration sudah diterapkan
+# 2. Jalankan aplikasi (dev atau produksi)
+npm run dev            # atau: npm run build && npm start
+# 3. Di terminal lain
+npm test               # BASE_URL default: http://localhost:3000
+```
+
+Skenario yang diuji:
+- Tambah pemasukan, tambah pengeluaran, edit, dan hapus transaksi milik sendiri.
+- Search, filter (tipe, kategori, rentang tanggal, bulan/tahun), sorting, dan pagination.
+- Pengguna tidak dapat membaca, mengedit, atau menghapus transaksi dan kategori milik pengguna lain.
+- Nominal nol, negatif, atau tidak valid ditolak; kategori tidak valid, kategori milik pengguna lain, atau kategori dengan tipe berbeda ditolak.
+- Ringkasan dashboard berubah sesuai transaksi.
+- Data tetap ada setelah reload.
+- Pengguna yang belum login mendapat `401` (API) atau diarahkan ke `/login` (halaman).
+- Kategori default tanpa duplikasi; kategori yang masih dipakai tidak bisa dihapus.
+
+Pemeriksaan lain:
+```bash
+npm run lint
+npm run typecheck
+npm run build
+```
+
+---
+
+## 📖 6. Panduan Penggunaan
+
+**Mencatat transaksi**
+1. Buka **Dashboard**, lalu klik **Add Income** atau **Add Expense**. Bisa juga dari **Transactions → Add Transaction**.
+2. Pilih tipe, isi judul, nominal (lebih dari 0, maksimal 2 angka desimal), kategori yang sesuai tipe, tanggal, dan deskripsi bila perlu.
+3. Klik **Tambah Transaksi**. Daftar dan ringkasan langsung diperbarui.
+
+**Mengedit / menghapus transaksi:** di tabel **Transactions**, klik ikon pensil untuk mengedit atau ikon tempat sampah untuk menghapus (ada konfirmasi).
+
+**Mencari & memfilter:** gunakan kolom pencarian, tombol tipe, pilihan kategori, rentang tanggal, tahun/bulan, dan urutan. Tombol **Reset** mengembalikan semua filter.
+
+**Mengelola kategori:** buka **Categories** untuk menambah kategori, mengubah nama/warna, atau menghapus kategori. Tipe kategori tidak dapat diubah setelah dibuat. Untuk menghapus kategori yang masih dipakai, klik **Lihat transaksi**, pindahkan transaksinya ke kategori lain lewat edit, lalu hapus kategorinya.
+
+---
+
+## 🔌 7. API Endpoint
+
+Semua endpoint di bawah membutuhkan sesi login. Identitas pengguna diambil dari cookie sesi yang diverifikasi di server, bukan dari `userId` kiriman client. Semua query dibatasi ke pengguna tersebut.
+
+| Method | Endpoint | Deskripsi |
+| :--- | :--- | :--- |
+| `POST` | `/api/auth/register` · `/api/auth/login` · `/api/auth/logout` | Autentikasi (tanpa sesi) |
+| `GET` | `/api/auth/me` | Profil pengguna aktif |
+| `GET` | `/api/transactions` | Daftar transaksi. Query: `search`, `type`, `categoryId`, `startDate`, `endDate` (YYYY-MM-DD), `year`, `month`, `sort` (`newest`/`oldest`), `page`, `limit` (maks. 100) |
+| `POST` | `/api/transactions` | Tambah transaksi |
+| `GET` / `PUT` / `DELETE` | `/api/transactions/[id]` | Detail / ubah / hapus transaksi |
+| `GET` | `/api/categories` | Daftar kategori (`?type=INCOME\|EXPENSE`), sekaligus membuat kategori default bila belum ada |
+| `POST` | `/api/categories` | Tambah kategori |
+| `PUT` / `DELETE` | `/api/categories/[id]` | Ubah nama/warna / hapus kategori (ditolak bila masih dipakai) |
+| `GET` | `/api/dashboard/summary` | Ringkasan keuangan + 5 transaksi terbaru |
+
+Transaksi/kategori milik pengguna lain diperlakukan sebagai "tidak ditemukan" (`404`). Error database tidak pernah ditampilkan ke pengguna.
+
+---
+
+## 📁 8. Struktur Project
+
+```text
+ExpenseTracker/
+├── prisma/
+│   ├── schema.prisma          # User, Category, Transaction
+│   ├── migrations/            # Migration Prisma
+│   └── seed.js                # Akun demo + kategori default
+├── scripts/db.js              # PostgreSQL embedded untuk development
+├── tests/api.test.mjs         # Test end-to-end API
+├── src/
+│   ├── app/
+│   │   ├── (auth)/            # /login, /register
+│   │   ├── (dashboard)/       # /dashboard, /transactions, /categories (+ layout terproteksi)
+│   │   ├── api/               # Route handlers (auth, transactions, categories, dashboard)
+│   │   └── page.tsx           # Landing page
+│   ├── components/
+│   │   ├── categories/        # CategoryModal
+│   │   ├── dashboard/         # DashboardShell, StatCard, RecentTransactions, EmptyState, UserProfileModal
+│   │   ├── layout/            # Navbar, Sidebar, Header
+│   │   ├── transactions/      # TransactionTable, TransactionFilters, TransactionModal
+│   │   └── ui/                # Komponen UI reusable
+│   ├── lib/
+│   │   ├── auth.ts            # Hash password, sign JWT, getCurrentUser
+│   │   ├── jwt.ts             # Verifikasi sesi (edge-safe), validasi redirect
+│   │   ├── categories.ts      # Kategori default per pengguna
+│   │   ├── transactions.ts    # Parsing & validasi kepemilikan transaksi
+│   │   ├── dashboard.ts       # Agregasi ringkasan keuangan
+│   │   ├── dates.ts           # Penanganan tanggal kalender (UTC)
+│   │   ├── formatters.ts      # Format Rupiah & tanggal
+│   │   ├── validations.ts     # Validasi input server & client
+│   │   └── prisma.ts          # PrismaClient singleton
+│   ├── types/index.ts
+│   └── proxy.ts               # Proteksi rute (Next.js 16 Proxy)
+└── README.md
+```
+
+---
+
+## 📜 9. Script npm
 
 | Script | Deskripsi |
 | :--- | :--- |
-| `npm run dev` | Menjalankan server development Next.js |
-| `npm run build` | Melakukan compile dan build produksi |
-| `npm run start` | Menjalankan build produksi yang sudah di-compile |
-| `npm run lint` | Menjalankan pemeriksaan ESLint pada seluruh file |
-| `npm run seed` | Menjalankan seeder untuk mengisi akun pengujian |
-| `npm run db:push` | Mendorong perubahan skema Prisma langsung ke database |
-| `npm run db:migrate` | Membuat dan menjalankan Prisma migration |
-| `npm run db:generate` | Memperbarui type definitions Prisma Client |
-| `npm run db:studio` | Membuka antarmuka visual Prisma Studio di browser |
+| `npm run dev` | Server development |
+| `npm run build` / `npm start` | Build & jalankan produksi |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | Pemeriksaan tipe TypeScript |
+| `npm test` | Test end-to-end API (aplikasi harus berjalan) |
+| `npm run db:start` | PostgreSQL embedded untuk development |
+| `npm run db:migrate` | Membuat/menerapkan migration (development) |
+| `npm run db:push` | Sinkronisasi skema tanpa migration |
+| `npm run db:generate` | Generate Prisma Client |
+| `npm run db:studio` | Prisma Studio |
+| `npm run seed` | Seed akun demo |
 
 ---
 
-## 🔒 7. Keamanan & Alur Autentikasi
+## 🔒 10. Keamanan
 
-1. **Password Security**:
-   - Kata sandi tidak pernah disimpan dalam bentuk plaintext.
-   - Hashing menggunakan fungsi asynchronous `bcrypt.hash(password, 10)` sebelum dimasukkan ke database.
-2. **Session Security**:
-   - Token ditandatangani menggunakan algoritma `HS256` oleh `jose`.
-   - Token disimpan di HTTP-Only Cookie dengan flag `SameSite: Lax` dan `Secure` (pada mode produksi), sehingga tidak dapat dibaca oleh script client side (mencegah XSS token theft).
-3. **Route Guarding**:
-   - `middleware.ts` memverifikasi token sebelum request mencapai halaman `/dashboard`. Pengguna tanpa sesi valid dialihkan ke `/login`.
-   - Server Component di `src/app/(dashboard)/layout.tsx` memvalidasi keberadaan user di database sebelum merender layout.
-   - Pengguna yang sudah login tidak dapat membuka halaman `/login` atau `/register` dan akan langsung dialihkan ke `/dashboard`.
+- Password tidak pernah disimpan sebagai plaintext (bcrypt, 10 salt rounds).
+- Token sesi ditandatangani HS256 dan disimpan di cookie HTTP-only. **Set `JWT_SECRET` yang kuat di produksi.**
+- `src/proxy.ts` melakukan pengecekan awal di setiap rute terproteksi. Layout dashboard dan setiap endpoint API memverifikasi ulang sesi beserta keberadaan pengguna di database.
+- Parameter `redirect` setelah login hanya menerima path relatif di domain yang sama (mencegah open redirect).
+- Semua query Prisma dibatasi `userId` dari sesi. ID dan input divalidasi di server. Prisma memakai query berparameter, sehingga aman dari SQL injection.
