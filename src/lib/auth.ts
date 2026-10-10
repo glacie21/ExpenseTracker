@@ -1,14 +1,11 @@
 import bcrypt from "bcryptjs";
-import { SignJWT, jwtVerify } from "jose";
+import { SignJWT } from "jose";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { AUTH_COOKIE_NAME, JWT_SECRET, verifyToken } from "@/lib/jwt";
 import { AuthSessionPayload, SafeUser } from "@/types";
 
-export const AUTH_COOKIE_NAME = "expense_tracker_session";
-
-const JWT_SECRET_STRING =
-  process.env.JWT_SECRET || "default_expense_tracker_dev_secret_key_32_chars_min";
-const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_STRING);
+export { AUTH_COOKIE_NAME, verifyToken };
 
 /**
  * Hash plain text password using bcrypt
@@ -39,18 +36,6 @@ export async function signToken(
     .setIssuedAt()
     .setExpirationTime(expirationTime)
     .sign(JWT_SECRET);
-}
-
-/**
- * Verify JWT token string
- */
-export async function verifyToken(token: string): Promise<AuthSessionPayload | null> {
-  try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    return payload as unknown as AuthSessionPayload;
-  } catch {
-    return null;
-  }
 }
 
 /**
