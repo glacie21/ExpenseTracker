@@ -1,4 +1,4 @@
-import { TransactionType } from "@/types";
+import { parseDateOnly } from "@/lib/dates";
 
 export interface ValidationResult {
   isValid: boolean;
@@ -6,6 +6,34 @@ export interface ValidationResult {
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Matches Decimal(15, 2): up to 13 integer digits and 2 fraction digits
+const AMOUNT_REGEX = /^\d{1,13}(\.\d{1,2})?$/;
+
+// Prisma cuid() ids (and similar url-safe ids); rejects anything unexpected early
+const ID_REGEX = /^[A-Za-z0-9_-]{1,64}$/;
+
+export function isValidId(id: unknown): id is string {
+  return typeof id === "string" && ID_REGEX.test(id);
+}
+
+/**
+ * Normalise an amount to an exact decimal string ("50000", "12.5") without
+ * going through floating-point arithmetic. Returns null if invalid.
+ */
+export function normalizeAmount(value: unknown): string | null {
+  let raw: string;
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return null;
+    raw = String(value);
+  } else if (typeof value === "string") {
+    raw = value.trim();
+  } else {
+    return null;
+  }
+  if (!AMOUNT_REGEX.test(raw)) return null;
+  return raw;
+}
 
 export function validateRegisterInput(data: {
   name?: string;
@@ -100,14 +128,18 @@ export function validateTransactionInput(data: {
     errors.title = "Nama transaksi maksimal 100 karakter";
   }
 
-  // Amount validation (strictly positive, non-zero)
+  // Amount validation (strictly positive, non-zero, max 2 decimals)
   if (data.amount === undefined || data.amount === null || data.amount === "") {
     errors.amount = "Nominal transaksi wajib diisi";
+  } else if (typeof data.amount === "number" && data.amount <= 0) {
+    errors.amount = "Nominal harus lebih besar dari 0";
+  } else if (typeof data.amount === "string" && data.amount.trim().startsWith("-")) {
+    errors.amount = "Nominal harus lebih besar dari 0";
   } else {
-    const numericAmount = typeof data.amount === "string" ? parseFloat(data.amount) : data.amount;
-    if (isNaN(numericAmount) || !isFinite(numericAmount)) {
-      errors.amount = "Nominal harus berupa angka yang valid";
-    } else if (numericAmount <= 0) {
+    const normalized = normalizeAmount(data.amount);
+    if (normalized === null) {
+      errors.amount = "Nominal harus berupa angka valid (maksimal 2 angka desimal)";
+    } else if (!/[1-9]/.test(normalized)) {
       errors.amount = "Nominal harus lebih besar dari 0";
     }
   }
@@ -116,21 +148,24 @@ export function validateTransactionInput(data: {
   const categoryId = typeof data.categoryId === "string" ? data.categoryId.trim() : "";
   if (!categoryId) {
     errors.categoryId = "Kategori transaksi wajib dipilih";
+  } else if (!isValidId(categoryId)) {
+    errors.categoryId = "Kategori tidak valid";
   }
 
-  // Date validation
+  // Date validation (calendar day, see lib/dates.ts)
   if (!data.date) {
     errors.date = "Tanggal transaksi wajib diisi";
-  } else {
-    const parsedDate = new Date(data.date);
-    if (isNaN(parsedDate.getTime())) {
-      errors.date = "Format tanggal tidak valid";
-    }
+  } else if (!parseDateOnly(data.date)) {
+    errors.date = "Format tanggal tidak valid";
   }
 
-  // Description validation (optional, but check length)
-  if (data.description && typeof data.description === "string" && data.description.length > 500) {
-    errors.description = "Deskripsi maksimal 500 karakter";
+  // Description validation (optional, but check type and length)
+  if (data.description !== undefined && data.description !== null) {
+    if (typeof data.description !== "string") {
+      errors.description = "Deskripsi tidak valid";
+    } else if (data.description.length > 500) {
+      errors.description = "Deskripsi maksimal 500 karakter";
+    }
   }
 
   return {
