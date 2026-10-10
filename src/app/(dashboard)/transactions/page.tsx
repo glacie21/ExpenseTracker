@@ -9,7 +9,8 @@ import { TransactionTable } from "@/components/transactions/TransactionTable";
 import { TransactionFilters } from "@/components/transactions/TransactionFilters";
 import { TransactionModal } from "@/components/transactions/TransactionModal";
 import { Category, PaginatedTransactions, Transaction, TransactionType } from "@/types";
-import { Plus, RefreshCw } from "lucide-react";
+import { Download, Plus, RefreshCw } from "lucide-react";
+import { downloadFile } from "@/lib/download";
 
 const PAGE_SIZE = 10;
 const SEARCH_DEBOUNCE_MS = 400;
@@ -174,6 +175,28 @@ function TransactionsView() {
   const pagination = result?.pagination ?? EMPTY_PAGINATION;
   const reload = () => setReloadToken((t) => t + 1);
 
+  const [isExporting, setIsExporting] = useState(false);
+  const handleExportCsv = async () => {
+    setIsExporting(true);
+    try {
+      // Filter aktif tanpa nomor halaman: ekspor mencakup semua hasil filter
+      const params = new URLSearchParams(filterQuery);
+      params.delete("page");
+      const filename = await downloadFile(
+        `/api/transactions/export?${params.toString()}`,
+        "transaksi.csv"
+      );
+      setFeedback({ type: "success", message: `File ${filename} berhasil diunduh.` });
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        message: error instanceof Error ? error.message : "Gagal mengekspor transaksi.",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const handleResetFilters = () => {
     setSearchInput("");
     setSearch("");
@@ -261,7 +284,7 @@ function TransactionsView() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Button
             variant="outline"
             size="sm"
@@ -270,6 +293,17 @@ function TransactionsView() {
             title="Muat ulang data"
           >
             Refresh
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCsv}
+            isLoading={isExporting}
+            leftIcon={<Download className="h-4 w-4" />}
+            title="Unduh transaksi sesuai filter aktif sebagai CSV"
+          >
+            Export CSV
           </Button>
 
           <Button

@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { parseDateOnly } from "@/lib/dates";
-import { normalizeAmount, validateTransactionInput } from "@/lib/validations";
+import { endOfDayUTC, monthRangeUTC, parseDateOnly } from "@/lib/dates";
+import { isValidId, normalizeAmount, validateTransactionInput } from "@/lib/validations";
 import { TransactionType } from "@/types";
 
 export const TRANSACTION_CATEGORY_SELECT = {
@@ -85,6 +85,85 @@ export async function parseTransactionBody(body: unknown, userId: string): Promi
       date: parseDateOnly(input.date)!,
     },
   };
+}
+
+type FilterResult =
+  | { ok: true; where: Prisma.TransactionWhereInput; sort: "asc" | "desc" }
+  | { ok: false; message: string };
+
+/**
+ * Build the Prisma filter for listing, reporting and exporting transactions
+ * from query params. Always scoped to `userId` (taken from the session).
+ *
+ * Params: search, type (INCOME|EXPENSE|ALL), categoryId, startDate, endDate
+ * (YYYY-MM-DD), year, month (1-12), sort (newest|oldest).
+ */
+export function buildTransactionFilter(userId: string, params: URLSearchParams): FilterResult {
+  const search = params.get("search")?.trim().slice(0, 100) || "";
+  const typeParam = params.get("type")?.trim() || "";
+  const categoryId = params.get("categoryId")?.trim() || "";
+  const startParam = params.get("startDate")?.trim() || "";
+  const endParam = params.get("endDate")?.trim() || "";
+  const yearParam = params.get("year")?.trim() || "";
+  const monthParam = params.get("month")?.trim() || "";
+
+  const where: Prisma.TransactionWhereInput = { userId };
+  const dateFilters: Prisma.TransactionWhereInput[] = [];
+
+  if (typeParam === "INCOME" || typeParam === "EXPENSE") {
+    where.type = typeParam;
+  } else if (typeParam && typeParam !== "ALL") {
+    return { ok: false, message: "Filter tipe transaksi tidak valid." };
+  }
+
+  if (categoryId) {
+    if (!isValidId(categoryId)) {
+      return { ok: false, message: "Filter kategori tidak valid." };
+    }
+    where.categoryId = categoryId;
+  }
+
+  if (search) {
+    where.OR = [
+      { title: { contains: search, mode: "insensitive" } },
+      { description: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
+  const startDate = startParam ? parseDateOnly(startParam) : null;
+  const endDate = endParam ? parseDateOnly(endParam) : null;
+  if ((startParam && !startDate) || (endParam && !endDate)) {
+    return { ok: false, message: "Format tanggal filter tidak valid (gunakan YYYY-MM-DD)." };
+  }
+  if (startDate && endDate && startDate.getTime() > endDate.getTime()) {
+    return { ok: false, message: "Tanggal awal tidak boleh setelah tanggal akhir." };
+  }
+  if (startDate) dateFilters.push({ date: { gte: startDate } });
+  if (endDate) dateFilters.push({ date: { lte: endOfDayUTC(endDate) } });
+
+  if (yearParam) {
+    const year = Number(yearParam);
+    if (!Number.isInteger(year) || year < 1900 || year > 9999) {
+      return { ok: false, message: "Filter tahun tidak valid." };
+    }
+    if (monthParam) {
+      const month = Number(monthParam);
+      if (!Number.isInteger(month) || month < 1 || month > 12) {
+        return { ok: false, message: "Filter bulan tidak valid." };
+      }
+      dateFilters.push({ date: monthRangeUTC(year, month) });
+    } else {
+      dateFilters.push({
+        date: { gte: monthRangeUTC(year, 1).gte, lte: monthRangeUTC(year, 12).lte },
+      });
+    }
+  }
+
+  if (dateFilters.length > 0) {
+    where.AND = dateFilters;
+  }
+
+  return { ok: true, where, sort: params.get("sort") === "oldest" ? "asc" : "desc" };
 }
 
 /**

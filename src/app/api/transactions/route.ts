@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { endOfDayUTC, monthRangeUTC, parseDateOnly } from "@/lib/dates";
-import { isValidId } from "@/lib/validations";
 import {
   TRANSACTION_CATEGORY_SELECT,
+  buildTransactionFilter,
   parseTransactionBody,
   serializeTransaction,
 } from "@/lib/transactions";
@@ -28,64 +26,15 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get("search")?.trim().slice(0, 100) || "";
-    const typeParam = searchParams.get("type");
-    const categoryId = searchParams.get("categoryId")?.trim() || "";
-    const startDate = parseDateOnly(searchParams.get("startDate"));
-    const endDate = parseDateOnly(searchParams.get("endDate"));
-    const month = parseInt(searchParams.get("month") || "", 10);
-    const year = parseInt(searchParams.get("year") || "", 10);
-    const sort = searchParams.get("sort") === "oldest" ? "asc" : "desc";
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "10", 10) || 10));
 
-    // Selalu dibatasi ke pengguna yang login
-    const where: Prisma.TransactionWhereInput = {
-      userId: user.id,
-    };
-    const dateFilters: Prisma.TransactionWhereInput[] = [];
-
-    if (typeParam === "INCOME" || typeParam === "EXPENSE") {
-      where.type = typeParam;
+    // Filter yang sama dipakai oleh ekspor CSV dan laporan; selalu dibatasi ke user login
+    const filter = buildTransactionFilter(user.id, searchParams);
+    if (!filter.ok) {
+      return NextResponse.json({ success: false, message: filter.message }, { status: 400 });
     }
-
-    if (categoryId) {
-      if (!isValidId(categoryId)) {
-        return NextResponse.json(
-          { success: false, message: "Filter kategori tidak valid." },
-          { status: 400 }
-        );
-      }
-      where.categoryId = categoryId;
-    }
-
-    if (search) {
-      where.OR = [
-        { title: { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } },
-      ];
-    }
-
-    if (startDate) {
-      dateFilters.push({ date: { gte: startDate } });
-    }
-    if (endDate) {
-      dateFilters.push({ date: { lte: endOfDayUTC(endDate) } });
-    }
-
-    const hasYear = Number.isInteger(year) && year >= 1900 && year <= 9999;
-    const hasMonth = Number.isInteger(month) && month >= 1 && month <= 12;
-    if (hasYear && hasMonth) {
-      dateFilters.push({ date: monthRangeUTC(year, month) });
-    } else if (hasYear) {
-      dateFilters.push({
-        date: { gte: monthRangeUTC(year, 1).gte, lte: monthRangeUTC(year, 12).lte },
-      });
-    }
-
-    if (dateFilters.length > 0) {
-      where.AND = dateFilters;
-    }
+    const { where, sort } = filter;
 
     const [total, transactions] = await Promise.all([
       prisma.transaction.count({ where }),
