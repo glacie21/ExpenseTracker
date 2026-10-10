@@ -30,7 +30,7 @@ export default function LandingPage() {
             {/* Stage badge */}
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-100/80 border border-emerald-200 text-emerald-800 text-xs font-semibold mb-6 dark:bg-emerald-950/60 dark:border-emerald-800 dark:text-emerald-300">
               <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              Tahap 1: Fondasi Arsitektur & Autentikasi Siap
+              Pencatatan Transaksi, Kategori & Ringkasan Keuangan Siap Digunakan
             </div>
 
             {/* Main Headline */}
@@ -104,19 +104,19 @@ export default function LandingPage() {
                   <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
                       <span className="text-[10px] text-slate-400 font-medium">TOTAL SALDO</span>
-                      <p className="text-base font-bold text-slate-800 dark:text-white mt-1">Rp 0</p>
+                      <p className="text-base font-bold text-slate-800 dark:text-white mt-1">Rp0</p>
                     </div>
                     <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
                       <span className="text-[10px] text-slate-400 font-medium">PEMASUKAN</span>
-                      <p className="text-base font-bold text-teal-600 mt-1">Rp 0</p>
+                      <p className="text-base font-bold text-teal-600 mt-1">Rp0</p>
                     </div>
                     <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
                       <span className="text-[10px] text-slate-400 font-medium">PENGELUARAN</span>
-                      <p className="text-base font-bold text-rose-500 mt-1">Rp 0</p>
+                      <p className="text-base font-bold text-rose-500 mt-1">Rp0</p>
                     </div>
                     <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
                       <span className="text-[10px] text-slate-400 font-medium">TABUNGAN</span>
-                      <p className="text-base font-bold text-indigo-600 mt-1">Rp 0</p>
+                      <p className="text-base font-bold text-indigo-600 mt-1">Rp0</p>
                     </div>
                   </div>
                 </div>
@@ -138,7 +138,7 @@ export default function LandingPage() {
             </div>
 
             <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="hover:border-emerald-300 transition-colors">
+              <Card id="security" className="scroll-mt-24 hover:border-emerald-300 transition-colors">
                 <CardContent className="p-6">
                   <div className="h-10 w-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center mb-4">
                     <ShieldCheck className="h-5 w-5" />
@@ -150,7 +150,7 @@ export default function LandingPage() {
                     Sistem pendaftaran dan login terlindungi dengan hashing kata sandi Bcrypt serta JWT session cookie HTTP-only.
                   </p>
                   <div className="mt-4">
-                    <Badge variant="success">Tersedia di Tahap 1</Badge>
+                    <Badge variant="success">Tersedia</Badge>
                   </div>
                 </CardContent>
               </Card>
@@ -164,10 +164,10 @@ export default function LandingPage() {
                     PostgreSQL & Prisma ORM
                   </h3>
                   <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                    Skema database relational yang terstruktur rapi, siap untuk ekspansi pencatatan transaksi di tahap berikutnya.
+                    Skema database relasional yang terstruktur rapi; seluruh transaksi dan ringkasan dihitung langsung dari PostgreSQL.
                   </p>
                   <div className="mt-4">
-                    <Badge variant="success">Tersedia di Tahap 1</Badge>
+                    <Badge variant="success">Tersedia</Badge>
                   </div>
                 </CardContent>
               </Card>
@@ -181,10 +181,10 @@ export default function LandingPage() {
                     Manajemen Transaksi
                   </h3>
                   <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                    Pencatatan pemasukan, pengeluaran, kategori transaksi kustom, dan grafik tren pengeluaran bulanan.
+                    Pencatatan pemasukan dan pengeluaran, kategori kustom, pencarian, filter, serta ringkasan saldo.
                   </p>
                   <div className="mt-4">
-                    <Badge variant="neutral">Direncanakan di Tahap 2</Badge>
+                    <Badge variant="success">Tersedia</Badge>
                   </div>
                 </CardContent>
               </Card>
@@ -223,7 +223,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white py-8 dark:border-slate-800 dark:bg-slate-950 text-center text-xs text-slate-500">
         <div className="mx-auto max-w-7xl px-4">
-          <p>© {new Date().getFullYear()} Expense Tracker App — Tahap 1: Fondasi, Autentikasi, Database, & Layout.</p>
+          <p>© {new Date().getFullYear()} Expense Tracker App — Kelola pemasukan dan pengeluaran pribadi Anda.</p>
         </div>
       </footer>
     </div>

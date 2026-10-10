@@ -59,14 +59,14 @@ export function Sidebar({ user, isOpen = false, onClose, onLogout }: SidebarProp
       href: "#",
       icon: BarChart3,
       disabled: true,
-      badge: "Tahap 2",
+      badge: "Segera",
     },
     {
       name: "Settings",
       href: "#",
       icon: Settings,
       disabled: true,
-      badge: "Tahap 2",
+      badge: "Segera",
     },
   ];
 
@@ -131,7 +131,7 @@ export function Sidebar({ user, isOpen = false, onClose, onLogout }: SidebarProp
                   <div
                     key={item.name}
                     className="group flex items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-400 cursor-not-allowed select-none transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50"
-                    title={`${item.name} akan tersedia di Tahap 2`}
+                    title={`${item.name} akan segera tersedia`}
                   >
                     <div className="flex items-center gap-3">
                       <Icon className="h-4 w-4 text-slate-300 dark:text-slate-600" />
@@ -180,7 +180,7 @@ export function Sidebar({ user, isOpen = false, onClose, onLogout }: SidebarProp
           <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-3.5 text-xs text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-200">
             <div className="flex items-center gap-2 font-semibold">
               <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              Fitur Inti Tahap 2 Aktif
+              Data Tersinkron
             </div>
             <p className="mt-1 text-[11px] text-emerald-700 dark:text-emerald-300/80 leading-relaxed">
               Transaksi, Kategori, dan Ringkasan Finansial tersinkronisasi langsung ke database.

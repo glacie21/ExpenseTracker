@@ -49,10 +49,7 @@ export function UserProfileModal({
             </p>
             <div className="mt-2 flex items-center gap-2">
               <Badge variant="success" size="sm">
-                Akun Terverifikasi
-              </Badge>
-              <Badge variant="neutral" size="sm">
-                Tahap 1 User
+                Akun Aktif
               </Badge>
             </div>
           </div>
