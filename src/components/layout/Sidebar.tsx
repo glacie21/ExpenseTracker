@@ -69,10 +69,9 @@ export function Sidebar({ user, isOpen = false, onClose, onLogout }: SidebarProp
     },
     {
       name: "Settings",
-      href: "#",
+      href: "/settings",
       icon: Settings,
-      disabled: true,
-      badge: "Segera",
+      disabled: false,
     },
   ];
 

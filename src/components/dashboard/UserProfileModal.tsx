@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 import { Modal } from "@/components/ui/Modal";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
@@ -99,7 +100,14 @@ export function UserProfileModal({
         </div>
 
         {/* Modal actions */}
-        <div className="flex justify-end pt-2">
+        <div className="flex justify-end gap-2 pt-2">
+          <Link
+            href="/settings"
+            onClick={onClose}
+            className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            Pengaturan Akun
+          </Link>
           <Button variant="secondary" size="sm" onClick={onClose}>
             Tutup
           </Button>

@@ -33,6 +33,9 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
   } else if (pathname.startsWith("/categories")) {
     pageTitle = "Kategori";
     pageSubtitle = "Kelola kategori transaksi keuangan Anda";
+  } else if (pathname.startsWith("/settings")) {
+    pageTitle = "Pengaturan";
+    pageSubtitle = "Profil, password, dan keamanan akun";
   }
 
   const handleLogout = async () => {
