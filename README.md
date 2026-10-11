@@ -7,6 +7,7 @@ Aplikasi web untuk mencatat dan memantau kondisi keuangan pribadi: pemasukan, pe
 | **Tahap 1** | Fondasi, autentikasi, database, layout dashboard | ✅ Selesai |
 | **Tahap 2** | Transaksi, kategori, dashboard keuangan, search & filter | ✅ Selesai |
 | **Tahap 3** | Dashboard analitik, laporan, anggaran, export CSV/PDF, kesiapan produksi | ✅ Selesai |
+| **Tahap 4** | Keamanan akun: rate limiting, pencabutan sesi, halaman Settings, CSP, CI | ✅ Selesai |
 
 ---
 
@@ -31,10 +32,10 @@ Aplikasi web untuk mencatat dan memantau kondisi keuangan pribadi: pemasukan, pe
 
 ### Tahap 1 — Fondasi & Autentikasi
 - **Landing page** responsif dengan navbar, hero, dan ringkasan fitur.
-- **Registrasi** (`/register`): validasi nama, email, password (min. 6 karakter), konfirmasi password, dan cek email duplikat. Password di-hash dengan **bcrypt** (10 salt rounds).
+- **Registrasi** (`/register`): validasi nama, email, password (min. 8 karakter), konfirmasi password, dan cek email duplikat. Password di-hash dengan **bcrypt** (10 salt rounds).
 - **Login** (`/login`): opsi *Remember Me* (sesi 30 hari vs 1 hari) dan tombol **"Gunakan Akun Demo"**.
 - **Sesi**: JWT (HS256) di cookie HTTP-only `expense_tracker_session` (`SameSite=Lax`, `Secure` di produksi).
-- **Proteksi rute** via `src/proxy.ts`: `/dashboard`, `/transactions`, `/categories`, `/reports`, `/budgets` hanya untuk pengguna login. Pengguna yang sudah login diarahkan dari `/login`/`/register` ke `/dashboard`.
+- **Proteksi rute** via `src/proxy.ts`: `/dashboard`, `/transactions`, `/categories`, `/reports`, `/budgets`, `/settings` hanya untuk pengguna login. Pengguna yang sudah login diarahkan dari `/login`/`/register` ke `/dashboard`.
 - **Logout** yang menghapus cookie sesi di server.
 - **Komponen UI reusable** (`src/components/ui`): `Button`, `Input`, `Card`, `Modal`, `ConfirmDialog`, `Alert`, `Avatar`, `Badge`.
 
@@ -73,6 +74,25 @@ Aplikasi web untuk mencatat dan memantau kondisi keuangan pribadi: pemasukan, pe
   - **CSV** dalam UTF-8 (dengan BOM agar terbaca benar di Excel). Kolom: tanggal (`YYYY-MM-DD`), judul, tipe, kategori, nominal (`5000000.00`), dan deskripsi. Koma, tanda kutip, dan baris baru di-escape. Teks yang menyerupai rumus (`=`, `+`, `-`, `@`) diberi awalan `'` untuk mencegah CSV/formula injection.
   - **PDF** A4: judul, periode, filter, waktu pembuatan, ringkasan, pengeluaran per kategori, dan tabel transaksi. Header tabel diulang di tiap halaman dan setiap halaman bernomor. Maksimal 2.000 baris transaksi; untuk data lengkap gunakan CSV.
 
+### Tahap 4 — Keamanan Akun
+- **Pengaturan** (`/settings`):
+  - Ubah nama tampilan. Email tidak bisa diubah karena dipakai untuk login.
+  - **Ganti password**: wajib memasukkan password saat ini. Setelah berhasil, sesi di perangkat lain berakhir, sedangkan sesi saat ini tetap berjalan.
+  - **Logout dari semua perangkat**: mengakhiri semua sesi, termasuk sesi saat ini.
+  - **Hapus akun**: wajib memasukkan password. Akun beserta seluruh transaksi, kategori, dan anggaran dihapus permanen.
+- **Pencabutan sesi**: setiap token membawa `sessionVersion` milik pengguna. Ganti password atau "logout semua perangkat" menaikkan versi tersebut, sehingga semua token lama langsung ditolak di setiap request.
+- **Rate limiting** (di memori proses):
+
+  | Aksi | Batas |
+  | :--- | :--- |
+  | Login gagal per email | 5 per 15 menit; selama terkunci, password yang benar pun ditolak (`429` + `Retry-After`) |
+  | Login gagal per IP | 50 per 15 menit |
+  | Registrasi per IP | 50 per jam |
+  | Password saat ini salah (ganti password / hapus akun), per pengguna | 5 per 15 menit |
+- Login dengan email yang tidak terdaftar memakan waktu yang sama dengan password salah, sehingga keberadaan email tidak bisa ditebak dari waktu respons.
+- Password minimal **8 karakter** dan maksimal 72 byte (batas bcrypt).
+- Halaman **404** dan **error** dengan tombol "Coba Lagi", serta `global-error` untuk kegagalan di root layout.
+
 ### Definisi perhitungan
 | Istilah | Rumus |
 | :--- | :--- |
@@ -96,7 +116,7 @@ Didefinisikan di [`prisma/schema.prisma`](prisma/schema.prisma).
 
 | Model | Field utama | Catatan |
 | :--- | :--- | :--- |
-| `User` (`users`) | `id`, `name`, `email` (unik), `password` | Tahap 1 |
+| `User` (`users`) | `id`, `name`, `email` (unik), `password`, `sessionVersion` | Tahap 1; `sessionVersion` sejak Tahap 4 |
 | `Category` (`categories`) | `id`, `userId`, `name`, `type`, `color` | Unik per `(userId, name, type)` |
 | `Transaction` (`transactions`) | `id`, `userId`, `categoryId`, `type`, `amount`, `title`, `description?`, `date` | `amount` = `Decimal(15,2)`; kategori `onDelete: Restrict` |
 | `Budget` (`budgets`) | `id`, `userId`, `categoryId`, `amount`, `month`, `year` | **Tahap 3**. Unik per `(userId, categoryId, year, month)`; `CHECK month 1–12` dan `amount > 0`; kategori `onDelete: Restrict` |
@@ -106,6 +126,7 @@ Migration:
 | :--- | :--- |
 | `20261009154848_init_phase2` | Tabel `users`, `categories`, `transactions` |
 | `20261010154238_add_budgets_and_analytics_indexes` | Tabel `budgets`; index `transactions (userId, type, date)` dan `(userId, categoryId, date)` untuk query analitik dan anggaran (menggantikan index `(userId, type)` yang sudah tercakup). **Tidak menghapus data.** |
+| `20261011090000_add_user_session_version` | Kolom `users.sessionVersion` (default `0`). Sesi yang sudah ada tetap valid. **Tidak menghapus data.** |
 
 Catatan desain:
 - Anggaran **hanya untuk kategori pengeluaran**. Aturan ini dicek di API, karena tipe disimpan di kategori, bukan di anggaran.
@@ -155,7 +176,7 @@ Database produksi pada umumnya sudah memakai UTF-8.
 | Jenis | Lokasi | Perintah | Butuh aplikasi berjalan? |
 | :--- | :--- | :--- | :--- |
 | Unit test | `tests/unit/*.test.mjs` | `npm run test:unit` | Tidak |
-| Integration (API end-to-end) | `tests/api.test.mjs` (Tahap 2), `tests/stage3.test.mjs` (Tahap 3) | `npm run test:integration` | Ya |
+| Integration (API end-to-end) | `tests/api.test.mjs` (Tahap 2), `tests/stage3.test.mjs` (Tahap 3), `tests/account.test.mjs` (Tahap 4) | `npm run test:integration` | Ya |
 | Semua | | `npm test` | Ya |
 
 ```bash
@@ -172,6 +193,15 @@ Cakupan:
 - **Unit**: total, saldo bersih, savings rate (termasuk pemasukan nol dan nilai negatif), perubahan antarperiode (pembanding nol, basis negatif), penggunaan dan sisa anggaran serta statusnya (80%, 100%, >100%), resolusi periode (minggu Senin, pergantian tahun, Februari kabisat, zona waktu), bucket grafik, dan penulisan CSV (escaping, formula injection).
 - **Integrasi Tahap 2**: CRUD transaksi, filter, validasi nominal dan kategori, isolasi antar pengguna, ringkasan, persistensi, dan akses tanpa login.
 - **Integrasi Tahap 3**: analitik per periode (termasuk transaksi di hari pertama/terakhir rentang), laporan dengan filter, validasi backend, ekspor CSV (isi, escaping, BOM, hanya data sendiri, 404 bila kosong), PDF (valid, periode kosong), anggaran (progres dari pengeluaran aktual, berubah saat transaksi diedit/dihapus, duplikat, kategori pemasukan ditolak), isolasi anggaran/laporan/ekspor antar pengguna, dan semua endpoint/halaman baru menolak akses tanpa login.
+- **Integrasi Tahap 4**: penguncian login (429), aturan password, ubah profil, ganti password (sesi lain dicabut, sesi ini tetap), batas tebakan password, logout semua perangkat, hapus akun beserta seluruh datanya, akses tanpa login, dan header CSP.
+- **Unit Tahap 4**: rate limiter (batas, reset jendela waktu, isolasi key) dan pembacaan IP klien.
+
+Rate limiter menyimpan hitungan di memori server. Satu kali `npm test` memakai sekitar 15 registrasi dan 20-an login gagal dari IP yang sama. Jika test dijalankan berkali-kali dalam satu jam lalu registrasi mendapat `429`, restart aplikasi untuk mengosongkan hitungan.
+
+### CI
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) berjalan di setiap push ke `main` dan setiap pull request:
+1. **checks**: lint, typecheck, unit test, dan build.
+2. **integration**: PostgreSQL 17 sebagai service, `db:deploy`, build, `npm start`, lalu `npm run test:integration`. Log aplikasi ditampilkan jika ada test yang gagal.
 
 Belum ada test browser (Playwright). Skenario end-to-end diuji di level HTTP. Lihat bagian [Keterbatasan](#-12-keterbatasan--rencana-berikutnya).
 
@@ -204,7 +234,8 @@ npm start                   # jalankan di port 3000 (atur PORT bila perlu)
 - Set `DATABASE_URL` dan `JWT_SECRET` di environment platform. Jangan commit `.env`.
 - Jalankan `npm run db:deploy` sebagai langkah rilis **sebelum** versi baru menerima traffic. Jangan pernah memakai `migrate dev`, `migrate reset`, atau `db push` di produksi.
 - Untuk platform serverless (misalnya Vercel), gunakan PostgreSQL terkelola dengan connection pooling (misalnya PgBouncer atau pooler bawaan penyedia), lalu jalankan `prisma migrate deploy` di pipeline rilis.
-- Aplikasi mengirim header keamanan dasar (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`) dan `Cache-Control: no-store` untuk seluruh API, sehingga data keuangan tidak di-cache.
+- Rate limiting disimpan di memori proses. Ini cukup untuk **satu instance** (VPS atau satu container). Jika aplikasi berjalan di beberapa instance atau serverless, tiap instance menghitung sendiri-sendiri, jadi gunakan store bersama (misalnya Redis). Batas per IP membaca `x-real-ip` / `x-forwarded-for`, jadi pastikan reverse proxy Anda menimpa header tersebut. Batas per email tidak bergantung pada IP.
+- Aplikasi mengirim header keamanan (`Content-Security-Policy`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, dan `Strict-Transport-Security` di produksi) dan `Cache-Control: no-store` untuk seluruh API, sehingga data keuangan tidak di-cache.
 - PostgreSQL embedded (`npm run db:start`) hanya untuk development.
 
 ---
@@ -219,6 +250,8 @@ npm start                   # jalankan di port 3000 (atur PORT bila perlu)
 
 **Anggaran:** buka **Budgets**, pilih bulan, lalu klik **Buat Anggaran** dan isi kategori pengeluaran, nominal, bulan, dan tahun. Kartu anggaran menunjukkan progres dan statusnya, dan peringatan muncul di atas daftar bila ada anggaran yang mendekati atau melewati batas. Satu kategori hanya bisa punya satu anggaran per bulan.
 
+**Pengaturan:** buka **Settings** di sidebar (atau **Pengaturan Akun** di modal profil) untuk mengubah nama, mengganti password, logout dari semua perangkat, atau menghapus akun.
+
 **Kategori:** di **Categories** Anda bisa menambah, mengubah nama/warna, dan menghapus kategori. Kategori yang masih dipakai transaksi atau anggaran perlu dikosongkan dulu sebelum dihapus.
 
 ---
@@ -231,6 +264,9 @@ Semua endpoint di bawah (kecuali register/login/logout) membutuhkan sesi login. 
 | :--- | :--- | :--- |
 | `POST` | `/api/auth/register` · `/api/auth/login` · `/api/auth/logout` | Autentikasi |
 | `GET` | `/api/auth/me` | Profil pengguna aktif |
+| `PUT` / `DELETE` | `/api/account` | Ubah nama (`{ name }`) / hapus akun beserta seluruh data (`{ password }`) |
+| `PUT` | `/api/account/password` | Ganti password (`{ currentPassword, newPassword, confirmPassword }`); sesi lain dicabut |
+| `DELETE` | `/api/account/sessions` | Logout dari semua perangkat |
 | `GET` / `POST` | `/api/transactions` | Daftar (query: `search`, `type`, `categoryId`, `startDate`, `endDate`, `year`, `month`, `sort`, `page`, `limit` ≤ 100) / tambah |
 | `GET` / `PUT` / `DELETE` | `/api/transactions/[id]` | Detail / ubah / hapus |
 | `GET` | `/api/transactions/export` | **CSV** dengan filter yang sama seperti daftar (maks. 100.000 baris; `404` bila kosong) |
@@ -253,15 +289,17 @@ ExpenseTracker/
 │   ├── schema.prisma          # User, Category, Transaction, Budget
 │   ├── migrations/            # Migration Prisma
 │   └── seed.js                # Akun demo + kategori default
+├── .github/workflows/ci.yml   # CI: lint, typecheck, test, build
 ├── scripts/db.js              # PostgreSQL embedded (UTF-8) untuk development
 ├── tests/
 │   ├── unit/                  # Unit test perhitungan, periode, CSV
 │   ├── api.test.mjs           # Integrasi Tahap 2
-│   └── stage3.test.mjs        # Integrasi Tahap 3
+│   ├── stage3.test.mjs        # Integrasi Tahap 3
+│   └── account.test.mjs       # Integrasi Tahap 4
 ├── src/
 │   ├── app/
 │   │   ├── (auth)/            # /login, /register
-│   │   ├── (dashboard)/       # /dashboard, /transactions, /categories, /reports, /budgets
+│   │   ├── (dashboard)/       # /dashboard, /transactions, /categories, /reports, /budgets, /settings
 │   │   ├── api/               # Route handlers
 │   │   └── page.tsx           # Landing page
 │   ├── components/
@@ -271,6 +309,7 @@ ExpenseTracker/
 │   │   ├── dashboard/         # DashboardShell, StatCard, PeriodFilter, TrendLine, RecentTransactions, ...
 │   │   ├── layout/            # Navbar, Sidebar, Header
 │   │   ├── reports/           # ReportTransactionsTable
+│   │   ├── settings/          # SettingsPanel (profil, password, sesi, hapus akun)
 │   │   ├── transactions/      # TransactionTable, TransactionFilters, TransactionModal
 │   │   └── ui/                # Komponen UI reusable
 │   ├── lib/
@@ -282,7 +321,9 @@ ExpenseTracker/
 │   │   ├── dates.ts           # Tanggal kalender & periode (unit-tested)
 │   │   ├── csv.ts             # Penulis CSV aman (unit-tested)
 │   │   ├── transactions.ts    # Validasi & filter transaksi bersama
-│   │   ├── auth.ts / jwt.ts   # Sesi & autentikasi
+│   │   ├── auth.ts / jwt.ts   # Sesi, pencabutan sesi & autentikasi
+│   │   ├── account.ts         # Verifikasi ulang password untuk aksi sensitif
+│   │   ├── rateLimit.ts       # Rate limiter di memori (unit-tested)
 │   │   └── ...                # config, money, dbErrors, formatters, validations, prisma
 │   ├── types/index.ts
 │   └── proxy.ts               # Proteksi rute (Next.js 16 Proxy)
@@ -318,13 +359,19 @@ ExpenseTracker/
 - PDF memakai font standar Helvetica (WinAnsi). Karakter di luar Latin, seperti emoji atau aksara non-Latin, diganti `?` di PDF, tetapi tetap utuh di aplikasi dan CSV.
 - Ekspor dibatasi 100.000 baris (CSV) dan 2.000 baris transaksi (PDF).
 - Perbandingan "This Month" memakai bulan penuh sebelumnya, sehingga di awal bulan angka bulan berjalan wajar terlihat lebih kecil.
-- Ide lanjutan: anggaran berulang otomatis tiap bulan, rate limiting untuk login, pengaturan zona waktu per pengguna, dan halaman Settings.
+- **Belum ada reset password lewat email** ("lupa password"), karena aplikasi belum punya layanan pengiriman email. Untuk saat ini password hanya bisa diganti saat sedang login.
+- **Logout biasa** hanya menghapus cookie di browser tersebut. Jika token mungkin bocor, gunakan **Logout dari semua perangkat** atau ganti password.
+- CSP masih memakai `'unsafe-inline'` untuk script, karena Next.js membutuhkannya jika tidak memakai nonce per request.
+- Ide lanjutan: akun/dompet dan transfer antar akun, transaksi dan anggaran berulang, import CSV mutasi bank, serta pengaturan zona waktu dan mata uang per pengguna.
 
 ---
 
 ## 🔒 13. Keamanan
 
-- Password di-hash dengan bcrypt (10 salt rounds) dan tidak pernah disimpan sebagai plaintext.
+- Password di-hash dengan bcrypt (10 salt rounds) dan tidak pernah disimpan sebagai plaintext. Panjang minimal 8 karakter.
+- Login gagal, registrasi, dan tebakan password saat ini dibatasi (lihat Tahap 4). Waktu respons login sama untuk email yang terdaftar maupun tidak.
+- Ganti password atau "logout semua perangkat" langsung mencabut semua token lama melalui `sessionVersion`.
+- Aksi sensitif (ganti password, hapus akun) mewajibkan password saat ini.
 - Token sesi ditandatangani HS256 dan disimpan di cookie HTTP-only. Di produksi, `JWT_SECRET` wajib diisi minimal 32 karakter.
 - `src/proxy.ts` mengecek setiap rute terproteksi. Layout dashboard dan setiap endpoint API memverifikasi ulang sesi beserta keberadaan pengguna di database.
 - Parameter `redirect` setelah login hanya menerima path relatif di domain yang sama (mencegah open redirect).
