@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { AUTH_COOKIE_NAME } from "@/lib/auth";
+import { clearSessionCookie } from "@/lib/auth";
 
 export async function POST() {
   try {
@@ -8,15 +8,7 @@ export async function POST() {
       message: "Anda telah berhasil keluar dari akun.",
     });
 
-    response.cookies.set({
-      name: AUTH_COOKIE_NAME,
-      value: "",
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 0,
-    });
+    clearSessionCookie(response);
 
     return response;
   } catch (error) {

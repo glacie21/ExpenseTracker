@@ -12,6 +12,10 @@ export interface AuthSessionPayload {
   userId: string;
   email: string;
   name: string;
+  /** User.sessionVersion at issue time; a mismatch means the session was revoked. */
+  sv?: number;
+  /** Whether the session was created with "Remember Me" (kept when the token is reissued). */
+  rm?: boolean;
 }
 
 export interface ApiResponse<T = unknown> {

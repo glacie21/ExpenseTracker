@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashPassword, signToken, AUTH_COOKIE_NAME } from "@/lib/auth";
+import { createSessionToken, hashPassword, setSessionCookie } from "@/lib/auth";
 import { validateRegisterInput } from "@/lib/validations";
+import { REGISTER_IP_RULE, checkRateLimit, clientIp, hitRateLimit, tooManyRequestsMessage } from "@/lib/rateLimit";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const validation = validateRegisterInput(body);
+    const ipKey = `register:ip:${clientIp(request.headers)}`;
+    const limit = checkRateLimit(ipKey, REGISTER_IP_RULE);
+    if (limit.limited) {
+      return NextResponse.json(
+        { success: false, message: tooManyRequestsMessage(limit.retryAfter) },
+        { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
+      );
+    }
+
+    const body = await request.json().catch(() => null);
+    const validation = validateRegisterInput(body ?? {});
 
     if (!validation.isValid) {
       return NextResponse.json(
@@ -55,40 +65,35 @@ export async function POST(request: NextRequest) {
         email: true,
         createdAt: true,
         updatedAt: true,
+        sessionVersion: true,
       },
     });
+    hitRateLimit(ipKey, REGISTER_IP_RULE);
 
     // Initialize default categories for new user
     const { ensureUserCategories } = await import("@/lib/categories");
     await ensureUserCategories(user.id);
 
-    // Generate JWT token
-    const token = await signToken({
-      userId: user.id,
-      email: user.email,
+    const token = await createSessionToken(user);
+    const safeUser = {
+      id: user.id,
       name: user.name,
-    });
+      email: user.email,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
 
     // Prepare response with secure cookie
     const response = NextResponse.json(
       {
         success: true,
         message: "Pendaftaran berhasil! Mengalihkan ke dashboard...",
-        data: { user },
+        data: { user: safeUser },
       },
       { status: 201 }
     );
 
-    const isProduction = process.env.NODE_ENV === "production";
-    response.cookies.set({
-      name: AUTH_COOKIE_NAME,
-      value: token,
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24, // 1 day
-    });
+    setSessionCookie(response, token);
 
     return response;
   } catch (error) {

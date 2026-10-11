@@ -35,6 +35,30 @@ export function normalizeAmount(value: unknown): string | null {
   return raw;
 }
 
+export const PASSWORD_MIN_LENGTH = 8;
+// bcrypt ignores everything after 72 bytes, so longer passwords would give a false sense of security
+const PASSWORD_MAX_BYTES = 72;
+
+/** Error message for a new password, or null when it is acceptable. */
+export function passwordError(password: string): string | null {
+  if (!password) return "Password wajib diisi";
+  if (password.length < PASSWORD_MIN_LENGTH) {
+    return `Password minimal terdiri dari ${PASSWORD_MIN_LENGTH} karakter`;
+  }
+  if (new TextEncoder().encode(password).length > PASSWORD_MAX_BYTES) {
+    return `Password maksimal ${PASSWORD_MAX_BYTES} karakter`;
+  }
+  return null;
+}
+
+/** Display name rule shared by registration and profile settings. */
+export function nameError(name: string): string | null {
+  if (!name) return "Nama lengkap wajib diisi";
+  if (name.length < 2) return "Nama minimal 2 karakter";
+  if (name.length > 100) return "Nama maksimal 100 karakter";
+  return null;
+}
+
 export function validateRegisterInput(data: {
   name?: string;
   email?: string;
@@ -48,11 +72,8 @@ export function validateRegisterInput(data: {
   const password = data.password || "";
   const confirmPassword = data.confirmPassword || "";
 
-  if (!name) {
-    errors.name = "Nama lengkap wajib diisi";
-  } else if (name.length < 2) {
-    errors.name = "Nama minimal 2 karakter";
-  }
+  const nameProblem = nameError(name);
+  if (nameProblem) errors.name = nameProblem;
 
   if (!email) {
     errors.email = "Email wajib diisi";
@@ -60,16 +81,44 @@ export function validateRegisterInput(data: {
     errors.email = "Format email tidak valid";
   }
 
-  if (!password) {
-    errors.password = "Password wajib diisi";
-  } else if (password.length < 6) {
-    errors.password = "Password minimal terdiri dari 6 karakter";
-  }
+  const passwordProblem = passwordError(password);
+  if (passwordProblem) errors.password = passwordProblem;
 
   if (!confirmPassword) {
     errors.confirmPassword = "Konfirmasi password wajib diisi";
   } else if (password !== confirmPassword) {
     errors.confirmPassword = "Konfirmasi password tidak cocok dengan password";
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+}
+
+export function validatePasswordChangeInput(data: {
+  currentPassword?: unknown;
+  newPassword?: unknown;
+  confirmPassword?: unknown;
+}): ValidationResult {
+  const errors: Record<string, string> = {};
+  const currentPassword = typeof data.currentPassword === "string" ? data.currentPassword : "";
+  const newPassword = typeof data.newPassword === "string" ? data.newPassword : "";
+  const confirmPassword = typeof data.confirmPassword === "string" ? data.confirmPassword : "";
+
+  if (!currentPassword) errors.currentPassword = "Password saat ini wajib diisi";
+
+  const newProblem = passwordError(newPassword);
+  if (newProblem) {
+    errors.newPassword = newProblem;
+  } else if (newPassword === currentPassword) {
+    errors.newPassword = "Password baru harus berbeda dari password saat ini";
+  }
+
+  if (!confirmPassword) {
+    errors.confirmPassword = "Konfirmasi password wajib diisi";
+  } else if (newPassword !== confirmPassword) {
+    errors.confirmPassword = "Konfirmasi password tidak cocok dengan password baru";
   }
 
   return {

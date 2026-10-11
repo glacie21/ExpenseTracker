@@ -1,12 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { comparePassword, signToken, AUTH_COOKIE_NAME } from "@/lib/auth";
+import { burnPasswordCheck, comparePassword, createSessionToken, setSessionCookie } from "@/lib/auth";
 import { validateLoginInput } from "@/lib/validations";
+import {
+  LOGIN_EMAIL_RULE,
+  LOGIN_IP_RULE,
+  checkRateLimit,
+  clientIp,
+  hitRateLimit,
+  resetRateLimit,
+  tooManyRequestsMessage,
+} from "@/lib/rateLimit";
+
+const INVALID_CREDENTIALS = {
+  success: false,
+  message: "Email atau password yang Anda masukkan salah.",
+};
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const validation = validateLoginInput(body);
+    const body = await request.json().catch(() => null);
+    const validation = validateLoginInput(body ?? {});
 
     if (!validation.isValid) {
       return NextResponse.json(
@@ -23,42 +37,37 @@ export async function POST(request: NextRequest) {
     const password = body.password;
     const rememberMe = Boolean(body.rememberMe);
 
-    // Find user in database
+    // Lock out before checking the password, so a correct guess is not revealed either
+    const emailKey = `login:email:${email}`;
+    const ipKey = `login:ip:${clientIp(request.headers)}`;
+    const blocked = [checkRateLimit(emailKey, LOGIN_EMAIL_RULE), checkRateLimit(ipKey, LOGIN_IP_RULE)].find(
+      (status) => status.limited
+    );
+    if (blocked) {
+      return NextResponse.json(
+        { success: false, message: tooManyRequestsMessage(blocked.retryAfter) },
+        { status: 429, headers: { "Retry-After": String(blocked.retryAfter) } }
+      );
+    }
+
     const user = await prisma.user.findUnique({
       where: { email },
     });
 
-    if (!user) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Email atau password yang Anda masukkan salah.",
-        },
-        { status: 401 }
-      );
+    // Same bcrypt cost whether or not the email exists
+    const isPasswordValid = user
+      ? await comparePassword(password, user.password)
+      : (await burnPasswordCheck(password), false);
+
+    if (!user || !isPasswordValid) {
+      hitRateLimit(emailKey, LOGIN_EMAIL_RULE);
+      hitRateLimit(ipKey, LOGIN_IP_RULE);
+      return NextResponse.json(INVALID_CREDENTIALS, { status: 401 });
     }
 
-    // Verify password
-    const isPasswordValid = await comparePassword(password, user.password);
-    if (!isPasswordValid) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Email atau password yang Anda masukkan salah.",
-        },
-        { status: 401 }
-      );
-    }
+    resetRateLimit(emailKey);
 
-    // Generate JWT token
-    const token = await signToken(
-      {
-        userId: user.id,
-        email: user.email,
-        name: user.name,
-      },
-      rememberMe
-    );
+    const token = await createSessionToken(user, rememberMe);
 
     const safeUser = {
       id: user.id,
@@ -74,18 +83,7 @@ export async function POST(request: NextRequest) {
       data: { user: safeUser },
     });
 
-    const isProduction = process.env.NODE_ENV === "production";
-    const maxAge = rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 24; // 30 days vs 1 day
-
-    response.cookies.set({
-      name: AUTH_COOKIE_NAME,
-      value: token,
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: "lax",
-      path: "/",
-      maxAge,
-    });
+    setSessionCookie(response, token, rememberMe);
 
     return response;
   } catch (error) {

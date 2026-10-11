@@ -16,15 +16,17 @@ enum TransactionType {
 }
 
 model User {
-  id           String        @id @default(cuid())
-  name         String
-  email        String        @unique
-  password     String
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  categories   Category[]
-  transactions Transaction[]
-  budgets      Budget[]
+  id             String        @id @default(cuid())
+  name           String
+  email          String        @unique
+  password       String
+  // Incremented on password change / "logout all devices"; tokens carry the version they were issued with
+  sessionVersion Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  categories     Category[]
+  transactions   Transaction[]
+  budgets        Budget[]
 
   @@map("users")
 }

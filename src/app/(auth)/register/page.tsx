@@ -45,7 +45,7 @@ export default function RegisterPage() {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = "Format email tidak valid";
 
     if (!password) errors.password = "Password wajib diisi";
-    else if (password.length < 6) errors.password = "Password minimal 6 karakter";
+    else if (password.length < 8) errors.password = "Password minimal 8 karakter";
 
     if (!confirmPassword) errors.confirmPassword = "Konfirmasi password wajib diisi";
     else if (password !== confirmPassword) errors.confirmPassword = "Konfirmasi password tidak cocok";
@@ -160,7 +160,7 @@ export default function RegisterPage() {
               <Input
                 label="Password"
                 type={showPassword ? "text" : "password"}
-                placeholder="Minimal 6 karakter"
+                placeholder="Minimal 8 karakter"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 error={fieldErrors.password}
