@@ -56,7 +56,7 @@ export function IncomeExpenseChart({ series, granularity }: IncomeExpenseChartPr
 
   const hasData = series.some((p) => p.income > 0 || p.expense > 0);
   const legend = (
-    <div className="flex items-center gap-4 text-xs text-slate-600 dark:text-slate-300">
+    <div className="flex items-center gap-4 text-xs text-ink-2">
       <span className="inline-flex items-center gap-1.5">
         <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: INCOME_COLOR }} />
         Pemasukan
@@ -70,12 +70,12 @@ export function IncomeExpenseChart({ series, granularity }: IncomeExpenseChartPr
 
   if (!hasData) {
     return (
-      <div className="flex h-[260px] flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 text-center dark:border-slate-800">
-        <BarChart3 className="mb-2 h-8 w-8 text-slate-300 dark:text-slate-600" />
-        <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
+      <div className="flex h-[260px] flex-col items-center justify-center rounded-sm border border-dashed border-rule text-center">
+        <BarChart3 className="mb-2 h-8 w-8 text-ink-3" />
+        <p className="text-sm font-medium text-ink-2">
           Belum ada transaksi pada periode ini
         </p>
-        <p className="mt-1 text-xs text-slate-400">Grafik akan muncul setelah transaksi dicatat.</p>
+        <p className="mt-1 text-xs text-ink-3">Grafik akan muncul setelah transaksi dicatat.</p>
       </div>
     );
   }
@@ -114,7 +114,7 @@ export function IncomeExpenseChart({ series, granularity }: IncomeExpenseChartPr
                   x2={width - MARGIN.right}
                   y1={y(tick)}
                   y2={y(tick)}
-                  className="stroke-slate-200 dark:stroke-slate-800"
+                  className="stroke-rule-soft"
                   strokeWidth={1}
                 />
                 <text
@@ -122,7 +122,7 @@ export function IncomeExpenseChart({ series, granularity }: IncomeExpenseChartPr
                   y={y(tick)}
                   textAnchor="end"
                   dominantBaseline="middle"
-                  className="fill-slate-400 text-[11px]"
+                  className="fill-ink-3 text-[11px]"
                 >
                   {formatRupiahCompact(tick)}
                 </text>
@@ -144,19 +144,19 @@ export function IncomeExpenseChart({ series, granularity }: IncomeExpenseChartPr
                       y={MARGIN.top}
                       width={bucketWidth}
                       height={innerHeight}
-                      className="fill-slate-100 dark:fill-slate-800/60"
+                      className="fill-sunken"
                     />
                   )}
                   {incomeH > 0 && (
                     <path
                       d={roundedTopBar(center - BAR_GAP / 2 - barWidth, baseline - incomeH, barWidth, incomeH)}
-                      fill={INCOME_COLOR}
+                      style={{ fill: INCOME_COLOR }}
                     />
                   )}
                   {expenseH > 0 && (
                     <path
                       d={roundedTopBar(center + BAR_GAP / 2, baseline - expenseH, barWidth, expenseH)}
-                      fill={EXPENSE_COLOR}
+                      style={{ fill: EXPENSE_COLOR }}
                     />
                   )}
                   {i % labelEvery === 0 && (
@@ -164,7 +164,7 @@ export function IncomeExpenseChart({ series, granularity }: IncomeExpenseChartPr
                       x={center}
                       y={HEIGHT - 8}
                       textAnchor="middle"
-                      className="fill-slate-400 text-[11px]"
+                      className="fill-ink-3 text-[11px]"
                     >
                       {axisLabel(date, granularity)}
                     </text>
@@ -181,7 +181,7 @@ export function IncomeExpenseChart({ series, granularity }: IncomeExpenseChartPr
                     onPointerEnter={() => setActive(i)}
                     onFocus={() => setActive(i)}
                     onBlur={() => setActive(null)}
-                    className="cursor-default outline-none focus-visible:stroke-emerald-500 focus-visible:stroke-2"
+                    className="cursor-default outline-none focus-visible:stroke-accent focus-visible:stroke-2"
                   />
                 </g>
               );
@@ -192,7 +192,7 @@ export function IncomeExpenseChart({ series, granularity }: IncomeExpenseChartPr
               x2={width - MARGIN.right}
               y1={MARGIN.top + innerHeight}
               y2={MARGIN.top + innerHeight}
-              className="stroke-slate-300 dark:stroke-slate-700"
+              className="stroke-ink-3"
               strokeWidth={1}
             />
           </svg>
@@ -201,14 +201,14 @@ export function IncomeExpenseChart({ series, granularity }: IncomeExpenseChartPr
         {activePoint && activeDate && (
           <div
             role="status"
-            className="pointer-events-none absolute top-2 z-10 min-w-[170px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg dark:border-slate-700 dark:bg-slate-900"
+            className="pointer-events-none absolute top-2 z-10 min-w-[170px] rounded-sm border border-rule bg-surface px-3 py-2 text-xs shadow-[0_6px_16px_-8px_rgb(0_0_0/0.3)]"
             style={
               flipTooltip
                 ? { right: width - tooltipLeft + 12 }
                 : { left: tooltipLeft + 12 }
             }
           >
-            <p className="mb-1.5 font-medium text-slate-500 dark:text-slate-400">
+            <p className="mb-1.5 font-medium text-ink-3">
               {bucketTitle(activeDate, granularity)}
             </p>
             {[
@@ -216,11 +216,11 @@ export function IncomeExpenseChart({ series, granularity }: IncomeExpenseChartPr
               { label: "Pengeluaran", value: activePoint.expense, color: EXPENSE_COLOR },
             ].map((row) => (
               <div key={row.label} className="flex items-center justify-between gap-4 py-0.5">
-                <span className="inline-flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                <span className="inline-flex items-center gap-1.5 text-ink-3">
                   <span className="h-0.5 w-3 rounded" style={{ backgroundColor: row.color }} />
                   {row.label}
                 </span>
-                <span className="font-semibold text-slate-900 dark:text-slate-100">
+                <span className="num font-semibold text-ink">
                   {formatRupiah(row.value)}
                 </span>
               </div>
@@ -231,24 +231,24 @@ export function IncomeExpenseChart({ series, granularity }: IncomeExpenseChartPr
 
       {/* Table view: every value reachable without hovering */}
       <details className="text-xs">
-        <summary className="cursor-pointer select-none text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">
+        <summary className="cursor-pointer select-none text-ink-3 hover:text-ink">
           Lihat tabel data
         </summary>
-        <div className="mt-2 max-h-64 overflow-auto rounded-lg border border-slate-200 dark:border-slate-800">
+        <div className="mt-2 max-h-64 overflow-auto rounded-sm border border-rule">
           <table className="w-full text-left">
-            <thead className="sticky top-0 bg-slate-50 text-slate-500 dark:bg-slate-900 dark:text-slate-400">
+            <thead className="sticky top-0 bg-sunken text-ink-3">
               <tr>
                 <th scope="col" className="px-3 py-2 font-medium">Periode</th>
                 <th scope="col" className="px-3 py-2 text-right font-medium">Pemasukan</th>
                 <th scope="col" className="px-3 py-2 text-right font-medium">Pengeluaran</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700 dark:divide-slate-800 dark:text-slate-300">
+            <tbody className="divide-y divide-rule-soft text-ink-2">
               {series.map((point) => (
                 <tr key={point.date}>
                   <td className="px-3 py-1.5">{bucketTitle(parseDateOnly(point.date)!, granularity)}</td>
-                  <td className="px-3 py-1.5 text-right">{formatRupiah(point.income)}</td>
-                  <td className="px-3 py-1.5 text-right">{formatRupiah(point.expense)}</td>
+                  <td className="num px-3 py-1.5 text-right">{formatRupiah(point.income)}</td>
+                  <td className="num px-3 py-1.5 text-right">{formatRupiah(point.expense)}</td>
                 </tr>
               ))}
             </tbody>
