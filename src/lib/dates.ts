@@ -92,12 +92,12 @@ export type PeriodPreset =
   | "custom";
 
 export const PERIOD_PRESETS: { value: PeriodPreset; label: string }[] = [
-  { value: "this_week", label: "This Week" },
-  { value: "this_month", label: "This Month" },
-  { value: "last_month", label: "Last Month" },
-  { value: "last_3_months", label: "Last 3 Months" },
-  { value: "this_year", label: "This Year" },
-  { value: "custom", label: "Custom Range" },
+  { value: "this_week", label: "Minggu ini" },
+  { value: "this_month", label: "Bulan ini" },
+  { value: "last_month", label: "Bulan lalu" },
+  { value: "last_3_months", label: "3 bulan terakhir" },
+  { value: "this_year", label: "Tahun ini" },
+  { value: "custom", label: "Rentang lain" },
 ];
 
 export function isPeriodPreset(value: unknown): value is PeriodPreset {

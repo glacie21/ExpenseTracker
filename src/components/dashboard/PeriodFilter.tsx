@@ -2,7 +2,7 @@
 
 import React, { useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { CalendarRange, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { PERIOD_PRESETS, PeriodPreset } from "@/lib/dates";
 
@@ -11,14 +11,19 @@ interface PeriodFilterProps {
   start: string;
   end: string;
   label: string;
+  /** Rendered at the right end of the period row (e.g. quick actions). */
+  actions?: React.ReactNode;
   children: React.ReactNode;
 }
+
+const DATE_INPUT =
+  "mt-1 block h-9 rounded-sm border border-rule bg-surface px-2.5 text-sm text-ink focus:border-ink focus:outline-none";
 
 /**
  * Date-range filter for the dashboard. It sits above everything it scopes;
  * while the new period loads, the current content stays in place (dimmed).
  */
-export function PeriodFilter({ preset, start, end, label, children }: PeriodFilterProps) {
+export function PeriodFilter({ preset, start, end, label, actions, children }: PeriodFilterProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
@@ -61,60 +66,67 @@ export function PeriodFilter({ preset, start, end, label, children }: PeriodFilt
 
   return (
     <div className="space-y-6">
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Pilih periode">
-          {PERIOD_PRESETS.map((p) => (
-            <button
-              key={p.value}
-              type="button"
-              onClick={() => selectPreset(p.value)}
-              aria-pressed={activeValue === p.value}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 ${
-                activeValue === p.value
-                  ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-                  : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-800 dark:hover:bg-slate-800"
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-          {isPending && (
-            <Loader2 className="h-4 w-4 animate-spin text-slate-400" aria-label="Memuat periode" />
-          )}
+      <div className="space-y-4">
+        <div className="flex flex-col gap-4 border-b border-rule md:flex-row md:items-end md:justify-between">
+          <div
+            className="-mb-px flex gap-5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            role="group"
+            aria-label="Pilih periode"
+          >
+            {PERIOD_PRESETS.map((p) => {
+              const active = activeValue === p.value;
+              return (
+                <button
+                  key={p.value}
+                  type="button"
+                  onClick={() => selectPreset(p.value)}
+                  aria-pressed={active}
+                  className={`shrink-0 border-b-2 pb-2.5 text-sm transition-colors ${
+                    active
+                      ? "border-ink font-medium text-ink"
+                      : "border-transparent text-ink-3 hover:text-ink"
+                  }`}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
+          </div>
+          {actions && <div className="flex shrink-0 flex-wrap gap-2 pb-3">{actions}</div>}
         </div>
 
         {showCustom && (
           <form onSubmit={applyCustom} className="flex flex-wrap items-end gap-3">
-            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+            <label className="text-xs text-ink-3">
               Dari
               <input
                 type="date"
                 value={customStart}
                 onChange={(e) => setCustomStart(e.target.value)}
-                className="mt-1 block rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+                className={DATE_INPUT}
                 required
               />
             </label>
-            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+            <label className="text-xs text-ink-3">
               Sampai
               <input
                 type="date"
                 value={customEnd}
                 onChange={(e) => setCustomEnd(e.target.value)}
-                className="mt-1 block rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+                className={DATE_INPUT}
                 required
               />
             </label>
-            <Button type="submit" size="sm" variant="secondary">
+            <Button type="submit" size="md" variant="primary">
               Terapkan
             </Button>
-            {error && <p className="w-full text-xs text-rose-600">{error}</p>}
+            {error && <p className="w-full text-xs text-neg">{error}</p>}
           </form>
         )}
 
-        <p className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-          <CalendarRange className="h-3.5 w-3.5" />
-          Periode: <span className="font-semibold text-slate-700 dark:text-slate-200">{label}</span>
+        <p className="flex items-center gap-2 text-sm text-ink-2">
+          <span className="font-serif text-2xl text-ink">{label}</span>
+          {isPending && <Loader2 className="h-4 w-4 animate-spin text-ink-3" aria-label="Memuat periode" />}
         </p>
       </div>
 

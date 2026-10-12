@@ -1,10 +1,7 @@
 import React from "react";
 import Link from "next/link";
-import { ArrowDownLeft, ArrowUpRight, ArrowRight } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
-import { formatDate, formatRupiah } from "@/lib/formatters";
+import { Amount } from "@/components/ui/Amount";
+import { formatDate } from "@/lib/formatters";
 import { Transaction } from "@/types";
 
 interface RecentTransactionsProps {
@@ -13,75 +10,54 @@ interface RecentTransactionsProps {
 
 export function RecentTransactions({ transactions }: RecentTransactionsProps) {
   return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-base">Transaksi Terbaru</CardTitle>
-        <Link href="/transactions">
-          <Button variant="ghost" size="sm" rightIcon={<ArrowRight className="h-4 w-4" />}>
-            View All
-          </Button>
+    <section aria-labelledby="recent-heading" className="rounded-sm border border-rule bg-surface">
+      <div className="flex items-baseline justify-between gap-4 border-b border-rule-soft px-5 py-4 sm:px-6">
+        <h2 id="recent-heading" className="font-serif text-lg font-medium text-ink">
+          Transaksi terakhir
+        </h2>
+        <Link
+          href="/transactions"
+          className="text-sm text-ink-2 underline decoration-rule underline-offset-4 hover:text-ink hover:decoration-ink"
+        >
+          Lihat semua
         </Link>
-      </CardHeader>
-      <CardContent className="p-0">
-        <ul className="divide-y divide-slate-100 dark:divide-slate-800">
-          {transactions.map((tx) => {
-            const isIncome = tx.type === "INCOME";
-            return (
-              <li key={tx.id} className="flex items-center justify-between gap-4 px-5 py-4 sm:px-6">
-                <div className="flex min-w-0 items-center gap-3">
-                  <div
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                      isIncome
-                        ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400"
-                        : "bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400"
-                    }`}
-                    aria-label={isIncome ? "Pemasukan" : "Pengeluaran"}
-                  >
-                    {isIncome ? (
-                      <ArrowDownLeft className="h-5 w-5" />
-                    ) : (
-                      <ArrowUpRight className="h-5 w-5" />
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
-                      {tx.title}
-                    </p>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                      <span className="inline-flex items-center gap-1.5">
-                        <span
-                          className="h-2 w-2 rounded-full"
-                          style={{
-                            backgroundColor: tx.category?.color || (isIncome ? "#10b981" : "#f97316"),
-                          }}
-                        />
-                        {tx.category?.name ?? "Tanpa kategori"}
-                      </span>
-                      <span aria-hidden="true">·</span>
-                      <span>{formatDate(tx.date)}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex shrink-0 flex-col items-end gap-1">
-                  <span
-                    className={`text-sm font-semibold tracking-tight ${
-                      isIncome
-                        ? "text-emerald-600 dark:text-emerald-400"
-                        : "text-rose-600 dark:text-rose-400"
-                    }`}
-                  >
-                    {isIncome ? "+" : "-"}
-                    {formatRupiah(tx.amount)}
-                  </span>
-                  <Badge variant={isIncome ? "success" : "danger"} className="hidden sm:inline-flex">
-                    {isIncome ? "Income" : "Expense"}
-                  </Badge>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </CardContent>
-    </Card>
+      </div>
+
+      <table className="w-full text-sm">
+        <caption className="sr-only">Lima transaksi terakhir dari semua periode</caption>
+        <thead className="sr-only">
+          <tr>
+            <th scope="col">Tanggal</th>
+            <th scope="col">Transaksi</th>
+            <th scope="col">Nominal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {transactions.map((tx) => (
+            <tr key={tx.id} className="border-b border-rule-soft last:border-0">
+              <td className="w-28 py-3 pl-5 align-top font-mono text-xs whitespace-nowrap text-ink-3 sm:pl-6">
+                {formatDate(tx.date)}
+              </td>
+              <td className="py-3 pr-3">
+                <span className="block text-ink">{tx.title}</span>
+                <span className="mt-0.5 inline-flex items-center gap-1.5 text-xs text-ink-3">
+                  {tx.category?.color && (
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: tx.category.color }}
+                      aria-hidden="true"
+                    />
+                  )}
+                  {tx.category?.name ?? "Tanpa kategori"}
+                </span>
+              </td>
+              <td className="py-3 pr-5 text-right align-top sm:pr-6">
+                <Amount value={Number(tx.amount)} type={tx.type} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
   );
 }

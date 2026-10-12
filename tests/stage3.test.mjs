@@ -153,7 +153,7 @@ describe("analytics (dashboard)", () => {
   test("dashboard page renders the selected period", async () => {
     const res = await alice.client.get("/dashboard?period=custom&start=2024-03-01&end=2024-03-31");
     assert.equal(res.status, 200);
-    for (const text of ["Savings Rate", "Income vs Expense", "Expense Breakdown", "Rp5.000.000"]) {
+    for (const text of ["Neraca periode", "Tingkat tabungan", "Arus kas", "Pengeluaran per kategori", "Rp5.000.000"]) {
       assert.ok(res.body.includes(text), text);
     }
   });
