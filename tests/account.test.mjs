@@ -51,6 +51,24 @@ class Client {
   }
 }
 
+/**
+ * Follow redirects by hand (keeping cookies) and return where they end.
+ * Fails instead of hanging when the chain loops.
+ */
+async function followRedirects(client, path, maxHops = 5) {
+  let current = path;
+  for (let hop = 0; hop <= maxHops; hop++) {
+    const res = await client.get(current);
+    const location = res.headers.get("location");
+    if (res.status < 300 || res.status >= 400 || !location) {
+      return { status: res.status, path: current };
+    }
+    const next = new URL(location, BASE_URL);
+    current = next.pathname + next.search;
+  }
+  assert.fail(`redirect loop starting at ${path}`);
+}
+
 const emailFor = (label) => `${label}-${RUN_ID}@${EMAIL_DOMAIN}`;
 
 async function registerUser(label) {
@@ -230,6 +248,51 @@ describe("sessions", () => {
     const { client: fresh } = await login("stolen");
     await fresh.delete("/api/account/sessions");
     assert.equal((await stolen.get("/api/auth/me")).status, 401);
+  });
+
+  test("a revoked session lands on the login page instead of a redirect loop", async () => {
+    const first = await registerUser("revoked-loop");
+    const { client: second } = await login("revoked-loop");
+    await first.delete("/api/account/sessions");
+
+    const dashboard = await followRedirects(second, "/dashboard");
+    assert.equal(dashboard.path, "/login?redirect=%2Fdashboard");
+    assert.equal(dashboard.status, 200);
+
+    // The stale cookie was cleared, so the login page stays put on a reload
+    assert.equal((await second.get("/login")).status, 200);
+
+    // Same for the settings page, which checks the session on its own
+    const { client: stale } = await login("revoked-loop");
+    const { client: revoker } = await login("revoked-loop");
+    await revoker.delete("/api/account/sessions");
+    const settings = await followRedirects(stale, "/settings");
+    assert.equal(settings.path, "/login?redirect=%2Fsettings");
+    assert.equal(settings.status, 200);
+  });
+
+  test("a deleted account's other sessions land on the login page", async () => {
+    const first = await registerUser("deleted-loop");
+    const { client: second } = await login("deleted-loop");
+    assert.equal((await first.delete("/api/account", { password: PASSWORD })).status, 200);
+
+    // The requested page, query included, is kept for after the next login
+    const result = await followRedirects(second, "/transactions?type=EXPENSE");
+    assert.equal(result.status, 200);
+    assert.equal(result.path, "/login?redirect=%2Ftransactions%3Ftype%3DEXPENSE");
+  });
+
+  test("the session-expired route leaves a valid session alone", async () => {
+    const client = await registerUser("still-valid");
+
+    const res = await client.get("/api/auth/session-expired?redirect=/budgets");
+    assert.equal(res.status, 307);
+    assert.equal(new URL(res.headers.get("location")).pathname, "/budgets");
+    assert.equal((await client.get("/api/auth/me")).status, 200, "a cross-site link must not log the user out");
+
+    // Off-site redirect targets are ignored
+    const offsite = await client.get("/api/auth/session-expired?redirect=//evil.example");
+    assert.equal(new URL(offsite.headers.get("location")).pathname, "/dashboard");
   });
 });
 
