@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { AUTH_COOKIE_NAME, verifyToken } from "@/lib/jwt";
+import { AUTH_COOKIE_NAME, REQUEST_PATH_HEADER, verifyToken } from "@/lib/jwt";
 
 const PROTECTED_PREFIXES = ["/dashboard", "/transactions", "/categories", "/reports", "/budgets", "/settings"];
 
@@ -22,6 +22,17 @@ export async function proxy(request: NextRequest) {
   // If user is already logged in and tries to access login or register page
   if (isAuthPage && authenticated) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  if (isProtectedPath) {
+    // Lets the dashboard layout send a revoked session back here after login.
+    // Always overwritten, so a client-supplied value never reaches the layout.
+    const params = new URLSearchParams(search);
+    params.delete("_rsc");
+    const query = params.toString();
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set(REQUEST_PATH_HEADER, query ? `${pathname}?${query}` : pathname);
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   return NextResponse.next();

@@ -7,6 +7,9 @@ import { AuthSessionPayload } from "@/types";
  */
 export const AUTH_COOKIE_NAME = "expense_tracker_session";
 
+/** Request header the proxy sets so server layouts know which page was requested. */
+export const REQUEST_PATH_HEADER = "x-request-path";
+
 const DEV_FALLBACK_SECRET = "default_expense_tracker_dev_secret_key_32_chars_min";
 const MIN_SECRET_LENGTH = 32;
 

@@ -1,5 +1,7 @@
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { REQUEST_PATH_HEADER } from "@/lib/jwt";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 
 
@@ -15,8 +17,10 @@ export default async function DashboardLayout({
 }) {
   const user = await getCurrentUser();
 
+  // Clears a revoked cookie first; redirecting to /login directly would loop via the proxy
   if (!user) {
-    redirect("/login");
+    const requestedPath = (await headers()).get(REQUEST_PATH_HEADER) ?? "/dashboard";
+    redirect(`/api/auth/session-expired?redirect=${encodeURIComponent(requestedPath)}`);
   }
 
   return <DashboardShell user={user}>{children}</DashboardShell>;

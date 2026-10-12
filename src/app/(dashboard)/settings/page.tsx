@@ -9,7 +9,7 @@ export const metadata = {
 export default async function SettingsPage() {
   const user = await getCurrentUser();
   if (!user) {
-    redirect("/login?redirect=/settings");
+    redirect("/api/auth/session-expired?redirect=/settings");
   }
 
   return <SettingsPanel user={user} />;
