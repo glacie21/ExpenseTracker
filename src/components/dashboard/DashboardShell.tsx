@@ -18,21 +18,21 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
 
-  let pageTitle = "Dashboard";
-  let pageSubtitle = "Overview & Status Finansial";
+  let pageTitle = "Ringkasan";
+  let pageSubtitle = "Kondisi keuangan Anda pada periode yang dipilih";
 
   if (pathname.startsWith("/transactions")) {
     pageTitle = "Transaksi";
-    pageSubtitle = "Kelola catatan pemasukan dan pengeluaran";
+    pageSubtitle = "Semua pemasukan dan pengeluaran yang tercatat";
   } else if (pathname.startsWith("/reports")) {
     pageTitle = "Laporan";
-    pageSubtitle = "Ringkasan dan ekspor laporan keuangan";
+    pageSubtitle = "Ringkasan per periode, siap diunduh";
   } else if (pathname.startsWith("/budgets")) {
     pageTitle = "Anggaran";
     pageSubtitle = "Batas pengeluaran bulanan per kategori";
   } else if (pathname.startsWith("/categories")) {
     pageTitle = "Kategori";
-    pageSubtitle = "Kelola kategori transaksi keuangan Anda";
+    pageSubtitle = "Pengelompokan untuk transaksi dan anggaran";
   } else if (pathname.startsWith("/settings")) {
     pageTitle = "Pengaturan";
     pageSubtitle = "Profil, password, dan keamanan akun";
@@ -49,7 +49,7 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950 flex flex-col lg:flex-row">
+    <div className="flex min-h-screen flex-col bg-paper lg:flex-row">
       {/* Sidebar */}
       <Sidebar
         user={user}
@@ -66,10 +66,9 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
           user={user}
           onOpenSidebar={() => setSidebarOpen(true)}
           onOpenProfile={() => setProfileModalOpen(true)}
-          onLogout={handleLogout}
         />
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-8 sm:py-8">
           {children}
         </main>
       </div>
