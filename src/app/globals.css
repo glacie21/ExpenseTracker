@@ -1,34 +1,121 @@
 @import "tailwindcss";
 
+/*
+ * Ledger theme: warm paper, black ink, blue ink for the one accent and red ink
+ * for money going out. Every color is a token here, so components never need
+ * `dark:` variants; dark mode swaps the tokens below.
+ */
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
-}
+  --paper: #f4f1ea;
+  --surface: #fbfaf7;
+  --sunken: #ece8de;
+  --ink: #1c1b18;
+  --ink-2: #57544c;
+  --ink-3: #75716a;
+  --rule: #d8d3c6;
+  --rule-soft: #e7e3d8;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --accent: #2b67a8;
+  --accent-soft: #e3eaf3;
+  --on-accent: #fbfaf7;
+
+  /* Money going out / errors */
+  --neg: #b0442a;
+  --neg-soft: #f6e4dd;
+  /* Success and "good" changes */
+  --pos: #2f6b45;
+  --pos-soft: #e2eee4;
+  --warn: #8a5a12;
+  --warn-soft: #f5ead4;
+
+  /* Chart series, validated for CVD separation against --surface */
+  --chart-income: #2b67a8;
+  --chart-expense: #c4532b;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #020617;
-    --foreground: #f8fafc;
+    --paper: #141412;
+    --surface: #1b1a17;
+    --sunken: #23221e;
+    --ink: #ece9e1;
+    --ink-2: #b4afa3;
+    --ink-3: #8f8a7d;
+    --rule: #36342e;
+    --rule-soft: #282722;
+
+    --accent: #8fb3e6;
+    --accent-soft: #1f2a38;
+    --on-accent: #141412;
+
+    --neg: #e88a6c;
+    --neg-soft: #3a221b;
+    --pos: #79c294;
+    --pos-soft: #1b2e22;
+    --warn: #e2b25e;
+    --warn-soft: #33281a;
+
+    --chart-income: #5b8fd0;
+    --chart-expense: #d86a45;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-sunken: var(--sunken);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-rule: var(--rule);
+  --color-rule-soft: var(--rule-soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-neg: var(--neg);
+  --color-neg-soft: var(--neg-soft);
+  --color-pos: var(--pos);
+  --color-pos-soft: var(--pos-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-chart-income: var(--chart-income);
+  --color-chart-expense: var(--chart-expense);
+
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-source-serif), Georgia, "Times New Roman", serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 }
 
-/* Custom smooth scrollbar */
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* Money and other figures: serif, lining, every digit the same width */
+.num {
+  font-family: var(--font-serif);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* The accountant's double rule under a final total */
+.rule-total {
+  border-bottom: 3px double var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -36,10 +123,5 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 9999px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: var(--rule);
 }
