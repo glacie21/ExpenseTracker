@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
 export default function DashboardError({
@@ -17,26 +16,19 @@ export default function DashboardError({
   }, [error]);
 
   return (
-    <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-center" role="alert">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400">
-        <AlertTriangle className="h-6 w-6" />
-      </div>
-      <div className="space-y-1">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Halaman gagal dimuat</h2>
-        <p className="max-w-md text-sm text-slate-600 dark:text-slate-400">
-          Terjadi kesalahan saat memuat data. Data Anda tetap aman. Silakan coba lagi.
-        </p>
-        {error.digest && <p className="text-xs text-slate-400">Kode error: {error.digest}</p>}
-      </div>
-      <div className="flex gap-3">
-        <Button onClick={() => retry()} leftIcon={<RefreshCw className="h-4 w-4" />}>
-          Coba Lagi
-        </Button>
+    <div className="mx-auto max-w-md py-16" role="alert">
+      <h2 className="font-serif text-2xl font-medium text-ink">Halaman gagal dimuat</h2>
+      <p className="mt-3 text-ink-2">
+        Terjadi kesalahan saat memuat data. Data Anda tetap aman. Silakan coba lagi.
+      </p>
+      {error.digest && <p className="mt-2 font-mono text-xs text-ink-3">Kode error: {error.digest}</p>}
+      <div className="mt-8 flex gap-2">
+        <Button onClick={() => retry()}>Coba lagi</Button>
         <Link
           href="/dashboard"
-          className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+          className="inline-flex h-9 items-center rounded-sm border border-rule bg-surface px-4 text-sm font-medium text-ink hover:bg-sunken"
         >
-          Ke Dashboard
+          Ke ringkasan
         </Link>
       </div>
     </div>

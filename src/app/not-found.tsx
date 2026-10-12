@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Compass } from "lucide-react";
 
 export const metadata = {
   title: "Halaman tidak ditemukan - Expense Tracker",
@@ -7,22 +6,15 @@ export const metadata = {
 
 export default function NotFound() {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-24 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
-        <Compass className="h-6 w-6" />
-      </div>
-      <div className="space-y-1">
-        <p className="text-sm font-semibold text-emerald-600">404</p>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Halaman tidak ditemukan</h1>
-        <p className="max-w-md text-sm text-slate-600 dark:text-slate-400">
-          Halaman yang Anda cari tidak ada atau sudah dipindahkan.
-        </p>
-      </div>
+    <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-24">
+      <p className="num text-sm text-ink-3">404</p>
+      <h1 className="mt-1 font-serif text-3xl font-medium text-ink">Halaman tidak ditemukan</h1>
+      <p className="mt-3 text-ink-2">Halaman yang Anda cari tidak ada atau sudah dipindahkan.</p>
       <Link
         href="/dashboard"
-        className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700"
+        className="mt-8 inline-flex h-9 w-fit items-center rounded-sm bg-ink px-4 text-sm font-medium text-paper hover:bg-ink/85"
       >
-        Kembali ke Dashboard
+        Kembali ke ringkasan
       </Link>
     </main>
   );

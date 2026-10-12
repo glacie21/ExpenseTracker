@@ -25,7 +25,9 @@ export default function GlobalError({
           alignItems: "center",
           justifyContent: "center",
           gap: 16,
-          fontFamily: "system-ui, sans-serif",
+          fontFamily: "Georgia, serif",
+          background: "#f4f1ea",
+          color: "#1c1b18",
           textAlign: "center",
           padding: 16,
         }}
@@ -38,10 +40,11 @@ export default function GlobalError({
           onClick={() => retry()}
           style={{
             padding: "8px 16px",
-            borderRadius: 12,
+            borderRadius: 4,
             border: "none",
-            background: "#059669",
-            color: "white",
+            fontSize: 14,
+            background: "#1c1b18",
+            color: "#fbfaf7",
             cursor: "pointer",
           }}
         >
