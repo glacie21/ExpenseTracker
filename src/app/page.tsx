@@ -1,229 +1,139 @@
 import Link from "next/link";
-import {
-  ArrowRight,
-  ShieldCheck,
-  Zap,
-  Lock,
-  Database,
-  BarChart2,
-  CheckCircle2,
-  Layers,
-} from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
-import { Button } from "@/components/ui/Button";
-import { Card, CardContent } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+import { Amount } from "@/components/ui/Amount";
+
+// Illustrative month on the landing page (not user data)
+const SAMPLE_ENTRIES = [
+  { date: "01 Okt", title: "Gaji", category: "Gaji", type: "INCOME", amount: 8_500_000 },
+  { date: "02 Okt", title: "Sewa kos", category: "Tempat tinggal", type: "EXPENSE", amount: 1_800_000 },
+  { date: "—", title: "Makan & minum", category: "38 transaksi", type: "EXPENSE", amount: 1_240_500 },
+  { date: "—", title: "Transportasi", category: "21 transaksi", type: "EXPENSE", amount: 385_000 },
+  { date: "15 Okt", title: "Langganan musik & film", category: "Hiburan", type: "EXPENSE", amount: 186_000 },
+] as const;
+
+const SAMPLE_INCOME = 8_500_000;
+const SAMPLE_EXPENSE = 3_611_500;
+
+const STEPS = [
+  {
+    title: "Catat",
+    body: "Setiap pemasukan dan pengeluaran masuk ke kategori, seperti makan, transportasi, atau tagihan. Satu transaksi cukup beberapa detik.",
+  },
+  {
+    title: "Batasi",
+    body: "Pasang anggaran bulanan per kategori. Anda diberi tahu saat pengeluaran mendekati 80%, habis, atau sudah lewat batas.",
+  },
+  {
+    title: "Tinjau",
+    body: "Bandingkan bulan ini dengan bulan lalu, lihat kategori yang paling boros, lalu unduh laporannya sebagai PDF atau CSV.",
+  },
+];
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950 flex flex-col selection:bg-emerald-500 selection:text-white">
-      {/* Navigation */}
+    <div className="flex min-h-screen flex-col">
       <Navbar />
 
-      {/* Hero Section */}
       <main className="flex-1">
-        <section className="relative overflow-hidden pt-12 pb-20 md:pt-20 md:pb-32">
-          {/* Subtle background glow */}
-          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />
-
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
-            {/* Stage badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-100/80 border border-emerald-200 text-emerald-800 text-xs font-semibold mb-6 dark:bg-emerald-950/60 dark:border-emerald-800 dark:text-emerald-300">
-              <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              Pencatatan Transaksi, Kategori & Ringkasan Keuangan Siap Digunakan
-            </div>
-
-            {/* Main Headline */}
-            <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl md:text-6xl dark:text-white max-w-4xl mx-auto leading-tight">
-              Kendalikan Keuangan Pribadi Anda dengan{" "}
-              <span className="bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">
-                Lebih Cerdas & Aman
-              </span>
+        <section className="mx-auto grid max-w-6xl gap-12 px-4 py-16 sm:px-8 sm:py-24 lg:grid-cols-[1fr_minmax(0,28rem)] lg:items-center lg:gap-16">
+          <div>
+            <h1 className="font-serif text-4xl font-medium leading-[1.1] text-ink sm:text-5xl lg:text-6xl">
+              Tahu persis ke mana uang Anda pergi.
             </h1>
-
-            {/* Subtitle */}
-            <p className="mt-6 max-w-2xl mx-auto text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
-              Expense Tracker modern dengan teknologi Next.js App Router, PostgreSQL, dan Prisma. 
-              Dirancang untuk kemudahan pemantauan saldo, pemasukan, dan pengeluaran harian Anda.
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-2">
+              Catat pemasukan dan pengeluaran harian. Di akhir bulan, Anda punya laporan yang jujur:
+              berapa yang masuk, berapa yang keluar, dan kategori mana yang paling banyak menyedot.
             </p>
-
-            {/* CTA Buttons */}
-            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/register" className="w-full sm:w-auto">
-                <Button
-                  size="lg"
-                  className="w-full sm:w-auto px-8"
-                  rightIcon={<ArrowRight className="w-5 h-5" />}
-                >
-                  Mulai Sekarang Gratis
-                </Button>
+            <div className="mt-10 flex flex-wrap items-center gap-3">
+              <Link
+                href="/register"
+                className="inline-flex h-11 items-center rounded-sm bg-ink px-5 text-sm font-medium text-paper transition-colors hover:bg-ink/85"
+              >
+                Buat akun gratis
               </Link>
-              <Link href="/login" className="w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full sm:w-auto px-8"
-                >
-                  Masuk ke Akun
-                </Button>
+              <Link
+                href="/login"
+                className="inline-flex h-11 items-center rounded-sm border border-rule bg-surface px-5 text-sm font-medium text-ink transition-colors hover:bg-sunken"
+              >
+                Saya sudah punya akun
               </Link>
             </div>
-
-            {/* Trust Points */}
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-500 dark:text-slate-400">
-              <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                Password Bcrypt Hashing
-              </span>
-              <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                Next.js App Router
-              </span>
-              <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                PostgreSQL & Prisma ORM
-              </span>
-            </div>
-
-            {/* Interactive Preview Mockup Card */}
-            <div className="mt-16 max-w-4xl mx-auto">
-              <div className="rounded-2xl border border-slate-200/80 bg-white/70 p-2 shadow-2xl backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/70 sm:p-4">
-                <div className="rounded-xl border border-slate-200/60 bg-white p-5 text-left dark:border-slate-800/80 dark:bg-slate-950">
-                  <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800/60">
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full bg-rose-400" />
-                      <div className="h-3 w-3 rounded-full bg-amber-400" />
-                      <div className="h-3 w-3 rounded-full bg-emerald-400" />
-                      <span className="ml-2 text-xs font-mono text-slate-400">
-                        dashboard.expensetracker.app
-                      </span>
-                    </div>
-                    <Badge variant="success">Protected Route</Badge>
-                  </div>
-
-                  <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
-                      <span className="text-[10px] text-slate-400 font-medium">TOTAL SALDO</span>
-                      <p className="text-base font-bold text-slate-800 dark:text-white mt-1">Rp0</p>
-                    </div>
-                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
-                      <span className="text-[10px] text-slate-400 font-medium">PEMASUKAN</span>
-                      <p className="text-base font-bold text-teal-600 mt-1">Rp0</p>
-                    </div>
-                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
-                      <span className="text-[10px] text-slate-400 font-medium">PENGELUARAN</span>
-                      <p className="text-base font-bold text-rose-500 mt-1">Rp0</p>
-                    </div>
-                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
-                      <span className="text-[10px] text-slate-400 font-medium">TABUNGAN</span>
-                      <p className="text-base font-bold text-indigo-600 mt-1">Rp0</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
+
+          {/* A sample statement: what the app actually produces */}
+          <figure className="rounded-sm border border-rule bg-surface">
+            <figcaption className="flex items-baseline justify-between border-b border-rule px-5 py-4">
+              <span className="font-serif text-lg text-ink">Oktober 2026</span>
+              <span className="text-xs text-ink-3">Contoh</span>
+            </figcaption>
+            <table className="w-full text-sm">
+              <caption className="sr-only">Contoh catatan transaksi satu bulan</caption>
+              <tbody>
+                {SAMPLE_ENTRIES.map((entry) => (
+                  <tr key={entry.title} className="border-b border-rule-soft">
+                    <td className="w-20 py-2.5 pr-3 pl-5 align-top font-mono text-xs whitespace-nowrap text-ink-3">{entry.date}</td>
+                    <td className="py-2.5 pr-3">
+                      <span className="block text-ink">{entry.title}</span>
+                      <span className="block text-xs text-ink-3">{entry.category}</span>
+                    </td>
+                    <td className="py-2.5 pr-5 text-right align-top">
+                      <Amount value={entry.amount} type={entry.type} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th scope="row" colSpan={2} className="pt-4 pl-5 text-left font-normal text-ink-2">
+                    Masuk
+                  </th>
+                  <td className="pt-4 pr-5 text-right">
+                    <Amount value={SAMPLE_INCOME} />
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row" colSpan={2} className="pt-1 pl-5 text-left font-normal text-ink-2">
+                    Keluar
+                  </th>
+                  <td className="pt-1 pr-5 text-right">
+                    <Amount value={-SAMPLE_EXPENSE} />
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row" colSpan={2} className="pt-3 pb-5 pl-5 text-left font-medium text-ink">
+                    Sisa bulan ini
+                  </th>
+                  <td className="pt-3 pb-5 pr-5 text-right">
+                    <span className="rule-total inline-block pb-0.5">
+                      <Amount value={SAMPLE_INCOME - SAMPLE_EXPENSE} className="text-lg font-semibold" />
+                    </span>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </figure>
         </section>
 
-        {/* Features Preview Section */}
-        <section id="features" className="py-16 bg-white dark:bg-slate-900 border-t border-slate-200/80 dark:border-slate-800">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-2xl mx-auto">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                Fitur & Rencana Pengembangan
-              </h2>
-              <p className="mt-2 text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
-                Dibangun Bertahap dengan Arsitektur Bersih
-              </p>
-            </div>
-
-            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card id="security" className="scroll-mt-24 hover:border-emerald-300 transition-colors">
-                <CardContent className="p-6">
-                  <div className="h-10 w-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center mb-4">
-                    <ShieldCheck className="h-5 w-5" />
-                  </div>
-                  <h3 className="font-semibold text-base text-slate-900 dark:text-white">
-                    Autentikasi Aman & Modern
-                  </h3>
-                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                    Sistem pendaftaran dan login terlindungi dengan hashing kata sandi Bcrypt serta JWT session cookie HTTP-only.
-                  </p>
-                  <div className="mt-4">
-                    <Badge variant="success">Tersedia</Badge>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:border-emerald-300 transition-colors">
-                <CardContent className="p-6">
-                  <div className="h-10 w-10 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 flex items-center justify-center mb-4">
-                    <Database className="h-5 w-5" />
-                  </div>
-                  <h3 className="font-semibold text-base text-slate-900 dark:text-white">
-                    PostgreSQL & Prisma ORM
-                  </h3>
-                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                    Skema database relasional yang terstruktur rapi; seluruh transaksi dan ringkasan dihitung langsung dari PostgreSQL.
-                  </p>
-                  <div className="mt-4">
-                    <Badge variant="success">Tersedia</Badge>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:border-emerald-300 transition-colors">
-                <CardContent className="p-6">
-                  <div className="h-10 w-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 flex items-center justify-center mb-4">
-                    <BarChart2 className="h-5 w-5" />
-                  </div>
-                  <h3 className="font-semibold text-base text-slate-900 dark:text-white">
-                    Manajemen Transaksi
-                  </h3>
-                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                    Pencatatan pemasukan dan pengeluaran, kategori kustom, pencarian, filter, serta ringkasan saldo.
-                  </p>
-                  <div className="mt-4">
-                    <Badge variant="success">Tersedia</Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </section>
-
-        {/* Tech Stack Banner */}
-        <section id="architecture" className="py-16 bg-slate-50 dark:bg-slate-950 border-t border-slate-200/80 dark:border-slate-800">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">
-              Teknologi yang Digunakan
-            </h3>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-8 text-sm font-medium text-slate-700 dark:text-slate-300">
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                <Layers className="w-4 h-4 text-emerald-600" />
-                <span>Next.js App Router</span>
-              </div>
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                <Zap className="w-4 h-4 text-teal-600" />
-                <span>TypeScript</span>
-              </div>
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                <Lock className="w-4 h-4 text-indigo-600" />
-                <span>Tailwind CSS</span>
-              </div>
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                <Database className="w-4 h-4 text-blue-600" />
-                <span>PostgreSQL & Prisma</span>
-              </div>
-            </div>
+        <section className="border-t border-rule bg-surface">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-8 sm:py-20">
+            <h2 className="font-serif text-2xl font-medium text-ink sm:text-3xl">Cara kerjanya</h2>
+            <ol className="mt-10 grid gap-10 md:grid-cols-3 md:gap-8">
+              {STEPS.map((step, i) => (
+                <li key={step.title} className="border-t border-ink pt-4">
+                  <span className="num text-sm text-ink-3">{String(i + 1).padStart(2, "0")}</span>
+                  <h3 className="mt-1 font-serif text-xl text-ink">{step.title}</h3>
+                  <p className="mt-2 leading-relaxed text-ink-2">{step.body}</p>
+                </li>
+              ))}
+            </ol>
           </div>
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white py-8 dark:border-slate-800 dark:bg-slate-950 text-center text-xs text-slate-500">
-        <div className="mx-auto max-w-7xl px-4">
-          <p>© {new Date().getFullYear()} Expense Tracker App — Kelola pemasukan dan pengeluaran pribadi Anda.</p>
+      <footer className="border-t border-rule">
+        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-8 text-sm text-ink-3 sm:flex-row sm:justify-between sm:px-8">
+          <span>© {new Date().getFullYear()} Expense Tracker</span>
+          <span>Data Anda hanya bisa dilihat oleh Anda.</span>
         </div>
       </footer>
     </div>
