@@ -25,27 +25,21 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyles =
-      "inline-flex items-center justify-center font-medium rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed select-none active:scale-[0.98]";
+      "inline-flex items-center justify-center rounded-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed select-none";
 
     const sizeStyles = {
-      sm: "px-3 py-1.5 text-xs gap-1.5",
-      md: "px-4 py-2 text-sm gap-2",
-      lg: "px-6 py-2.5 text-base gap-2.5",
+      sm: "h-8 px-3 text-xs gap-1.5",
+      md: "h-9 px-4 text-sm gap-2",
+      lg: "h-11 px-5 text-sm gap-2",
     };
 
     const variantStyles = {
-      primary:
-        "bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm shadow-emerald-600/20 focus:ring-emerald-500",
-      secondary:
-        "bg-slate-900 text-white hover:bg-slate-800 shadow-sm focus:ring-slate-900 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200",
-      outline:
-        "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 focus:ring-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800",
-      ghost:
-        "text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:ring-slate-300 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white",
-      danger:
-        "bg-rose-600 text-white hover:bg-rose-700 shadow-sm shadow-rose-600/20 focus:ring-rose-500",
-      soft:
-        "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 focus:ring-emerald-400 dark:bg-emerald-950/50 dark:text-emerald-300",
+      primary: "bg-ink text-paper hover:bg-ink/85",
+      secondary: "bg-accent text-on-accent hover:bg-accent/90",
+      outline: "border border-rule bg-surface text-ink hover:bg-sunken",
+      ghost: "text-ink-2 hover:bg-sunken hover:text-ink",
+      danger: "bg-neg text-paper hover:bg-neg/90",
+      soft: "bg-accent-soft text-accent hover:bg-accent-soft/70",
     };
 
     return (

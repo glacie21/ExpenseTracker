@@ -31,28 +31,17 @@ export function ConfirmDialog({
   return (
     <Modal isOpen={isOpen} onClose={isLoading ? () => {} : onClose} maxWidth="sm">
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
-              variant === "danger"
-                ? "bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400"
-                : "bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400"
-            }`}
-          >
-            <AlertTriangle className="h-5 w-5" />
-          </div>
-          <div>
-            <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-              {title}
-            </h4>
-          </div>
+        <div className="flex items-center gap-2.5">
+          <AlertTriangle
+            className={`h-5 w-5 shrink-0 ${variant === "danger" ? "text-neg" : "text-warn"}`}
+            aria-hidden="true"
+          />
+          <h4 className="font-serif text-lg font-medium text-ink">{title}</h4>
         </div>
 
-        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-          {message}
-        </p>
+        <p className="text-sm text-ink-2 leading-relaxed">{message}</p>
 
-        <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-end gap-2 pt-4 border-t border-rule-soft">
           <Button
             variant="outline"
             size="sm"

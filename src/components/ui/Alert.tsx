@@ -15,39 +15,37 @@ export function Alert({
   className = "",
   ...props
 }: AlertProps) {
+  // A colored left rule marks the kind; the body text stays in ink
   const variantStyles = {
-    info: "bg-sky-50 border-sky-200 text-sky-800 dark:bg-sky-950/40 dark:border-sky-800 dark:text-sky-300",
-    success:
-      "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300",
-    warning:
-      "bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-300",
-    error:
-      "bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300",
+    info: "border-accent bg-accent-soft",
+    success: "border-pos bg-pos-soft",
+    warning: "border-warn bg-warn-soft",
+    error: "border-neg bg-neg-soft",
   };
 
   const icons = {
-    info: <Info className="w-5 h-5 text-sky-500 shrink-0" />,
-    success: <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />,
-    warning: <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />,
-    error: <AlertCircle className="w-5 h-5 text-rose-500 shrink-0" />,
+    info: <Info className="w-4 h-4 text-accent shrink-0" />,
+    success: <CheckCircle2 className="w-4 h-4 text-pos shrink-0" />,
+    warning: <AlertTriangle className="w-4 h-4 text-warn shrink-0" />,
+    error: <AlertCircle className="w-4 h-4 text-neg shrink-0" />,
   };
 
   return (
     <div
       role="alert"
-      className={`relative flex items-start gap-3 rounded-xl border p-4 text-sm transition-all ${variantStyles[variant]} ${className}`}
+      className={`relative flex items-start gap-3 rounded-sm border-l-[3px] px-4 py-3 text-sm text-ink ${variantStyles[variant]} ${className}`}
       {...props}
     >
       <div className="mt-0.5">{icons[variant]}</div>
       <div className="flex-1">
-        {title && <h5 className="font-semibold mb-1 tracking-tight">{title}</h5>}
-        <div className="text-sm opacity-90 leading-relaxed">{children}</div>
+        {title && <p className="font-semibold mb-0.5">{title}</p>}
+        <div className="leading-relaxed text-ink-2">{children}</div>
       </div>
       {onClose && (
         <button
           type="button"
           onClick={onClose}
-          className="rounded-lg p-1 text-slate-400 hover:text-slate-600 focus:outline-none dark:hover:text-slate-200"
+          className="rounded-sm p-0.5 text-ink-3 hover:text-ink"
           aria-label="Tutup pesan"
         >
           <X className="w-4 h-4" />

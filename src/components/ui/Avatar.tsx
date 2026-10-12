@@ -17,7 +17,7 @@ export function Avatar({
     sm: "w-8 h-8 text-xs",
     md: "w-10 h-10 text-sm",
     lg: "w-12 h-12 text-base",
-    xl: "w-16 h-16 text-lg font-bold",
+    xl: "w-16 h-16 text-xl",
   };
 
   const getInitials = (fullName: string) => {
@@ -29,16 +29,12 @@ export function Avatar({
 
   return (
     <div
-      className={`inline-flex shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 font-semibold ring-2 ring-emerald-500/20 select-none dark:bg-emerald-950 dark:text-emerald-300 ${sizeStyles[size]} ${className}`}
+      className={`inline-flex shrink-0 items-center justify-center rounded-full border border-rule bg-sunken font-serif text-ink select-none ${sizeStyles[size]} ${className}`}
       {...props}
     >
       {src ? (
         /* eslint-disable-next-line @next/next/no-img-element */
-        <img
-          src={src}
-          alt={name}
-          className="w-full h-full rounded-full object-cover"
-        />
+        <img src={src} alt={name} className="w-full h-full rounded-full object-cover" />
       ) : (
         <span>{getInitials(name)}</span>
       )}
