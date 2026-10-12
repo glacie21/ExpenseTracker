@@ -80,7 +80,7 @@ Aplikasi web untuk mencatat dan memantau kondisi keuangan pribadi: pemasukan, pe
   - **Ganti password**: wajib memasukkan password saat ini. Setelah berhasil, sesi di perangkat lain berakhir, sedangkan sesi saat ini tetap berjalan.
   - **Logout dari semua perangkat**: mengakhiri semua sesi, termasuk sesi saat ini.
   - **Hapus akun**: wajib memasukkan password. Akun beserta seluruh transaksi, kategori, dan anggaran dihapus permanen.
-- **Pencabutan sesi**: setiap token membawa `sessionVersion` milik pengguna. Ganti password atau "logout semua perangkat" menaikkan versi tersebut, sehingga semua token lama langsung ditolak di setiap request.
+- **Pencabutan sesi**: setiap token membawa `sessionVersion` milik pengguna. Ganti password atau "logout semua perangkat" menaikkan versi tersebut, sehingga semua token lama langsung ditolak di setiap request. Perangkat yang sesinya dicabut (atau akunnya dihapus) diarahkan lewat `/api/auth/session-expired`, yang menghapus cookie lama lalu membuka halaman login. Setelah login ulang, pengguna kembali ke halaman yang tadi dibuka.
 - **Rate limiting** (di memori proses):
 
   | Aksi | Batas |
@@ -264,6 +264,7 @@ Semua endpoint di bawah (kecuali register/login/logout) membutuhkan sesi login. 
 | :--- | :--- | :--- |
 | `POST` | `/api/auth/register` · `/api/auth/login` · `/api/auth/logout` | Autentikasi |
 | `GET` | `/api/auth/me` | Profil pengguna aktif |
+| `GET` | `/api/auth/session-expired?redirect=` | Menghapus cookie sesi yang sudah dicabut lalu mengarahkan ke `/login`; sesi yang masih valid tidak disentuh |
 | `PUT` / `DELETE` | `/api/account` | Ubah nama (`{ name }`) / hapus akun beserta seluruh data (`{ password }`) |
 | `PUT` | `/api/account/password` | Ganti password (`{ currentPassword, newPassword, confirmPassword }`); sesi lain dicabut |
 | `DELETE` | `/api/account/sessions` | Logout dari semua perangkat |
