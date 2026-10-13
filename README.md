@@ -41,35 +41,35 @@ Aplikasi web untuk mencatat dan memantau kondisi keuangan pribadi: pemasukan, pe
 
 ### Tahap 2 — Core Features
 - **Manajemen transaksi** (`/transactions`):
-  - Tabel berisi tanggal, nama, kategori, tipe (badge), nominal, dan aksi.
+  - Tabel berisi tanggal, judul, kategori, nominal (bertanda + / −), dan aksi.
   - Tambah/edit lewat modal (tipe, judul, nominal, kategori, tanggal, deskripsi opsional) dengan validasi, loading state, dan pencegahan submit ganda.
   - Hapus dengan dialog konfirmasi.
   - **Search** (dengan debounce), **filter** tipe/kategori/rentang tanggal/tahun/bulan, **sorting**, dan **pagination di server**. Filter tersimpan di URL.
-  - **Export CSV** sesuai filter aktif (Tahap 3).
+  - **Unduh CSV** sesuai filter aktif (Tahap 3).
 - **Manajemen kategori** (`/categories`):
-  - Tab Semua/Income/Expense, tambah, ubah nama/warna, hapus.
-  - **13 kategori default** dibuat otomatis per pengguna, tanpa duplikasi.
+  - Tab Semua/Pemasukan/Pengeluaran, tambah, ubah nama/warna, hapus.
+  - **13 kategori default** berbahasa Indonesia (Gaji, Makan & minum, Transportasi, dst.) dibuat otomatis per pengguna, tanpa duplikasi. Akun yang dibuat sebelum kategori diterjemahkan tetap memakai nama lamanya; namanya bisa diubah di halaman Kategori.
   - Kategori yang masih dipakai transaksi atau anggaran **tidak bisa dihapus**. Transaksi tidak pernah ikut terhapus.
-- **Quick actions** di dashboard: Add Income, Add Expense, View Transactions; plus **5 transaksi terbaru** dengan **View All**.
+- **Aksi cepat** di dashboard: **Catat pengeluaran** dan **Catat pemasukan**, plus **5 transaksi terakhir** dengan tautan **Lihat semua**.
 
 ### Tahap 3 — Advanced Features
 - **Dashboard analitik** (`/dashboard`):
-  - **Pemilih periode**: This Week, This Month, Last Month, Last 3 Months, This Year, Custom Range. Semua kartu dan grafik mengikuti periode yang dipilih, dan label periodenya selalu ditampilkan.
-  - **Kartu ringkasan periode**: Total Income, Total Expense, Net Balance, Savings Rate.
+  - **Pemilih periode**: Minggu ini, Bulan ini, Bulan lalu, 3 bulan terakhir, Tahun ini, Rentang lain. Semua angka dan grafik mengikuti periode yang dipilih, dan label periodenya selalu ditampilkan.
+  - **Neraca periode**: pemasukan, pengeluaran, dan saldo bersih (atau defisit) dalam satu tabel, ditutup garis ganda, plus tingkat tabungan.
   - **Tren** dibanding periode sebelumnya, untuk pemasukan, pengeluaran, dan saldo bersih: selisih nominal dan persentase. Jika periode pembanding bernilai nol, ditampilkan "Belum ada data pembanding", bukan persentase yang menyesatkan.
-  - **Grafik Income vs Expense**: harian, mingguan, atau bulanan tergantung panjang periode. Tooltip menampilkan tanggal dan nominal Rupiah, tersedia lewat mouse maupun keyboard, ukurannya responsif, dan ada tabel data sebagai alternatif.
-  - **Expense Breakdown**: bar per kategori dengan nominal, persentase, warna kategori, dan tooltip.
-  - Saldo bersih seluruh transaksi tetap ditampilkan di bagian sapaan.
+  - **Grafik arus kas** (pemasukan vs pengeluaran): harian, mingguan, atau bulanan tergantung panjang periode. Tooltip menampilkan tanggal dan nominal Rupiah, tersedia lewat mouse maupun keyboard, ukurannya responsif, dan ada tabel data sebagai alternatif.
+  - **Pengeluaran per kategori**: bar per kategori dengan nominal, persentase, warna kategori, dan tooltip.
+  - Saldo dari seluruh catatan sejak awal ditampilkan di bawah dashboard.
 - **Laporan** (`/reports`):
   - Periode mingguan, bulanan, tahunan, atau rentang khusus, dengan navigasi sebelumnya/berikutnya. Filter jenis transaksi dan kategori.
-  - Ringkasan: total pemasukan, pengeluaran, saldo bersih, savings rate, jumlah transaksi, dan kategori pengeluaran terbesar.
-  - **Category insights**: distribusi pengeluaran dan kategori yang pengeluarannya naik dibanding periode sebelumnya.
+  - Neraca: pemasukan, pengeluaran, saldo bersih, tingkat tabungan, dan kategori pengeluaran terbesar.
+  - **Wawasan kategori**: pengeluaran per kategori, dan tabel kategori yang pengeluarannya naik dibanding periode sebelumnya.
   - Tabel transaksi sesuai filter dengan pagination di server.
-  - **Export CSV** dan **Download PDF** dengan filter yang sama.
+  - **Unduh CSV** dan **Unduh PDF** dengan filter yang sama.
 - **Anggaran** (`/budgets`):
   - Anggaran bulanan per kategori pengeluaran: buat, edit, dan hapus (dengan konfirmasi), plus daftar per bulan/tahun.
-  - Progres per anggaran: batas, pengeluaran aktual, sisa, persentase penggunaan, dan progress bar yang tetap rapi di atas 100%.
-  - **Peringatan dalam aplikasi**: *Mendekati batas* (≥ 80%), *Anggaran habis* (= 100%), *Over budget* (> 100%). Tidak ada email atau push notification.
+  - Satu tabel per bulan: batas, terpakai, sisa, persentase, dan bar pemakaian yang tetap rapi di atas 100%, ditutup baris jumlah.
+  - **Peringatan dalam aplikasi**: *Mendekati batas* (≥ 80%), *Habis* (= 100%), *Terlampaui* (> 100%). Tidak ada email atau push notification.
 - **Export**:
   - **CSV** dalam UTF-8 (dengan BOM agar terbaca benar di Excel). Kolom: tanggal (`YYYY-MM-DD`), judul, tipe, kategori, nominal (`5000000.00`), dan deskripsi. Koma, tanda kutip, dan baris baru di-escape. Teks yang menyerupai rumus (`=`, `+`, `-`, `@`) diberi awalan `'` untuk mencegah CSV/formula injection.
   - **PDF** A4: judul, periode, filter, waktu pembuatan, ringkasan, pengeluaran per kategori, dan tabel transaksi. Header tabel diulang di tiap halaman dan setiap halaman bernomor. Maksimal 2.000 baris transaksi; untuk data lengkap gunakan CSV.
@@ -91,7 +91,7 @@ Aplikasi web untuk mencatat dan memantau kondisi keuangan pribadi: pemasukan, pe
   | Password saat ini salah (ganti password / hapus akun), per pengguna | 5 per 15 menit |
 - Login dengan email yang tidak terdaftar memakan waktu yang sama dengan password salah, sehingga keberadaan email tidak bisa ditebak dari waktu respons.
 - Password minimal **8 karakter** dan maksimal 72 byte (batas bcrypt).
-- Halaman **404** dan **error** dengan tombol "Coba Lagi", serta `global-error` untuk kegagalan di root layout.
+- Halaman **404** dan **error** dengan tombol "Coba lagi", serta `global-error` untuk kegagalan di root layout.
 
 ### Definisi perhitungan
 | Istilah | Rumus |
@@ -242,17 +242,17 @@ npm start                   # jalankan di port 3000 (atur PORT bila perlu)
 
 ## 📖 8. Panduan Penggunaan
 
-**Dashboard:** pilih periode di baris tombol (This Week … Custom Range). Kartu, tren, dan grafik ikut berubah, dan label periode tampil di bawah tombol. Arahkan kursor atau fokus keyboard ke batang grafik untuk melihat nominal, atau buka "Lihat tabel data".
+**Ringkasan:** pilih periode di baris tab (Minggu ini … Rentang lain). Neraca, tren, dan grafik ikut berubah, dan nama periodenya tampil di bawah tab. Arahkan kursor atau fokus keyboard ke batang grafik untuk melihat nominal, atau buka "Lihat tabel data".
 
-**Transaksi:** catat lewat **Add Income** / **Add Expense** di dashboard atau **Add Transaction** di `/transactions`. Edit lewat ikon pensil, hapus lewat ikon tempat sampah (ada konfirmasi). **Export CSV** mengunduh semua transaksi yang sesuai filter aktif, tidak hanya halaman yang sedang tampil.
+**Transaksi:** catat lewat **Catat pengeluaran** / **Catat pemasukan** di Ringkasan, atau **Catat transaksi** di halaman Transaksi. Ubah lewat ikon pensil, hapus lewat ikon tempat sampah (ada konfirmasi). Tab Semua/Pemasukan/Pengeluaran, kotak cari, dan filter di bawahnya bisa digabung; **Hapus semua filter** mengembalikan daftar lengkap. **Unduh CSV** mengunduh semua transaksi yang sesuai filter aktif, tidak hanya halaman yang sedang tampil.
 
-**Laporan:** buka **Reports**, pilih Mingguan/Bulanan/Tahunan/Rentang Khusus, lalu atur periode (tombol ‹ › untuk mundur/maju), jenis transaksi, dan kategori. **Export CSV** dan **Download PDF** memakai filter yang sama.
+**Laporan:** pilih Mingguan/Bulanan/Tahunan/Rentang tanggal, lalu atur periode (tombol ‹ › untuk mundur/maju), tipe transaksi, dan kategori. **Unduh CSV** dan **Unduh PDF** memakai filter yang sama.
 
-**Anggaran:** buka **Budgets**, pilih bulan, lalu klik **Buat Anggaran** dan isi kategori pengeluaran, nominal, bulan, dan tahun. Kartu anggaran menunjukkan progres dan statusnya, dan peringatan muncul di atas daftar bila ada anggaran yang mendekati atau melewati batas. Satu kategori hanya bisa punya satu anggaran per bulan.
+**Anggaran:** geser bulan dengan tombol ‹ › atau pilih langsung di kotak bulan, lalu klik **Buat anggaran** dan isi kategori pengeluaran, batas, bulan, dan tahun. Tabel anggaran menunjukkan batas, yang terpakai, sisa, dan statusnya. Peringatan muncul di atas tabel bila ada anggaran yang mendekati atau melewati batas. Satu kategori hanya bisa punya satu anggaran per bulan.
 
-**Pengaturan:** buka **Settings** di sidebar (atau **Pengaturan Akun** di modal profil) untuk mengubah nama, mengganti password, logout dari semua perangkat, atau menghapus akun.
+**Kategori:** kategori pemasukan dan pengeluaran ditampilkan dalam dua daftar. Anda bisa menambah, mengubah nama/warna, dan menghapus kategori. Klik jumlah transaksi untuk melihat transaksinya. Kategori yang masih dipakai transaksi atau anggaran perlu dikosongkan dulu sebelum dihapus.
 
-**Kategori:** di **Categories** Anda bisa menambah, mengubah nama/warna, dan menghapus kategori. Kategori yang masih dipakai transaksi atau anggaran perlu dikosongkan dulu sebelum dihapus.
+**Pengaturan:** buka **Pengaturan** di sidebar (atau **Pengaturan akun** di modal profil) untuk mengubah nama, mengganti password, keluar dari semua perangkat, atau menghapus akun.
 
 ---
 
@@ -304,10 +304,10 @@ ExpenseTracker/
 │   │   ├── api/               # Route handlers
 │   │   └── page.tsx           # Landing page
 │   ├── components/
-│   │   ├── budgets/           # BudgetCard, BudgetModal
+│   │   ├── budgets/           # BudgetLedger, BudgetModal
 │   │   ├── categories/        # CategoryModal
 │   │   ├── charts/            # IncomeExpenseChart, ExpenseBreakdown, chartTheme
-│   │   ├── dashboard/         # DashboardShell, StatCard, PeriodFilter, TrendLine, RecentTransactions, ...
+│   │   ├── dashboard/         # DashboardShell, PeriodStatement, PeriodFilter, TrendLine, RecentTransactions, ...
 │   │   ├── layout/            # Navbar, Sidebar, Header
 │   │   ├── reports/           # ReportTransactionsTable
 │   │   ├── settings/          # SettingsPanel (profil, password, sesi, hapus akun)
