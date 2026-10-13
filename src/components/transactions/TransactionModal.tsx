@@ -8,7 +8,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Category, Transaction, TransactionType } from "@/types";
 import { formatRupiah, formatDateForInput } from "@/lib/formatters";
 import { normalizeAmount } from "@/lib/validations";
-import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { FIELD, FIELD_LABEL } from "@/components/ui/fieldStyles";
 
 export interface TransactionModalProps {
   isOpen: boolean;
@@ -146,59 +146,40 @@ export function TransactionModal({
     <Modal
       isOpen={isOpen}
       onClose={isSubmitting ? () => {} : onClose}
-      title={isEditing ? "Edit Transaksi" : "Tambah Transaksi Baru"}
-      description={
-        isEditing
-          ? "Perbarui detail transaksi yang tercatat di akun Anda."
-          : "Catat pemasukan atau pengeluaran finansial Anda."
-      }
+      title={isEditing ? "Ubah transaksi" : "Catat transaksi"}
       maxWidth="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {apiError && (
-          <Alert variant="error" title="Gagal Menyimpan">
+          <Alert variant="error">
             {apiError}
           </Alert>
         )}
 
         {/* Transaction Type Switcher */}
-        <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
-            Tipe Transaksi <span className="text-rose-500">*</span>
-          </label>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => handleTypeChange("INCOME")}
-              className={`flex items-center justify-center gap-2 rounded-xl py-2.5 px-4 text-sm font-semibold transition-all border ${
-                type === "INCOME"
-                  ? "bg-emerald-500 text-white border-emerald-600 shadow-sm shadow-emerald-500/20"
-                  : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
-              }`}
-            >
-              <ArrowDownLeft className="h-4 w-4" />
-              <span>Pemasukan (Income)</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleTypeChange("EXPENSE")}
-              className={`flex items-center justify-center gap-2 rounded-xl py-2.5 px-4 text-sm font-semibold transition-all border ${
-                type === "EXPENSE"
-                  ? "bg-rose-500 text-white border-rose-600 shadow-sm shadow-rose-500/20"
-                  : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
-              }`}
-            >
-              <ArrowUpRight className="h-4 w-4" />
-              <span>Pengeluaran (Expense)</span>
-            </button>
+        <fieldset>
+          <legend className="sr-only">Tipe transaksi</legend>
+          <div className="grid grid-cols-2 rounded-sm border border-rule p-0.5">
+            {(["EXPENSE", "INCOME"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                aria-pressed={type === t}
+                onClick={() => handleTypeChange(t)}
+                className={`rounded-[1px] py-2 text-sm transition-colors ${
+                  type === t ? "bg-ink font-medium text-paper" : "text-ink-2 hover:bg-sunken hover:text-ink"
+                }`}
+              >
+                {t === "EXPENSE" ? "Pengeluaran" : "Pemasukan"}
+              </button>
+            ))}
           </div>
-        </div>
+        </fieldset>
 
         {/* Transaction Title */}
         <Input
-          label="Nama Transaksi"
-          placeholder="Contoh: Gaji Bulanan, Makan Siang, Beli Kopi"
+          label="Judul"
+          placeholder={type === "EXPENSE" ? "Contoh: Makan siang" : "Contoh: Gaji Oktober"}
           value={title}
           onChange={(e) => {
             setTitle(e.target.value);
@@ -213,6 +194,7 @@ export function TransactionModal({
         <div>
           <Input
             label="Nominal (Rp)"
+            className="num text-base"
             type="number"
             min="0.01"
             step="0.01"
@@ -236,8 +218,8 @@ export function TransactionModal({
         {/* Category & Date Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="transaction-category" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-              Kategori <span className="text-rose-500">*</span>
+            <label htmlFor="transaction-category" className={FIELD_LABEL}>
+              Kategori
             </label>
             <select id="transaction-category"
               value={categoryId}
@@ -246,14 +228,11 @@ export function TransactionModal({
                 if (errors.categoryId)
                   setErrors((prev) => ({ ...prev, categoryId: "" }));
               }}
-              className={`w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:bg-slate-900 dark:text-slate-100 ${
-                errors.categoryId
-                  ? "border-rose-300 focus:border-rose-500"
-                  : "border-slate-200 hover:border-slate-300 dark:border-slate-800"
-              }`}
+              aria-invalid={errors.categoryId ? true : undefined}
+              className={`${FIELD} ${errors.categoryId ? "border-neg" : ""}`}
             >
               <option value="" disabled>
-                -- Pilih Kategori --
+                Pilih kategori
               </option>
               {filteredCategories.map((cat) => (
                 <option key={cat.id} value={cat.id}>
@@ -262,19 +241,19 @@ export function TransactionModal({
               ))}
             </select>
             {errors.categoryId && (
-              <p className="mt-1 text-xs text-rose-500">{errors.categoryId}</p>
+              <p className="mt-1 text-xs text-neg">{errors.categoryId}</p>
             )}
             {filteredCategories.length === 0 && (
-              <p className="mt-1 text-xs text-amber-500">
-                Belum ada kategori {type.toLowerCase()}. Silakan tambah di menu
-                Kategori.
+              <p className="mt-1 text-xs text-warn">
+                Belum ada kategori {type === "INCOME" ? "pemasukan" : "pengeluaran"}. Tambahkan dulu
+                di menu Kategori.
               </p>
             )}
           </div>
 
           <div>
             <Input
-              label="Tanggal Transaksi"
+              label="Tanggal"
               type="date"
               value={date}
               onChange={(e) => {
@@ -289,24 +268,24 @@ export function TransactionModal({
 
         {/* Description (Optional) */}
         <div>
-          <label htmlFor="transaction-description" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-            Deskripsi (Opsional)
+          <label htmlFor="transaction-description" className={FIELD_LABEL}>
+            Catatan <span className="font-normal text-ink-3">(opsional)</span>
           </label>
           <textarea id="transaction-description"
             rows={2}
-            placeholder="Catatan tambahan, rincian pembelian, dll."
+            placeholder="Rincian tambahan"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             maxLength={500}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 resize-none"
+            className="w-full resize-none rounded-sm border border-rule bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-3 transition-colors hover:border-ink-3 focus:border-ink focus:outline-none"
           />
           {errors.description && (
-            <p className="mt-1 text-xs text-rose-500">{errors.description}</p>
+            <p className="mt-1 text-xs text-neg">{errors.description}</p>
           )}
         </div>
 
         {/* Footer Buttons */}
-        <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-end gap-2 border-t border-rule-soft pt-4">
           <Button
             type="button"
             variant="outline"
@@ -321,7 +300,7 @@ export function TransactionModal({
             isLoading={isSubmitting}
             disabled={isSubmitting}
           >
-            {isEditing ? "Simpan Perubahan" : "Tambah Transaksi"}
+            {isEditing ? "Simpan perubahan" : "Simpan"}
           </Button>
         </div>
       </form>

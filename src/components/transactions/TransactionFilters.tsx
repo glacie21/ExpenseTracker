@@ -2,8 +2,8 @@
 
 import React from "react";
 import { Category, TransactionType } from "@/types";
-import { Search, RotateCcw } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Search } from "lucide-react";
+import { FIELD_SM, FILTER_LABEL, tabClass } from "@/components/ui/fieldStyles";
 
 const MONTH_NAMES = [
   "Januari",
@@ -18,6 +18,12 @@ const MONTH_NAMES = [
   "Oktober",
   "November",
   "Desember",
+];
+
+const TYPE_TABS: { value: "ALL" | TransactionType; label: string }[] = [
+  { value: "ALL", label: "Semua" },
+  { value: "INCOME", label: "Pemasukan" },
+  { value: "EXPENSE", label: "Pengeluaran" },
 ];
 
 export interface TransactionFiltersProps {
@@ -39,6 +45,8 @@ export interface TransactionFiltersProps {
   onSortChange: (value: "newest" | "oldest") => void;
   categories: Category[];
   onReset: () => void;
+  /** Rendered at the right end of the type tabs row. */
+  actions?: React.ReactNode;
 }
 
 export function TransactionFilters({
@@ -60,6 +68,7 @@ export function TransactionFilters({
   onSortChange,
   categories,
   onReset,
+  actions,
 }: TransactionFiltersProps) {
   const currentYear = new Date().getFullYear();
   const yearOptions = Array.from({ length: 7 }, (_, i) => String(currentYear + 1 - i));
@@ -82,130 +91,101 @@ export function TransactionFilters({
     sort !== "newest";
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
-      {/* Top Row: Search and Quick Type Tabs */}
-      <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
-        {/* Search Input */}
-        <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Cari transaksi berdasarkan nama atau deskripsi..."
-            aria-label="Cari transaksi"
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:bg-slate-900"
-          />
+    <div className="space-y-4">
+      <div className="flex flex-col gap-4 border-b border-rule md:flex-row md:items-end md:justify-between">
+        <div className="-mb-px flex gap-5" role="group" aria-label="Tipe transaksi">
+          {TYPE_TABS.map((tab) => (
+            <button
+              key={tab.value}
+              type="button"
+              aria-pressed={type === tab.value}
+              onClick={() => {
+                onTypeChange(tab.value);
+                onCategoryChange("");
+              }}
+              className={tabClass(type === tab.value)}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
-
-        {/* Type Filter Buttons */}
-        <div className="flex rounded-xl bg-slate-100 p-1 dark:bg-slate-800 self-start md:self-auto">
-          <button
-            type="button"
-            onClick={() => {
-              onTypeChange("ALL");
-              onCategoryChange("");
-            }}
-            className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all ${
-              type === "ALL"
-                ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white"
-                : "text-slate-600 hover:text-slate-900 dark:text-slate-400"
-            }`}
-          >
-            Semua
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              onTypeChange("INCOME");
-              onCategoryChange("");
-            }}
-            className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all ${
-              type === "INCOME"
-                ? "bg-emerald-600 text-white shadow-sm shadow-emerald-500/20"
-                : "text-slate-600 hover:text-emerald-700 dark:text-slate-400"
-            }`}
-          >
-            Pemasukan
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              onTypeChange("EXPENSE");
-              onCategoryChange("");
-            }}
-            className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all ${
-              type === "EXPENSE"
-                ? "bg-rose-600 text-white shadow-sm shadow-rose-500/20"
-                : "text-slate-600 hover:text-rose-700 dark:text-slate-400"
-            }`}
-          >
-            Pengeluaran
-          </button>
-        </div>
+        {actions && <div className="flex shrink-0 flex-wrap gap-2 pb-3">{actions}</div>}
       </div>
 
-      {/* Bottom Row: Category, Date Range, Sort & Reset */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-        {/* Category Select */}
-        <div>
-          <label htmlFor="filter-category" className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+      <div className="relative">
+        <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-3" />
+        <input
+          type="search"
+          placeholder="Cari judul atau deskripsi"
+          aria-label="Cari transaksi"
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="h-10 w-full rounded-sm border border-rule bg-surface pr-3 pl-9 text-sm text-ink placeholder:text-ink-3 hover:border-ink-3 focus:border-ink focus:outline-none"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="col-span-2 sm:col-span-1">
+          <label htmlFor="filter-category" className={FILTER_LABEL}>
             Kategori
           </label>
-          <select id="filter-category"
+          <select
+            id="filter-category"
             value={categoryId}
             onChange={(e) => onCategoryChange(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs text-slate-800 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+            className={FIELD_SM}
           >
-            <option value="">Semua Kategori</option>
+            <option value="">Semua kategori</option>
             {filteredCategories.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name} ({c.type})
+                {type === "ALL"
+                  ? `${c.name} (${c.type === "INCOME" ? "pemasukan" : "pengeluaran"})`
+                  : c.name}
               </option>
             ))}
           </select>
         </div>
 
-        {/* Start Date */}
         <div>
-          <label htmlFor="filter-start-date" className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-            Dari Tanggal
+          <label htmlFor="filter-start-date" className={FILTER_LABEL}>
+            Dari tanggal
           </label>
-          <input id="filter-start-date"
+          <input
+            id="filter-start-date"
             type="date"
             value={startDate}
             onChange={(e) => onStartDateChange(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs text-slate-800 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+            className={FIELD_SM}
           />
         </div>
 
-        {/* End Date */}
         <div>
-          <label htmlFor="filter-end-date" className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-            Sampai Tanggal
+          <label htmlFor="filter-end-date" className={FILTER_LABEL}>
+            Sampai tanggal
           </label>
-          <input id="filter-end-date"
+          <input
+            id="filter-end-date"
             type="date"
             value={endDate}
             onChange={(e) => onEndDateChange(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs text-slate-800 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+            className={FIELD_SM}
           />
         </div>
 
-        {/* Year */}
         <div>
-          <label htmlFor="filter-year" className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+          <label htmlFor="filter-year" className={FILTER_LABEL}>
             Tahun
           </label>
-          <select id="filter-year"
+          <select
+            id="filter-year"
             value={year}
             onChange={(e) => {
               onYearChange(e.target.value);
               if (!e.target.value) onMonthChange("");
             }}
-            className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs text-slate-800 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+            className={FIELD_SM}
           >
-            <option value="">Semua Tahun</option>
+            <option value="">Semua tahun</option>
             {yearOptions.map((y) => (
               <option key={y} value={y}>
                 {y}
@@ -214,19 +194,19 @@ export function TransactionFilters({
           </select>
         </div>
 
-        {/* Month (requires year) */}
         <div>
-          <label htmlFor="filter-month" className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+          <label htmlFor="filter-month" className={FILTER_LABEL}>
             Bulan
           </label>
-          <select id="filter-month"
+          <select
+            id="filter-month"
             value={month}
             onChange={(e) => onMonthChange(e.target.value)}
             disabled={!year}
             title={!year ? "Pilih tahun terlebih dahulu" : undefined}
-            className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs text-slate-800 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+            className={FIELD_SM}
           >
-            <option value="">Semua Bulan</option>
+            <option value="">Semua bulan</option>
             {MONTH_NAMES.map((name, index) => (
               <option key={name} value={String(index + 1)}>
                 {name}
@@ -235,37 +215,31 @@ export function TransactionFilters({
           </select>
         </div>
 
-        {/* Sort & Reset Actions */}
-        <div className="flex items-end gap-2">
-          <div className="flex-1">
-            <label htmlFor="filter-sort" className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-              Urutan
-            </label>
-            <select id="filter-sort"
-              value={sort}
-              onChange={(e) => onSortChange(e.target.value as "newest" | "oldest")}
-              className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs text-slate-800 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
-            >
-              <option value="newest">Terbaru (Newest)</option>
-              <option value="oldest">Terlama (Oldest)</option>
-            </select>
-          </div>
-
-          {hasActiveFilters && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onReset}
-              leftIcon={<RotateCcw className="h-3.5 w-3.5" />}
-              className="h-[34px] px-2.5 text-xs text-slate-600 hover:text-slate-900"
-              title="Reset Filter"
-            >
-              Reset
-            </Button>
-          )}
+        <div className="col-span-2 sm:col-span-1">
+          <label htmlFor="filter-sort" className={FILTER_LABEL}>
+            Urutan
+          </label>
+          <select
+            id="filter-sort"
+            value={sort}
+            onChange={(e) => onSortChange(e.target.value as "newest" | "oldest")}
+            className={FIELD_SM}
+          >
+            <option value="newest">Terbaru dulu</option>
+            <option value="oldest">Terlama dulu</option>
+          </select>
         </div>
       </div>
+
+      {hasActiveFilters && (
+        <button
+          type="button"
+          onClick={onReset}
+          className="text-sm text-ink-2 underline decoration-rule underline-offset-4 hover:text-ink hover:decoration-ink"
+        >
+          Hapus semua filter
+        </button>
+      )}
     </div>
   );
 }

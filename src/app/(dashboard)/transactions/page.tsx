@@ -271,63 +271,11 @@ function TransactionsView() {
     }
   };
 
+  const isFiltered =
+    Boolean(search.trim()) || type !== "ALL" || Boolean(categoryId || startDate || endDate || year);
+
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
-            Daftar Transaksi
-          </h2>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Kelola seluruh riwayat pemasukan dan pengeluaran finansial Anda secara terperinci.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={reload}
-            leftIcon={<RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />}
-            title="Muat ulang data"
-          >
-            Refresh
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportCsv}
-            isLoading={isExporting}
-            leftIcon={<Download className="h-4 w-4" />}
-            title="Unduh transaksi sesuai filter aktif sebagai CSV"
-          >
-            Export CSV
-          </Button>
-
-          <Button
-            variant="primary"
-            size="md"
-            onClick={handleOpenAddModal}
-            leftIcon={<Plus className="h-4 w-4" />}
-          >
-            Add Transaction
-          </Button>
-        </div>
-      </div>
-
-      {/* Feedback Banner */}
-      {feedback && (
-        <Alert
-          variant={feedback.type}
-          onClose={() => setFeedback(null)}
-          title={feedback.type === "success" ? "Berhasil" : "Perhatian"}
-        >
-          {feedback.message}
-        </Alert>
-      )}
-
+    <div className="space-y-6">
       {/* Filter and Search Bar */}
       <TransactionFilters
         search={searchInput}
@@ -348,7 +296,41 @@ function TransactionsView() {
         onSortChange={withPageReset(setSort)}
         categories={categories}
         onReset={handleResetFilters}
+        actions={
+          <>
+            <Button
+              variant="ghost"
+              size="md"
+              onClick={reload}
+              aria-label="Muat ulang"
+              title="Muat ulang"
+              className="px-2.5"
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+            </Button>
+            <Button
+              variant="outline"
+              size="md"
+              onClick={handleExportCsv}
+              isLoading={isExporting}
+              leftIcon={<Download className="h-4 w-4" />}
+              title="Unduh transaksi sesuai filter aktif sebagai CSV"
+            >
+              Unduh CSV
+            </Button>
+            <Button variant="primary" size="md" onClick={handleOpenAddModal} leftIcon={<Plus className="h-4 w-4" />}>
+              Catat transaksi
+            </Button>
+          </>
+        }
       />
+
+      {/* Feedback Banner */}
+      {feedback && (
+        <Alert variant={feedback.type} onClose={() => setFeedback(null)}>
+          {feedback.message}
+        </Alert>
+      )}
 
       {/* Transaction Table */}
       <TransactionTable
@@ -361,6 +343,7 @@ function TransactionsView() {
         pagination={pagination}
         onPageChange={(newPage) => setPage(newPage)}
         onAddNew={handleOpenAddModal}
+        isFiltered={isFiltered}
       />
 
       {/* Add / Edit Transaction Modal (key me-reset isi form setiap dibuka) */}
@@ -395,9 +378,9 @@ function TransactionsView() {
           setDeleteConfirm({ isOpen: false, transaction: null, isDeleting: false })
         }
         onConfirm={handleConfirmDelete}
-        title="Hapus Transaksi?"
-        message={`Apakah Anda yakin ingin menghapus transaksi "${deleteConfirm.transaction?.title}"? Tindakan ini akan memperbarui saldo Anda dan tidak dapat dibatalkan.`}
-        confirmLabel="Ya, Hapus"
+        title="Hapus transaksi?"
+        message={`"${deleteConfirm.transaction?.title}" akan dihapus dan saldo dihitung ulang. Tindakan ini tidak bisa dibatalkan.`}
+        confirmLabel="Hapus"
         isLoading={deleteConfirm.isDeleting}
         variant="danger"
       />
@@ -409,7 +392,7 @@ export default function TransactionsPage() {
   return (
     <Suspense
       fallback={
-        <div className="h-64 rounded-2xl border border-slate-200/80 bg-white animate-pulse dark:border-slate-800 dark:bg-slate-900" />
+        <div className="h-64 animate-pulse rounded-sm border border-rule bg-surface" />
       }
     >
       <TransactionsView />
