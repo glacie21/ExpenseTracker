@@ -9,21 +9,21 @@ export interface DefaultCategoryItem {
 
 export const DEFAULT_CATEGORIES: DefaultCategoryItem[] = [
   // Income categories
-  { name: "Salary", type: "INCOME", color: "#10b981" },
-  { name: "Freelance", type: "INCOME", color: "#06b6d4" },
-  { name: "Business", type: "INCOME", color: "#3b82f6" },
-  { name: "Investment", type: "INCOME", color: "#8b5cf6" },
-  { name: "Other Income", type: "INCOME", color: "#64748b" },
+  { name: "Gaji", type: "INCOME", color: "#2b67a8" },
+  { name: "Pekerjaan lepas", type: "INCOME", color: "#3d8a8a" },
+  { name: "Usaha", type: "INCOME", color: "#5b5fa8" },
+  { name: "Investasi", type: "INCOME", color: "#4f7d3a" },
+  { name: "Pemasukan lain", type: "INCOME", color: "#75716a" },
 
   // Expense categories
-  { name: "Food & Drink", type: "EXPENSE", color: "#f97316" },
-  { name: "Transportation", type: "EXPENSE", color: "#3b82f6" },
-  { name: "Shopping", type: "EXPENSE", color: "#ec4899" },
-  { name: "Bills", type: "EXPENSE", color: "#ef4444" },
-  { name: "Entertainment", type: "EXPENSE", color: "#a855f7" },
-  { name: "Health", type: "EXPENSE", color: "#14b8a6" },
-  { name: "Education", type: "EXPENSE", color: "#eab308" },
-  { name: "Other Expense", type: "EXPENSE", color: "#64748b" },
+  { name: "Makan & minum", type: "EXPENSE", color: "#c4532b" },
+  { name: "Transportasi", type: "EXPENSE", color: "#5f8fb8" },
+  { name: "Belanja", type: "EXPENSE", color: "#8a4f9e" },
+  { name: "Tagihan", type: "EXPENSE", color: "#a8324a" },
+  { name: "Hiburan", type: "EXPENSE", color: "#b8892b" },
+  { name: "Kesehatan", type: "EXPENSE", color: "#8a9a2b" },
+  { name: "Pendidikan", type: "EXPENSE", color: "#7a6a55" },
+  { name: "Pengeluaran lain", type: "EXPENSE", color: "#75716a" },
 ];
 
 /**

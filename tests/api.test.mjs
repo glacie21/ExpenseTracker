@@ -94,8 +94,8 @@ before(async () => {
   alice = await registerUser("alice");
   bob = await registerUser("bob");
   aliceCategories = await getCategories(alice);
-  salary = aliceCategories.find((c) => c.name === "Salary" && c.type === "INCOME");
-  food = aliceCategories.find((c) => c.name === "Food & Drink" && c.type === "EXPENSE");
+  salary = aliceCategories.find((c) => c.name === "Gaji" && c.type === "INCOME");
+  food = aliceCategories.find((c) => c.name === "Makan & minum" && c.type === "EXPENSE");
 });
 
 after(async () => {
@@ -264,7 +264,7 @@ describe("transactions", () => {
       type: "INCOME",
       title: "Proyek freelance",
       amount: "750000",
-      categoryId: aliceCategories.find((c) => c.name === "Freelance").id,
+      categoryId: aliceCategories.find((c) => c.name === "Pekerjaan lepas").id,
       date: "2026-09-15",
       description: "Desain logo",
     });
