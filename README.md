@@ -359,9 +359,9 @@ ExpenseTracker/
 - **Belum ada test browser** (Playwright). Alur UI (klik, modal, unduhan di browser) belum diuji otomatis; yang diuji adalah API dan HTML yang dirender server. Menambahkan Playwright adalah langkah berikutnya yang disarankan.
 - PDF memakai font standar Helvetica (WinAnsi). Karakter di luar Latin, seperti emoji atau aksara non-Latin, diganti `?` di PDF, tetapi tetap utuh di aplikasi dan CSV.
 - Ekspor dibatasi 100.000 baris (CSV) dan 2.000 baris transaksi (PDF).
-- Perbandingan "This Month" memakai bulan penuh sebelumnya, sehingga di awal bulan angka bulan berjalan wajar terlihat lebih kecil.
+- Perbandingan "Bulan ini" memakai bulan penuh sebelumnya, sehingga di awal bulan angka bulan berjalan wajar terlihat lebih kecil.
 - **Belum ada reset password lewat email** ("lupa password"), karena aplikasi belum punya layanan pengiriman email. Untuk saat ini password hanya bisa diganti saat sedang login.
-- **Logout biasa** hanya menghapus cookie di browser tersebut. Jika token mungkin bocor, gunakan **Logout dari semua perangkat** atau ganti password.
+- **Logout biasa** hanya menghapus cookie di browser tersebut. Jika token mungkin bocor, gunakan **Keluar dari semua perangkat** di Pengaturan, atau ganti password.
 - CSP masih memakai `'unsafe-inline'` untuk script, karena Next.js membutuhkannya jika tidak memakai nonce per request.
 - Ide lanjutan: akun/dompet dan transfer antar akun, transaksi dan anggaran berulang, import CSV mutasi bank, serta pengaturan zona waktu dan mata uang per pengguna.
 

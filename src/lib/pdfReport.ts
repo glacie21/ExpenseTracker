@@ -224,7 +224,7 @@ export async function buildReportPdf(input: PdfReportInput): Promise<Uint8Array>
     ["Total Pemasukan", formatRupiah(s.totalIncome)],
     ["Total Pengeluaran", formatRupiah(s.totalExpense)],
     ["Saldo Bersih", formatRupiah(s.netBalance)],
-    ["Savings Rate", formatPercent(s.savingsRate)],
+    ["Tingkat Tabungan", formatPercent(s.savingsRate)],
     ["Jumlah Transaksi", String(s.transactionCount)],
     [
       "Kategori Pengeluaran Terbesar",
