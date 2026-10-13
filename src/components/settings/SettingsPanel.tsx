@@ -2,10 +2,8 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { KeyRound, LogOut, Trash2, UserRound } from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
@@ -37,13 +35,32 @@ async function sendJson(method: string, url: string, body?: unknown): Promise<Ap
   }
 }
 
-function SectionIcon({ children, tone = "emerald" }: { children: React.ReactNode; tone?: "emerald" | "rose" }) {
-  const toneClass =
-    tone === "rose"
-      ? "bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400"
-      : "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400";
+/** One settings topic: heading and explanation on the left, the form on the right. */
+function Section({
+  title,
+  description,
+  danger = false,
+  children,
+}: {
+  title: string;
+  description: React.ReactNode;
+  danger?: boolean;
+  children: React.ReactNode;
+}) {
+  const headingId = React.useId();
   return (
-    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${toneClass}`}>{children}</div>
+    <section
+      aria-labelledby={headingId}
+      className="grid gap-4 border-b border-rule py-8 first:pt-0 last:border-0 md:grid-cols-3 md:gap-8"
+    >
+      <div>
+        <h2 id={headingId} className={`font-serif text-lg font-medium ${danger ? "text-neg" : "text-ink"}`}>
+          {title}
+        </h2>
+        <p className="mt-1 text-sm leading-relaxed text-ink-3">{description}</p>
+      </div>
+      <div className="md:col-span-2">{children}</div>
+    </section>
   );
 }
 
@@ -71,19 +88,8 @@ function ProfileSection({ user }: { user: SafeUser }) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <SectionIcon>
-            <UserRound className="h-5 w-5" />
-          </SectionIcon>
-          <div>
-            <CardTitle>Profil</CardTitle>
-            <CardDescription>Nama yang ditampilkan di aplikasi.</CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-      <form onSubmit={handleSubmit} className="space-y-4 p-6" noValidate>
+    <Section title="Profil" description="Nama yang tampil di aplikasi.">
+      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         {feedback && (
           <Alert variant={feedback.type} onClose={() => setFeedback(null)}>
             {feedback.message}
@@ -107,11 +113,11 @@ function ProfileSection({ user }: { user: SafeUser }) {
         />
         <div className="flex justify-end">
           <Button type="submit" isLoading={saving} disabled={name.trim() === user.name}>
-            Simpan Profil
+            Simpan
           </Button>
         </div>
       </form>
-    </Card>
+    </Section>
   );
 }
 
@@ -144,19 +150,8 @@ function PasswordSection() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <SectionIcon>
-            <KeyRound className="h-5 w-5" />
-          </SectionIcon>
-          <div>
-            <CardTitle>Ganti Password</CardTitle>
-            <CardDescription>Setelah diganti, sesi di perangkat lain otomatis berakhir.</CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-      <form onSubmit={handleSubmit} className="space-y-4 p-6" noValidate>
+    <Section title="Password" description="Setelah diganti, sesi di perangkat lain otomatis berakhir. Sesi ini tetap berjalan.">
+      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         {feedback && (
           <Alert variant={feedback.type} onClose={() => setFeedback(null)}>
             {feedback.message}
@@ -194,11 +189,11 @@ function PasswordSection() {
         </div>
         <div className="flex justify-end">
           <Button type="submit" isLoading={saving}>
-            Ganti Password
+            Ganti password
           </Button>
         </div>
       </form>
-    </Card>
+    </Section>
   );
 }
 
@@ -222,32 +217,22 @@ function SessionsSection() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <SectionIcon>
-            <LogOut className="h-5 w-5" />
-          </SectionIcon>
-          <div>
-            <CardTitle>Sesi Login</CardTitle>
-            <CardDescription>
-              Akhiri semua sesi, misalnya jika Anda lupa logout di perangkat lain.
-            </CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-      <div className="space-y-4 p-6">
+    <Section
+      title="Sesi login"
+      description="Berguna jika Anda lupa keluar di perangkat lain, atau curiga akun dipakai orang lain."
+    >
+      <div className="space-y-4">
         {error && (
           <Alert variant="error" onClose={() => setError(null)}>
             {error}
           </Alert>
         )}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-slate-600 dark:text-slate-400">
+          <p className="text-sm text-ink-2">
             Anda juga akan keluar dari perangkat ini dan perlu login kembali.
           </p>
           <Button variant="outline" onClick={() => setConfirmOpen(true)} className="shrink-0">
-            Logout dari Semua Perangkat
+            Keluar dari semua perangkat
           </Button>
         </div>
       </div>
@@ -257,11 +242,11 @@ function SessionsSection() {
         onConfirm={handleConfirm}
         isLoading={loading}
         variant="warning"
-        title="Logout dari semua perangkat?"
-        message="Semua sesi aktif, termasuk sesi ini, akan diakhiri."
-        confirmLabel="Ya, Logout Semua"
+        title="Keluar dari semua perangkat?"
+        message="Semua sesi aktif, termasuk sesi ini, akan diakhiri. Anda perlu login lagi."
+        confirmLabel="Keluar dari semua"
       />
-    </Card>
+    </Section>
   );
 }
 
@@ -297,33 +282,24 @@ function DeleteAccountSection() {
   };
 
   return (
-    <Card className="border-rose-200 dark:border-rose-900/60">
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <SectionIcon tone="rose">
-            <Trash2 className="h-5 w-5" />
-          </SectionIcon>
-          <div>
-            <CardTitle>Hapus Akun</CardTitle>
-            <CardDescription>
-              Menghapus akun beserta seluruh transaksi, kategori, dan anggaran secara permanen.
-            </CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-      <div className="flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-slate-600 dark:text-slate-400">
-          Tindakan ini tidak dapat dibatalkan. Ekspor data Anda ke CSV terlebih dahulu jika masih diperlukan.
+    <Section
+      title="Hapus akun"
+      danger
+      description="Akun beserta semua transaksi, kategori, dan anggaran dihapus permanen."
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-ink-2">
+          Tidak bisa dibatalkan. Unduh CSV di halaman Transaksi lebih dulu jika datanya masih Anda perlukan.
         </p>
         <Button variant="danger" onClick={() => setOpen(true)} className="shrink-0">
-          Hapus Akun
+          Hapus akun
         </Button>
       </div>
       <Modal
         isOpen={open}
         onClose={close}
         title="Hapus akun secara permanen?"
-        description="Semua data Anda akan dihapus dan tidak dapat dipulihkan."
+        description="Masukkan password untuk konfirmasi. Data yang dihapus tidak bisa dipulihkan."
         maxWidth="sm"
       >
         <form onSubmit={handleDelete} className="space-y-4" noValidate>
@@ -336,23 +312,23 @@ function DeleteAccountSection() {
             autoComplete="current-password"
             required
           />
-          <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-3 dark:border-slate-800">
+          <div className="flex items-center justify-end gap-2 border-t border-rule-soft pt-4">
             <Button type="button" variant="outline" size="sm" onClick={close} disabled={loading}>
               Batal
             </Button>
             <Button type="submit" variant="danger" size="sm" isLoading={loading}>
-              Hapus Akun Saya
+              Hapus akun saya
             </Button>
           </div>
         </form>
       </Modal>
-    </Card>
+    </Section>
   );
 }
 
 export function SettingsPanel({ user }: { user: SafeUser }) {
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="max-w-4xl">
       <ProfileSection user={user} />
       <PasswordSection />
       <SessionsSection />
