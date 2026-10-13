@@ -7,16 +7,13 @@ import { Alert } from "@/components/ui/Alert";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CategoryModal } from "@/components/categories/CategoryModal";
 import { Category, TransactionType } from "@/types";
-import {
-  AlertCircle,
-  Plus,
-  Edit2,
-  Trash2,
-  ArrowDownLeft,
-  ArrowUpRight,
-  RefreshCw,
-  FolderOpen,
-} from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
+import { tabClass } from "@/components/ui/fieldStyles";
+
+const TYPE_HEADING: Record<TransactionType, string> = {
+  INCOME: "Pemasukan",
+  EXPENSE: "Pengeluaran",
+};
 
 export default function CategoriesPage() {
   const [activeTab, setActiveTab] = useState<"ALL" | TransactionType>("ALL");
@@ -104,7 +101,7 @@ export default function CategoriesPage() {
     if (txCount > 0) {
       setFeedback({
         type: "error",
-        message: `Kategori "${category.name}" sedang digunakan oleh ${txCount} transaksi. Harap ubah kategori transaksi tersebut terlebih dahulu sebelum menghapusnya.`,
+        message: `"${category.name}" masih dipakai ${txCount} transaksi. Pindahkan transaksi itu ke kategori lain dulu, baru kategori ini bisa dihapus.`,
       });
       return;
     }
@@ -149,223 +146,145 @@ export default function CategoriesPage() {
     }
   };
 
-  return (
-    <div className="space-y-6 animate-in fade-in duration-300">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
-            Kelola Kategori
-          </h2>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Atur pengelompokan pemasukan dan pengeluaran agar pencatatan keuangan lebih terstruktur.
-          </p>
-        </div>
+  const tabs: { value: "ALL" | TransactionType; label: string; count: number }[] = [
+    { value: "ALL", label: "Semua", count: categories.length },
+    { value: "INCOME", label: "Pemasukan", count: incomeCategories.length },
+    { value: "EXPENSE", label: "Pengeluaran", count: expenseCategories.length },
+  ];
+  const groups = (["INCOME", "EXPENSE"] as const)
+    .filter((t) => activeTab === "ALL" || activeTab === t)
+    .map((t) => ({ type: t, items: filteredCategories.filter((c) => c.type === t) }));
 
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fetchCategories()}
-            leftIcon={<RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />}
-            title="Muat ulang kategori"
+  const renderRow = (cat: Category) => {
+    const txCount = cat._count?.transactions || 0;
+    return (
+      <li key={cat.id} className="flex items-center gap-3 border-b border-rule-soft py-3 pr-4 pl-5 last:border-0 sm:pl-6">
+        <span
+          className="h-2.5 w-2.5 shrink-0 rounded-full"
+          style={{ backgroundColor: cat.color || "var(--ink-3)" }}
+          aria-hidden="true"
+        />
+        <span className="min-w-0 flex-1 truncate text-ink">{cat.name}</span>
+        {txCount > 0 ? (
+          <Link
+            href={`/transactions?type=${cat.type}&categoryId=${cat.id}`}
+            className="shrink-0 text-xs text-ink-3 underline decoration-rule underline-offset-4 hover:text-ink hover:decoration-ink"
           >
-            Refresh
-          </Button>
+            <span className="num text-sm">{txCount}</span> transaksi
+          </Link>
+        ) : (
+          <span className="shrink-0 text-xs text-ink-3">belum dipakai</span>
+        )}
+        <span className="flex shrink-0">
+          <button
+            type="button"
+            onClick={() => handleEdit(cat)}
+            aria-label={`Ubah ${cat.name}`}
+            title="Ubah"
+            className="rounded-sm p-1.5 text-ink-3 transition-colors hover:bg-sunken hover:text-ink"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => handleDeletePrompt(cat)}
+            aria-label={`Hapus ${cat.name}`}
+            title="Hapus"
+            className="rounded-sm p-1.5 text-ink-3 transition-colors hover:bg-neg-soft hover:text-neg"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </span>
+      </li>
+    );
+  };
 
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 border-b border-rule sm:flex-row sm:items-end sm:justify-between">
+        <div className="-mb-px flex gap-5" role="group" aria-label="Tipe kategori">
+          {tabs.map((tab) => (
+            <button
+              key={tab.value}
+              type="button"
+              aria-pressed={activeTab === tab.value}
+              onClick={() => setActiveTab(tab.value)}
+              className={tabClass(activeTab === tab.value)}
+            >
+              {tab.label} <span className="num text-ink-3">{isLoading ? "" : tab.count}</span>
+            </button>
+          ))}
+        </div>
+        <div className="pb-3">
           <Button
             variant="primary"
-            size="md"
-            onClick={() =>
-              handleOpenAddModal(activeTab === "INCOME" ? "INCOME" : "EXPENSE")
-            }
+            onClick={() => handleOpenAddModal(activeTab === "INCOME" ? "INCOME" : "EXPENSE")}
             leftIcon={<Plus className="h-4 w-4" />}
           >
-            Tambah Kategori
+            Tambah kategori
           </Button>
         </div>
       </div>
 
-      {/* Feedback Alert */}
       {feedback && (
-        <Alert
-          variant={feedback.type}
-          onClose={() => setFeedback(null)}
-          title={feedback.type === "success" ? "Berhasil" : "Perhatian"}
-        >
+        <Alert variant={feedback.type} onClose={() => setFeedback(null)}>
           {feedback.message}
         </Alert>
       )}
 
-      {/* Tabs */}
-      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
-        <div className="flex rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
-          <button
-            type="button"
-            onClick={() => setActiveTab("ALL")}
-            className={`rounded-lg px-4 py-2 text-xs font-semibold transition-all ${
-              activeTab === "ALL"
-                ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white"
-                : "text-slate-600 hover:text-slate-900 dark:text-slate-400"
-            }`}
-          >
-            Semua ({categories.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("INCOME")}
-            className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold transition-all ${
-              activeTab === "INCOME"
-                ? "bg-emerald-600 text-white shadow-sm shadow-emerald-500/20"
-                : "text-slate-600 hover:text-emerald-700 dark:text-slate-400"
-            }`}
-          >
-            <ArrowDownLeft className="w-3.5 h-3.5" />
-            Pemasukan ({incomeCategories.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("EXPENSE")}
-            className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold transition-all ${
-              activeTab === "EXPENSE"
-                ? "bg-rose-600 text-white shadow-sm shadow-rose-500/20"
-                : "text-slate-600 hover:text-rose-700 dark:text-slate-400"
-            }`}
-          >
-            <ArrowUpRight className="w-3.5 h-3.5" />
-            Pengeluaran ({expenseCategories.length})
-          </button>
-        </div>
-      </div>
-
-      {/* Category Grid */}
       {loadError && !isLoading ? (
-        <div className="rounded-2xl border border-rose-200 bg-white p-8 sm:p-12 text-center shadow-sm dark:border-rose-900/60 dark:bg-slate-900">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400 mb-4">
-            <AlertCircle className="h-7 w-7" />
-          </div>
-          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">
-            Gagal Memuat Kategori
-          </h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-6">
-            {loadError}
+        <section className="rounded-sm border border-rule bg-surface px-6 py-12 text-center">
+          <h2 className="font-serif text-lg text-ink">Kategori gagal dimuat</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm text-ink-2">{loadError}</p>
+          <Button onClick={fetchCategories} variant="outline" className="mt-5">
+            Coba lagi
+          </Button>
+        </section>
+      ) : isLoading ? (
+        <div className="h-64 animate-pulse rounded-sm border border-rule bg-surface" aria-busy="true" />
+      ) : filteredCategories.length === 0 ? (
+        <section className="rounded-sm border border-dashed border-rule px-6 py-12 text-center sm:py-16">
+          <h2 className="font-serif text-xl text-ink">Belum ada kategori</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm text-ink-2">
+            Kategori mengelompokkan transaksi, dan menjadi dasar anggaran bulanan.
           </p>
           <Button
-            onClick={fetchCategories}
-            variant="outline"
-            leftIcon={<RefreshCw className="h-4 w-4" />}
+            onClick={() => handleOpenAddModal(activeTab === "INCOME" ? "INCOME" : "EXPENSE")}
+            className="mt-6"
           >
-            Coba Lagi
+            Tambah kategori
           </Button>
-        </div>
-      ) : isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div
-              key={i}
-              className="h-28 rounded-2xl bg-white border border-slate-200/80 p-5 animate-pulse dark:bg-slate-900 dark:border-slate-800"
-            />
+        </section>
+      ) : (
+        <div className={`grid grid-cols-1 gap-6 ${groups.length > 1 ? "lg:grid-cols-2" : ""}`}>
+          {groups.map((group) => (
+            <section
+              key={group.type}
+              aria-labelledby={`cat-${group.type}`}
+              className="self-start rounded-sm border border-rule bg-surface"
+            >
+              <div className="flex items-baseline justify-between gap-4 border-b border-rule px-5 py-4 sm:px-6">
+                <h2 id={`cat-${group.type}`} className="font-serif text-lg font-medium text-ink">
+                  {TYPE_HEADING[group.type]}
+                </h2>
+                <span className="text-xs text-ink-3">
+                  <span className="num text-sm">{group.items.length}</span> kategori
+                </span>
+              </div>
+              {group.items.length === 0 ? (
+                <p className="px-5 py-6 text-sm text-ink-3 sm:px-6">Belum ada kategori.</p>
+              ) : (
+                <ul className="text-sm">{group.items.map(renderRow)}</ul>
+              )}
+            </section>
           ))}
         </div>
-      ) : filteredCategories.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 sm:p-12 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-50 text-teal-600 dark:bg-teal-950/50 dark:text-teal-400 mb-4">
-            <FolderOpen className="h-7 w-7" />
-          </div>
-          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">
-            Belum Ada Kategori
-          </h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-6">
-            Kategori membantu Anda mengelompokkan pengeluaran dan pemasukan dengan rapi.
-          </p>
-          <Button
-            onClick={() =>
-              handleOpenAddModal(activeTab === "INCOME" ? "INCOME" : "EXPENSE")
-            }
-            variant="primary"
-            leftIcon={<Plus className="h-4 w-4" />}
-          >
-            Tambah Kategori Pertama
-          </Button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredCategories.map((cat) => {
-            const isIncome = cat.type === "INCOME";
-            const txCount = cat._count?.transactions || 0;
-
-            return (
-              <div
-                key={cat.id}
-                className="group relative rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm hover:shadow-md transition-all dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <div className="flex items-center gap-3">
-                      <span
-                        className="h-4 w-4 rounded-full shrink-0 shadow-sm"
-                        style={{ backgroundColor: cat.color || (isIncome ? "#10b981" : "#f97316") }}
-                      />
-                      <h4 className="font-semibold text-base text-slate-900 dark:text-slate-100 truncate">
-                        {cat.name}
-                      </h4>
-                    </div>
-
-                    <span
-                      className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                        isIncome
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
-                          : "bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300"
-                      }`}
-                    >
-                      {isIncome ? "Income" : "Expense"}
-                    </span>
-                  </div>
-
-                  <p className="text-xs text-slate-400">
-                    Digunakan oleh{" "}
-                    <strong className="text-slate-600 dark:text-slate-300">
-                      {txCount}
-                    </strong>{" "}
-                    transaksi
-                    {txCount > 0 && (
-                      <>
-                        {" · "}
-                        <Link
-                          href={`/transactions?type=${cat.type}&categoryId=${cat.id}`}
-                          className="font-medium text-emerald-600 hover:underline dark:text-emerald-400"
-                        >
-                          Lihat transaksi
-                        </Link>
-                      </>
-                    )}
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-end gap-1.5 pt-4 mt-2 border-t border-slate-100 dark:border-slate-800/80">
-                  <button
-                    type="button"
-                    onClick={() => handleEdit(cat)}
-                    className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 rounded-lg px-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                    <span>Edit</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleDeletePrompt(cat)}
-                    className="flex items-center gap-1 text-xs text-slate-400 hover:text-rose-600 rounded-lg px-2 py-1 hover:bg-rose-50 dark:hover:bg-rose-950/50 dark:hover:text-rose-400 transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Hapus</span>
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
       )}
+
+      <p className="text-xs text-ink-3">
+        Kategori yang masih dipakai transaksi atau anggaran tidak bisa dihapus, supaya tidak ada catatan
+        yang kehilangan kategorinya.
+      </p>
 
       {/* Category Modal (Add / Edit); key me-reset isi form setiap dibuka */}
       {isModalOpen && (
@@ -397,9 +316,9 @@ export default function CategoriesPage() {
           setDeleteDialog({ isOpen: false, category: null, isDeleting: false })
         }
         onConfirm={handleConfirmDelete}
-        title="Hapus Kategori?"
-        message={`Apakah Anda yakin ingin menghapus kategori "${deleteDialog.category?.name}"? Tindakan ini tidak dapat dibatalkan.`}
-        confirmLabel="Ya, Hapus"
+        title="Hapus kategori?"
+        message={`Kategori "${deleteDialog.category?.name}" akan dihapus. Tindakan ini tidak bisa dibatalkan.`}
+        confirmLabel="Hapus"
         isLoading={deleteDialog.isDeleting}
         variant="danger"
       />

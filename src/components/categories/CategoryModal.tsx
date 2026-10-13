@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
 import { Category, TransactionType } from "@/types";
 import { Check } from "lucide-react";
+import { FIELD_LABEL } from "@/components/ui/fieldStyles";
 
 export interface CategoryModalProps {
   isOpen: boolean;
@@ -16,20 +17,23 @@ export interface CategoryModalProps {
   defaultType?: TransactionType;
 }
 
+// Muted inks that stay readable as small dots on both the light and dark paper
 const PRESET_COLORS = [
-  "#10b981", // emerald
-  "#06b6d4", // cyan
-  "#3b82f6", // blue
-  "#6366f1", // indigo
-  "#8b5cf6", // purple
-  "#ec4899", // pink
-  "#f43f5e", // rose
-  "#ef4444", // red
-  "#f97316", // orange
-  "#eab308", // amber
-  "#14b8a6", // teal
-  "#64748b", // slate
+  { value: "#2b67a8", name: "Biru" },
+  { value: "#5f8fb8", name: "Biru muda" },
+  { value: "#3d8a8a", name: "Hijau laut" },
+  { value: "#4f7d3a", name: "Hijau" },
+  { value: "#8a9a2b", name: "Zaitun" },
+  { value: "#b8892b", name: "Kuning tanah" },
+  { value: "#c4532b", name: "Jingga" },
+  { value: "#a8324a", name: "Merah tua" },
+  { value: "#8a4f9e", name: "Ungu" },
+  { value: "#5b5fa8", name: "Nila" },
+  { value: "#7a6a55", name: "Cokelat" },
+  { value: "#75716a", name: "Abu-abu" },
 ];
+
+const DEFAULT_COLOR = { INCOME: "#2b67a8", EXPENSE: "#c4532b" } as const;
 
 export function CategoryModal({
   isOpen,
@@ -44,7 +48,7 @@ export function CategoryModal({
   const [name, setName] = useState(initialData?.name ?? "");
   const [type, setType] = useState<TransactionType>(initialData?.type ?? defaultType);
   const [color, setColor] = useState(
-    initialData?.color || (defaultType === "INCOME" ? "#10b981" : "#f97316")
+    initialData?.color || DEFAULT_COLOR[defaultType]
   );
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -103,63 +107,45 @@ export function CategoryModal({
     <Modal
       isOpen={isOpen}
       onClose={isSubmitting ? () => {} : onClose}
-      title={isEditing ? "Edit Kategori" : "Tambah Kategori Baru"}
-      description={
-        isEditing
-          ? "Perbarui nama dan warna penanda kategori."
-          : "Tambahkan kategori baru untuk transaksi Anda."
-      }
+      title={isEditing ? "Ubah kategori" : "Tambah kategori"}
+      description={isEditing ? "Tipe kategori tidak bisa diubah setelah dibuat." : undefined}
       maxWidth="sm"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {apiError && (
-          <Alert variant="error" title="Gagal Menyimpan">
+          <Alert variant="error">
             {apiError}
           </Alert>
         )}
 
         {/* Tipe Kategori */}
         {!isEditing && (
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
-              Tipe Kategori
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setType("INCOME");
-                  setColor("#10b981");
-                }}
-                className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all ${
-                  type === "INCOME"
-                    ? "bg-emerald-500 text-white border-emerald-600 shadow-sm"
-                    : "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
-                }`}
-              >
-                Pemasukan (Income)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setType("EXPENSE");
-                  setColor("#f97316");
-                }}
-                className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all ${
-                  type === "EXPENSE"
-                    ? "bg-rose-500 text-white border-rose-600 shadow-sm"
-                    : "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
-                }`}
-              >
-                Pengeluaran (Expense)
-              </button>
+          <fieldset>
+            <legend className="sr-only">Tipe kategori</legend>
+            <div className="grid grid-cols-2 rounded-sm border border-rule p-0.5">
+              {(["EXPENSE", "INCOME"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  aria-pressed={type === t}
+                  onClick={() => {
+                    setType(t);
+                    setColor(DEFAULT_COLOR[t]);
+                  }}
+                  className={`rounded-[1px] py-2 text-sm transition-colors ${
+                    type === t ? "bg-ink font-medium text-paper" : "text-ink-2 hover:bg-sunken hover:text-ink"
+                  }`}
+                >
+                  {t === "EXPENSE" ? "Pengeluaran" : "Pemasukan"}
+                </button>
+              ))}
             </div>
-          </div>
+          </fieldset>
         )}
 
         <Input
-          label="Nama Kategori"
-          placeholder="Contoh: Kebutuhan Rumah, Hobi, Bonus"
+          label="Nama"
+          placeholder={type === "EXPENSE" ? "Contoh: Kebutuhan rumah" : "Contoh: Bonus"}
           value={name}
           onChange={(e) => {
             setName(e.target.value);
@@ -171,29 +157,32 @@ export function CategoryModal({
         />
 
         {/* Color Picker Palette */}
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            Warna Penanda
-          </label>
-          <div className="flex flex-wrap gap-2.5 items-center">
-            {PRESET_COLORS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setColor(c)}
-                className="h-8 w-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm"
-                style={{ backgroundColor: c }}
-                title={c}
-              >
-                {color.toLowerCase() === c.toLowerCase() && (
-                  <Check className="w-4 h-4 text-white drop-shadow" />
-                )}
-              </button>
-            ))}
+        <fieldset>
+          <legend className={FIELD_LABEL}>Warna penanda</legend>
+          <div className="flex flex-wrap items-center gap-2">
+            {PRESET_COLORS.map((c) => {
+              const selected = color.toLowerCase() === c.value;
+              return (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => setColor(c.value)}
+                  aria-pressed={selected}
+                  aria-label={c.name}
+                  title={c.name}
+                  className={`flex h-7 w-7 items-center justify-center rounded-full ring-offset-2 ring-offset-surface transition-shadow ${
+                    selected ? "ring-2 ring-ink" : "hover:ring-1 hover:ring-ink-3"
+                  }`}
+                  style={{ backgroundColor: c.value }}
+                >
+                  {selected && <Check className="h-3.5 w-3.5 text-white" aria-hidden="true" />}
+                </button>
+              );
+            })}
           </div>
-        </div>
+        </fieldset>
 
-        <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-end gap-2 border-t border-rule-soft pt-4">
           <Button
             type="button"
             variant="outline"
@@ -208,7 +197,7 @@ export function CategoryModal({
             isLoading={isSubmitting}
             disabled={isSubmitting}
           >
-            {isEditing ? "Simpan Perubahan" : "Tambah Kategori"}
+            {isEditing ? "Simpan perubahan" : "Simpan"}
           </Button>
         </div>
       </form>
