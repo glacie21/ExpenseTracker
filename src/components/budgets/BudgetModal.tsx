@@ -8,6 +8,7 @@ import { Alert } from "@/components/ui/Alert";
 import { formatRupiah } from "@/lib/formatters";
 import { normalizeAmount } from "@/lib/validations";
 import { Category } from "@/types";
+import { FIELD, FIELD_LABEL } from "@/components/ui/fieldStyles";
 
 export interface BudgetFormData {
   id?: string;
@@ -92,33 +93,30 @@ export function BudgetModal({ onClose, onSuccess, initialData, categories }: Bud
     }
   };
 
-  const selectClass =
-    "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100";
-
   return (
     <Modal
       isOpen
       onClose={isSubmitting ? () => {} : onClose}
-      title={isEditing ? "Edit Anggaran" : "Buat Anggaran"}
-      description="Batas pengeluaran bulanan untuk satu kategori pengeluaran."
+      title={isEditing ? "Ubah anggaran" : "Buat anggaran"}
+      description="Batas pengeluaran satu kategori untuk satu bulan."
       maxWidth="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         {apiError && (
-          <Alert variant="error" title="Gagal Menyimpan">
+          <Alert variant="error">
             {apiError}
           </Alert>
         )}
 
         <div>
-          <label htmlFor="budget-category" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-            Kategori Pengeluaran <span className="text-rose-500">*</span>
+          <label htmlFor="budget-category" className={FIELD_LABEL}>
+            Kategori pengeluaran
           </label>
           <select
             id="budget-category"
             value={effectiveCategoryId}
             onChange={(e) => setCategoryId(e.target.value)}
-            className={selectClass}
+            className={FIELD}
             aria-invalid={Boolean(errors.categoryId)}
           >
             {expenseCategories.length === 0 && <option value="">Belum ada kategori pengeluaran</option>}
@@ -128,11 +126,12 @@ export function BudgetModal({ onClose, onSuccess, initialData, categories }: Bud
               </option>
             ))}
           </select>
-          {errors.categoryId && <p className="mt-1 text-xs text-rose-500">{errors.categoryId}</p>}
+          {errors.categoryId && <p className="mt-1 text-xs text-neg">{errors.categoryId}</p>}
         </div>
 
         <Input
-          label="Nominal Anggaran (Rp)"
+          label="Batas (Rp)"
+          className="num text-base"
           type="number"
           min="0.01"
           step="0.01"
@@ -149,14 +148,14 @@ export function BudgetModal({ onClose, onSuccess, initialData, categories }: Bud
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label htmlFor="budget-month" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+            <label htmlFor="budget-month" className={FIELD_LABEL}>
               Bulan
             </label>
             <select
               id="budget-month"
               value={month}
               onChange={(e) => setMonth(Number(e.target.value))}
-              className={selectClass}
+              className={FIELD}
             >
               {MONTHS.map((name, i) => (
                 <option key={name} value={i + 1}>
@@ -164,7 +163,7 @@ export function BudgetModal({ onClose, onSuccess, initialData, categories }: Bud
                 </option>
               ))}
             </select>
-            {errors.month && <p className="mt-1 text-xs text-rose-500">{errors.month}</p>}
+            {errors.month && <p className="mt-1 text-xs text-neg">{errors.month}</p>}
           </div>
           <Input
             label="Tahun"
@@ -178,12 +177,12 @@ export function BudgetModal({ onClose, onSuccess, initialData, categories }: Bud
           />
         </div>
 
-        <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-3 dark:border-slate-800">
+        <div className="flex items-center justify-end gap-2 border-t border-rule-soft pt-4">
           <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
             Batal
           </Button>
           <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
-            {isEditing ? "Simpan Perubahan" : "Buat Anggaran"}
+            {isEditing ? "Simpan perubahan" : "Simpan"}
           </Button>
         </div>
       </form>
