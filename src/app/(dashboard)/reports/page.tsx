@@ -2,18 +2,12 @@
 
 import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import {
-  AlertCircle,
-  ChevronLeft,
-  ChevronRight,
-  Download,
-  FileText,
-  RefreshCw,
-  TrendingUp,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, FileText } from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Amount } from "@/components/ui/Amount";
+import { FIELD_SM, FILTER_LABEL, tabClass } from "@/components/ui/fieldStyles";
 import { ExpenseBreakdown, BreakdownItem } from "@/components/charts/ExpenseBreakdown";
 import { ReportTransactionsTable } from "@/components/reports/ReportTransactionsTable";
 import {
@@ -29,7 +23,7 @@ import {
   yearRange,
 } from "@/lib/dates";
 import { formatPercent } from "@/lib/finance";
-import { formatRupiah, formatRupiahSigned } from "@/lib/formatters";
+import { formatRupiah } from "@/lib/formatters";
 import { downloadFile } from "@/lib/download";
 import { Category, PaginatedTransactions, Transaction, TransactionType } from "@/types";
 
@@ -39,7 +33,7 @@ const PERIOD_TABS: { value: PeriodType; label: string }[] = [
   { value: "week", label: "Mingguan" },
   { value: "month", label: "Bulanan" },
   { value: "year", label: "Tahunan" },
-  { value: "custom", label: "Rentang Khusus" },
+  { value: "custom", label: "Rentang tanggal" },
 ];
 
 const PAGE_SIZE = 10;
@@ -85,13 +79,71 @@ function shiftAnchor(periodType: PeriodType, anchor: string, direction: 1 | -1):
   return toDateOnlyString(new Date(Date.UTC(date.getUTCFullYear() + direction, 0, 1)));
 }
 
-function SummaryTile({ label, value, hint }: { label: string; value: string; hint?: string }) {
+function ReportStatement({ report }: { report: ReportData }) {
+  const { summary, topExpenseCategory } = report;
+  const net = summary.netBalance;
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
-      <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">{label}</p>
-      <p className="mt-2 break-words text-xl font-bold tracking-tight text-slate-900 dark:text-white">{value}</p>
-      {hint && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{hint}</p>}
-    </div>
+    <section aria-labelledby="report-statement" className="h-full rounded-sm border border-rule bg-surface">
+      <div className="border-b border-rule-soft px-5 py-4 sm:px-6">
+        <h2 id="report-statement" className="font-serif text-lg font-medium text-ink">
+          Neraca
+        </h2>
+      </div>
+      <table className="w-full text-sm">
+        <caption className="sr-only">Pemasukan, pengeluaran, dan saldo bersih {report.period.label}</caption>
+        <tbody>
+          <tr className="border-b border-rule-soft">
+            <th scope="row" className="px-5 py-3.5 text-left font-normal sm:px-6">
+              <span className="block text-ink">Pemasukan</span>
+              <span className="block text-xs text-ink-3">{summary.incomeCount} transaksi</span>
+            </th>
+            <td className="px-5 py-3.5 text-right align-top sm:px-6">
+              <Amount value={summary.totalIncome} className="text-base" />
+            </td>
+          </tr>
+          <tr className="border-b border-rule-soft">
+            <th scope="row" className="px-5 py-3.5 text-left font-normal sm:px-6">
+              <span className="block text-ink">Pengeluaran</span>
+              <span className="block text-xs text-ink-3">{summary.expenseCount} transaksi</span>
+            </th>
+            <td className="px-5 py-3.5 text-right align-top sm:px-6">
+              <Amount value={-summary.totalExpense} className="text-base" />
+            </td>
+          </tr>
+          <tr>
+            <th scope="row" className="px-5 pt-5 pb-2 text-left font-medium text-ink sm:px-6">
+              {net < 0 ? "Defisit" : "Saldo bersih"}
+            </th>
+            <td className="px-5 pt-5 pb-2 text-right sm:px-6">
+              <span className="rule-total inline-block pb-1">
+                <Amount value={net} className="text-2xl font-semibold" />
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <dl className="mt-3 space-y-2 border-t border-rule-soft px-5 py-4 text-sm sm:px-6">
+        <div className="flex justify-between gap-4">
+          <dt className="text-ink-3">Tingkat tabungan</dt>
+          <dd className="num text-ink">
+            {summary.totalIncome > 0 ? formatPercent(summary.savingsRate) : "–"}
+          </dd>
+        </div>
+        <div className="flex justify-between gap-4">
+          <dt className="shrink-0 text-ink-3">Pengeluaran terbesar</dt>
+          <dd className="min-w-0 truncate text-right text-ink">
+            {topExpenseCategory ? (
+              <>
+                {topExpenseCategory.name}{" "}
+                <span className="num text-ink-3">{formatPercent(topExpenseCategory.percent)}</span>
+              </>
+            ) : (
+              "–"
+            )}
+          </dd>
+        </div>
+      </dl>
+    </section>
   );
 }
 
@@ -233,60 +285,18 @@ function ReportsView() {
   };
 
   const filteredCategories = type === "ALL" ? categories : categories.filter((c) => c.type === type);
-  const inputClass =
-    "w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs text-slate-800 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200";
-  const labelClass = "block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1 dark:text-slate-400";
+  const inputClass = FIELD_SM;
+  const labelClass = FILTER_LABEL;
   const currentYear = new Date().getFullYear();
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
-      {/* Header */}
-      <div className="flex flex-col gap-4 border-b border-slate-200/80 pb-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
-            Laporan Keuangan
-          </h2>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Ringkasan mingguan, bulanan, tahunan, atau rentang khusus dari transaksi Anda.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleExport("csv")}
-            isLoading={exporting === "csv"}
-            disabled={!reportQuery || exporting !== null}
-            leftIcon={<Download className="h-4 w-4" />}
-          >
-            Export CSV
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => handleExport("pdf")}
-            isLoading={exporting === "pdf"}
-            disabled={!reportQuery || exporting !== null}
-            leftIcon={<FileText className="h-4 w-4" />}
-          >
-            Download PDF
-          </Button>
-        </div>
-      </div>
-
-      {feedback && (
-        <Alert
-          variant={feedback.type}
-          onClose={() => setFeedback(null)}
-          title={feedback.type === "success" ? "Berhasil" : "Perhatian"}
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 border-b border-rule md:flex-row md:items-end md:justify-between">
+        <div
+          className="-mb-px flex gap-5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          role="group"
+          aria-label="Jenis periode laporan"
         >
-          {feedback.message}
-        </Alert>
-      )}
-
-      {/* Filters */}
-      <div className="space-y-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5 dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Jenis periode laporan">
           {PERIOD_TABS.map((tab) => (
             <button
               key={tab.value}
@@ -299,22 +309,46 @@ function ReportsView() {
                 }
                 changeFilter(setPeriodType)(tab.value);
               }}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 ${
-                periodType === tab.value
-                  ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-                  : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-              }`}
+              className={tabClass(periodType === tab.value)}
             >
               {tab.label}
             </button>
           ))}
         </div>
+        <div className="flex shrink-0 flex-wrap gap-2 pb-3">
+          <Button
+            variant="outline"
+            onClick={() => handleExport("csv")}
+            isLoading={exporting === "csv"}
+            disabled={!reportQuery || exporting !== null}
+            leftIcon={<Download className="h-4 w-4" />}
+          >
+            Unduh CSV
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => handleExport("pdf")}
+            isLoading={exporting === "pdf"}
+            disabled={!reportQuery || exporting !== null}
+            leftIcon={<FileText className="h-4 w-4" />}
+          >
+            Unduh PDF
+          </Button>
+        </div>
+      </div>
 
+      {feedback && (
+        <Alert variant={feedback.type} onClose={() => setFeedback(null)}>
+          {feedback.message}
+        </Alert>
+      )}
+
+      <div className="space-y-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {periodType === "custom" ? (
             <>
               <div>
-                <label htmlFor="report-start" className={labelClass}>Dari Tanggal</label>
+                <label htmlFor="report-start" className={labelClass}>Dari tanggal</label>
                 <input
                   id="report-start"
                   type="date"
@@ -324,7 +358,7 @@ function ReportsView() {
                 />
               </div>
               <div>
-                <label htmlFor="report-end" className={labelClass}>Sampai Tanggal</label>
+                <label htmlFor="report-end" className={labelClass}>Sampai tanggal</label>
                 <input
                   id="report-end"
                   type="date"
@@ -337,15 +371,15 @@ function ReportsView() {
           ) : (
             <div className="sm:col-span-2">
               <label htmlFor="report-anchor" className={labelClass}>
-                {periodType === "week" ? "Minggu (pilih salah satu tanggal)" : periodType === "month" ? "Bulan" : "Tahun"}
+                {periodType === "week" ? "Minggu (pilih tanggal mana saja)" : periodType === "month" ? "Bulan" : "Tahun"}
               </label>
               <div className="flex items-center gap-2">
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
                   aria-label="Periode sebelumnya"
                   onClick={() => changeFilter(setAnchor)(shiftAnchor(periodType, anchor, -1))}
-                  className="h-[34px] px-2"
+                  className="h-9 shrink-0 px-2"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -384,11 +418,11 @@ function ReportsView() {
                   </select>
                 )}
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
                   aria-label="Periode berikutnya"
                   onClick={() => changeFilter(setAnchor)(shiftAnchor(periodType, anchor, 1))}
-                  className="h-[34px] px-2"
+                  className="h-9 shrink-0 px-2"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
@@ -397,7 +431,7 @@ function ReportsView() {
           )}
 
           <div>
-            <label htmlFor="report-type" className={labelClass}>Jenis Transaksi</label>
+            <label htmlFor="report-type" className={labelClass}>Tipe transaksi</label>
             <select
               id="report-type"
               value={type}
@@ -420,10 +454,10 @@ function ReportsView() {
               onChange={(e) => changeFilter(setCategoryId)(e.target.value)}
               className={inputClass}
             >
-              <option value="">Semua Kategori</option>
+              <option value="">Semua kategori</option>
               {filteredCategories.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name} ({c.type === "INCOME" ? "Pemasukan" : "Pengeluaran"})
+                  {type === "ALL" ? `${c.name} (${c.type === "INCOME" ? "pemasukan" : "pengeluaran"})` : c.name}
                 </option>
               ))}
             </select>
@@ -431,100 +465,110 @@ function ReportsView() {
         </div>
 
         {!range && (
-          <p className="text-xs text-rose-600">
+          <p className="text-xs text-neg">
             Pilih rentang tanggal yang valid (tanggal awal tidak setelah tanggal akhir, maksimal 5 tahun).
           </p>
         )}
         {report && (
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Periode: <span className="font-semibold text-slate-700 dark:text-slate-200">{report.period.label}</span>
-            {" · "}dibandingkan dengan {report.period.previousLabel}
+          <p className="flex flex-wrap items-baseline gap-x-3">
+            <span className="font-serif text-2xl text-ink">{report.period.label}</span>
+            <span className="text-xs text-ink-3">dibanding {report.period.previousLabel}</span>
           </p>
         )}
       </div>
 
       {summary?.error && !summaryLoading ? (
-        <div className="rounded-2xl border border-rose-200 bg-white p-8 text-center dark:border-rose-900/60 dark:bg-slate-900">
-          <AlertCircle className="mx-auto mb-3 h-8 w-8 text-rose-500" />
-          <p className="mb-4 text-sm text-slate-600 dark:text-slate-300">{summary.error}</p>
-          <Button variant="outline" onClick={() => setReloadToken((t) => t + 1)} leftIcon={<RefreshCw className="h-4 w-4" />}>
-            Coba Lagi
+        <section className="rounded-sm border border-rule bg-surface px-6 py-12 text-center">
+          <h2 className="font-serif text-lg text-ink">Laporan gagal dimuat</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm text-ink-2">{summary.error}</p>
+          <Button variant="outline" onClick={() => setReloadToken((t) => t + 1)} className="mt-5">
+            Coba lagi
           </Button>
-        </div>
+        </section>
       ) : !report ? (
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3" aria-busy="true">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="h-24 rounded-2xl border border-slate-200/80 bg-white animate-pulse dark:border-slate-800 dark:bg-slate-900" />
-          ))}
-        </div>
+        <div className="h-72 animate-pulse rounded-sm border border-rule bg-surface" aria-busy="true" />
       ) : (
         <div className={`space-y-6 transition-opacity ${summaryLoading ? "opacity-50" : ""}`} aria-busy={summaryLoading}>
-          {/* Report Summary */}
-          <section aria-label="Ringkasan laporan" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <SummaryTile label="Total Income" value={formatRupiah(report.summary.totalIncome)} hint={`${report.summary.incomeCount} transaksi`} />
-            <SummaryTile label="Total Expense" value={formatRupiah(report.summary.totalExpense)} hint={`${report.summary.expenseCount} transaksi`} />
-            <SummaryTile label="Net Balance" value={formatRupiah(report.summary.netBalance)} />
-            <SummaryTile
-              label="Savings Rate"
-              value={formatPercent(report.summary.savingsRate)}
-              hint={report.summary.totalIncome > 0 ? undefined : "0% karena tidak ada pemasukan"}
-            />
-            <SummaryTile label="Jumlah Transaksi" value={String(report.summary.transactionCount)} />
-            <SummaryTile
-              label="Kategori Pengeluaran Terbesar"
-              value={report.topExpenseCategory?.name ?? "-"}
-              hint={
-                report.topExpenseCategory
-                  ? `${formatRupiah(report.topExpenseCategory.total)} · ${formatPercent(report.topExpenseCategory.percent)}`
-                  : "Belum ada pengeluaran"
-              }
-            />
-          </section>
-
-          {/* Category Insights */}
-          <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <Card>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+            <div className="lg:col-span-2">
+              <ReportStatement report={report} />
+            </div>
+            <Card className="lg:col-span-3">
               <CardHeader>
-                <CardTitle className="text-base">Distribusi Pengeluaran</CardTitle>
-                <CardDescription>Pengeluaran per kategori pada periode ini.</CardDescription>
+                <CardTitle>Pengeluaran per kategori</CardTitle>
+                <CardDescription>Diurutkan dari yang terbesar.</CardDescription>
               </CardHeader>
               <CardContent>
                 <ExpenseBreakdown items={report.breakdown} />
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Kenaikan Pengeluaran</CardTitle>
-                <CardDescription>Kategori yang pengeluarannya naik dibanding {report.period.previousLabel}.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {report.categoryIncreases.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">
-                    Tidak ada kategori dengan kenaikan pengeluaran pada periode ini.
-                  </p>
-                ) : (
-                  <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+          </div>
+
+          <section aria-labelledby="increases-heading" className="rounded-sm border border-rule bg-surface">
+            <div className="flex flex-col gap-0.5 border-b border-rule-soft px-5 py-4 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4 sm:px-6">
+              <h2 id="increases-heading" className="font-serif text-lg font-medium text-ink">
+                Pengeluaran yang naik
+              </h2>
+              <span className="text-xs text-ink-3">dibanding {report.period.previousLabel}</span>
+            </div>
+            {report.categoryIncreases.length === 0 ? (
+              <p className="px-5 py-6 text-sm text-ink-3 sm:px-6">
+                Tidak ada kategori yang pengeluarannya naik pada periode ini.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <caption className="sr-only">Kategori dengan kenaikan pengeluaran</caption>
+                  <thead className="border-b border-rule text-xs text-ink-3">
+                    <tr>
+                      <th scope="col" className="py-3 pr-3 pl-5 text-left font-normal sm:pl-6">
+                        Kategori
+                      </th>
+                      <th scope="col" className="hidden px-3 py-3 text-right font-normal sm:table-cell">
+                        Sebelumnya
+                      </th>
+                      <th scope="col" className="hidden px-3 py-3 text-right font-normal sm:table-cell">
+                        Periode ini
+                      </th>
+                      <th scope="col" className="py-3 pr-5 pl-3 text-right font-normal sm:pr-6">
+                        Kenaikan
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
                     {report.categoryIncreases.map((c) => (
-                      <li key={c.categoryId} className="flex items-center justify-between gap-3 py-3 text-sm">
-                        <span className="inline-flex min-w-0 items-center gap-2 text-slate-700 dark:text-slate-200">
-                          <TrendingUp className="h-4 w-4 shrink-0 text-rose-600" aria-hidden="true" />
-                          <span className="truncate">{c.name}</span>
-                        </span>
-                        <span className="shrink-0 text-right">
-                          <span className="font-semibold text-slate-900 dark:text-slate-100">{formatRupiahSigned(c.difference)}</span>
-                          <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">
-                            {c.percent === null ? "baru periode ini" : `+${formatPercent(c.percent)}`}
+                      <tr key={c.categoryId} className="border-b border-rule-soft last:border-0">
+                        <th scope="row" className="py-3 pr-3 pl-5 text-left font-normal sm:pl-6">
+                          <span className="inline-flex items-center gap-2 text-ink">
+                            <span
+                              className="h-2 w-2 shrink-0 rounded-full"
+                              style={{ backgroundColor: c.color || "var(--ink-3)" }}
+                              aria-hidden="true"
+                            />
+                            {c.name}
                           </span>
-                          <span className="block text-xs text-slate-400">
+                          <span className="num block text-xs text-ink-3 sm:hidden">
                             {formatRupiah(c.previous)} → {formatRupiah(c.current)}
                           </span>
-                        </span>
-                      </li>
+                        </th>
+                        <td className="hidden px-3 py-3 text-right sm:table-cell">
+                          <Amount value={c.previous} />
+                        </td>
+                        <td className="hidden px-3 py-3 text-right sm:table-cell">
+                          <Amount value={c.current} />
+                        </td>
+                        <td className="py-3 pr-5 pl-3 text-right whitespace-nowrap sm:pr-6">
+                          <span className="num text-neg">+{formatRupiah(c.difference)}</span>
+                          <span className="block text-xs text-ink-3">
+                            {c.percent === null ? "baru periode ini" : `+${formatPercent(c.percent)}`}
+                          </span>
+                        </td>
+                      </tr>
                     ))}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
         </div>
       )}
@@ -533,8 +577,8 @@ function ReportsView() {
       {range && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Daftar Transaksi</CardTitle>
-            <CardDescription>Transaksi sesuai periode dan filter laporan.</CardDescription>
+            <CardTitle>Rincian transaksi</CardTitle>
+            <CardDescription>Sesuai periode dan filter di atas. CSV dan PDF memuat daftar yang sama.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             <ReportTransactionsTable
@@ -554,7 +598,7 @@ export default function ReportsPage() {
   return (
     <Suspense
       fallback={
-        <div className="h-64 rounded-2xl border border-slate-200/80 bg-white animate-pulse dark:border-slate-800 dark:bg-slate-900" />
+        <div className="h-64 animate-pulse rounded-sm border border-rule bg-surface" />
       }
     >
       <ReportsView />
