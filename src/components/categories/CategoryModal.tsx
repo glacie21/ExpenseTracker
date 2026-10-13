@@ -8,6 +8,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Category, TransactionType } from "@/types";
 import { Check } from "lucide-react";
 import { FIELD_LABEL } from "@/components/ui/fieldStyles";
+import { TypeToggle } from "@/components/ui/TypeToggle";
 
 export interface CategoryModalProps {
   isOpen: boolean;
@@ -120,27 +121,14 @@ export function CategoryModal({
 
         {/* Tipe Kategori */}
         {!isEditing && (
-          <fieldset>
-            <legend className="sr-only">Tipe kategori</legend>
-            <div className="grid grid-cols-2 rounded-sm border border-rule p-0.5">
-              {(["EXPENSE", "INCOME"] as const).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  aria-pressed={type === t}
-                  onClick={() => {
-                    setType(t);
-                    setColor(DEFAULT_COLOR[t]);
-                  }}
-                  className={`rounded-[1px] py-2 text-sm transition-colors ${
-                    type === t ? "bg-ink font-medium text-paper" : "text-ink-2 hover:bg-sunken hover:text-ink"
-                  }`}
-                >
-                  {t === "EXPENSE" ? "Pengeluaran" : "Pemasukan"}
-                </button>
-              ))}
-            </div>
-          </fieldset>
+          <TypeToggle
+            value={type}
+            onChange={(t) => {
+              setType(t);
+              setColor(DEFAULT_COLOR[t]);
+            }}
+            legend="Tipe kategori"
+          />
         )}
 
         <Input

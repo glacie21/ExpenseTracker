@@ -2,7 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSessionToken, hashPassword, setSessionCookie } from "@/lib/auth";
 import { validateRegisterInput } from "@/lib/validations";
+import { isUniqueViolation } from "@/lib/dbErrors";
 import { REGISTER_IP_RULE, checkRateLimit, clientIp, hitRateLimit, tooManyRequestsMessage } from "@/lib/rateLimit";
+
+function emailTakenResponse() {
+  return NextResponse.json(
+    {
+      success: false,
+      message: "Email sudah terdaftar. Silakan gunakan email lain atau masuk ke akun Anda.",
+      errors: { email: "Email sudah digunakan" },
+    },
+    { status: 409 }
+  );
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,8 +41,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const email = body.email.trim().toLowerCase();
-    const name = body.name.trim();
+    const email = String(body.email).trim().toLowerCase();
+    const name = String(body.name).trim();
     const password = body.password;
 
     // Check if user already exists
@@ -38,16 +50,7 @@ export async function POST(request: NextRequest) {
       where: { email },
     });
 
-    if (existingUser) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Email sudah terdaftar. Silakan gunakan email lain atau masuk ke akun Anda.",
-          errors: { email: "Email sudah digunakan" },
-        },
-        { status: 409 }
-      );
-    }
+    if (existingUser) return emailTakenResponse();
 
     // Hash password
     const hashedPassword = await hashPassword(password);
@@ -97,6 +100,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
+    if (isUniqueViolation(error)) return emailTakenResponse();
     console.error("Register API error:", error);
     return NextResponse.json(
       {

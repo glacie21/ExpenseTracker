@@ -3,11 +3,11 @@
 import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
 import { AuthFrame } from "@/components/layout/AuthFrame";
+import { RevealButton } from "@/components/ui/RevealButton";
 import { safeRedirectPath } from "@/lib/jwt";
 
 const LINK_STYLE = "text-ink underline decoration-rule underline-offset-4 hover:decoration-ink";
@@ -112,16 +112,7 @@ function LoginForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           error={fieldErrors.password}
-          rightIcon={
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="text-ink-3 hover:text-ink"
-              aria-label={showPassword ? "Sembunyikan sandi" : "Tampilkan sandi"}
-            >
-              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
-          }
+          rightIcon={<RevealButton shown={showPassword} onToggle={() => setShowPassword(!showPassword)} />}
           autoComplete="current-password"
           required
         />

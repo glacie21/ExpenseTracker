@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { TransactionType } from "@/types";
 
@@ -47,4 +48,20 @@ export async function ensureUserCategories(userId: string): Promise<void> {
       skipDuplicates: true,
     });
   }
+}
+
+/** 409 for a category name that already exists for this user and type. */
+export function duplicateCategoryResponse(name?: string, type?: TransactionType) {
+  const typeLabel = type === "INCOME" ? "pemasukan" : type === "EXPENSE" ? "pengeluaran" : null;
+  return NextResponse.json(
+    {
+      success: false,
+      message:
+        name && typeLabel
+          ? `Kategori "${name}" untuk ${typeLabel} sudah ada.`
+          : "Kategori dengan nama ini sudah ada.",
+      errors: { name: "Nama kategori sudah ada untuk tipe ini" },
+    },
+    { status: 409 }
+  );
 }

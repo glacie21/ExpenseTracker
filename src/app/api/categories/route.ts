@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib/dbErrors";
-import { ensureUserCategories } from "@/lib/categories";
+import { isUniqueViolation, isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib/dbErrors";
+import { duplicateCategoryResponse } from "@/lib/categories";
 import { validateCategoryInput } from "@/lib/validations";
 import { TransactionType } from "@/types";
 
@@ -20,9 +20,6 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       );
     }
-
-    // Pastikan kategori default terinisialisasi jika user baru pertama kali akses
-    await ensureUserCategories(user.id);
 
     const { searchParams } = new URL(request.url);
     const typeParam = searchParams.get("type");
@@ -102,16 +99,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (existing) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: `Kategori "${name}" untuk tipe ${type} sudah ada.`,
-          errors: { name: "Nama kategori sudah ada untuk tipe ini" },
-        },
-        { status: 409 }
-      );
-    }
+    if (existing) return duplicateCategoryResponse(name, type);
 
     const category = await prisma.category.create({
       data: {
@@ -132,6 +120,7 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     if (isUnsupportedCharacterError(error)) return unsupportedCharacterResponse();
+    if (isUniqueViolation(error)) return duplicateCategoryResponse();
     console.error("POST /api/categories error:", error);
     return NextResponse.json(
       { success: false, message: "Gagal membuat kategori baru." },

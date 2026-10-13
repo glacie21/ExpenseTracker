@@ -6,7 +6,7 @@ import { DashboardShell } from "@/components/dashboard/DashboardShell";
 
 
 export const metadata = {
-  title: "Dashboard - Expense Tracker",
+  title: { default: "Ringkasan - Expense Tracker", template: "%s - Expense Tracker" },
   description: "Pantau ringkasan kondisi keuangan pribadi Anda",
 };
 

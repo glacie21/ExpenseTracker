@@ -5,7 +5,9 @@ import { Transaction } from "@/types";
 import { formatDate } from "@/lib/formatters";
 import { Amount } from "@/components/ui/Amount";
 import { Button } from "@/components/ui/Button";
-import { Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Pagination } from "@/components/ui/Pagination";
+import { RowActions } from "@/components/ui/RowActions";
+import { EmptyBlock, ErrorState } from "@/components/ui/States";
 
 export interface TransactionTableProps {
   transactions: Transaction[];
@@ -54,17 +56,7 @@ export function TransactionTable({
   isFiltered = false,
 }: TransactionTableProps) {
   if (error && !isLoading) {
-    return (
-      <section className="rounded-sm border border-rule bg-surface px-6 py-12 text-center">
-        <h2 className="font-serif text-lg text-ink">Transaksi gagal dimuat</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm text-ink-2">{error}</p>
-        {onRetry && (
-          <Button onClick={onRetry} variant="outline" className="mt-5">
-            Coba lagi
-          </Button>
-        )}
-      </section>
-    );
+    return <ErrorState title="Transaksi gagal dimuat" message={error} onRetry={onRetry} />;
   }
 
   if (isLoading) {
@@ -85,32 +77,23 @@ export function TransactionTable({
   }
 
   if (transactions.length === 0) {
-    return (
-      <section className="rounded-sm border border-dashed border-rule px-6 py-12 text-center sm:py-16">
-        {isFiltered ? (
-          <>
-            <h2 className="font-serif text-lg text-ink">Tidak ada transaksi yang cocok</h2>
-            <p className="mx-auto mt-2 max-w-md text-sm text-ink-2">
-              Coba kata kunci lain, atau longgarkan filter tanggal dan kategori.
-            </p>
-          </>
-        ) : (
-          <>
-            <h2 className="font-serif text-lg text-ink">Belum ada transaksi</h2>
-            <p className="mx-auto mt-2 max-w-md text-sm text-ink-2">
-              Catat pemasukan atau pengeluaran pertama Anda. Semuanya akan muncul di sini.
-            </p>
-            <Button onClick={onAddNew} variant="primary" className="mt-5">
-              Catat transaksi
-            </Button>
-          </>
-        )}
-      </section>
+    return isFiltered ? (
+      <EmptyBlock title="Tidak ada transaksi yang cocok">
+        Coba kata kunci lain, atau longgarkan filter tanggal dan kategori.
+      </EmptyBlock>
+    ) : (
+      <EmptyBlock
+        title="Belum ada transaksi"
+        action={
+          <Button onClick={onAddNew} variant="primary">
+            Catat transaksi
+          </Button>
+        }
+      >
+        Catat pemasukan atau pengeluaran pertama Anda. Semuanya akan muncul di sini.
+      </EmptyBlock>
     );
   }
-
-  const firstRow = (pagination.page - 1) * pagination.limit + 1;
-  const lastRow = Math.min(pagination.page * pagination.limit, pagination.total);
 
   return (
     <div className="rounded-sm border border-rule bg-surface">
@@ -159,24 +142,7 @@ export function TransactionTable({
                   <Amount value={Number(tx.amount)} type={tx.type} />
                 </td>
                 <td className="py-2.5 pr-4 pl-1 text-right align-top whitespace-nowrap sm:pr-5">
-                  <button
-                    type="button"
-                    onClick={() => onEdit(tx)}
-                    aria-label={`Ubah ${tx.title}`}
-                    title="Ubah"
-                    className="rounded-sm p-1.5 text-ink-3 transition-colors hover:bg-sunken hover:text-ink"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onDelete(tx)}
-                    aria-label={`Hapus ${tx.title}`}
-                    title="Hapus"
-                    className="rounded-sm p-1.5 text-ink-3 transition-colors hover:bg-neg-soft hover:text-neg"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <RowActions label={tx.title} onEdit={() => onEdit(tx)} onDelete={() => onDelete(tx)} />
                 </td>
               </tr>
             ))}
@@ -184,41 +150,7 @@ export function TransactionTable({
         </table>
       </div>
 
-      <div className="flex flex-col items-center justify-between gap-3 border-t border-rule px-5 py-3 sm:flex-row sm:px-6">
-        <p className="text-xs text-ink-3">
-          <span className="num text-sm text-ink">
-            {firstRow}–{lastRow}
-          </span>{" "}
-          dari <span className="num text-sm text-ink">{pagination.total}</span> transaksi
-        </p>
-
-        {pagination.totalPages > 1 && (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(pagination.page - 1)}
-              disabled={pagination.page <= 1}
-              leftIcon={<ChevronLeft className="h-4 w-4" />}
-            >
-              Sebelumnya
-            </Button>
-            <span className="px-1 text-xs text-ink-3">
-              Hal. <span className="num text-sm text-ink">{pagination.page}</span> /{" "}
-              <span className="num text-sm text-ink">{pagination.totalPages}</span>
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(pagination.page + 1)}
-              disabled={pagination.page >= pagination.totalPages}
-              rightIcon={<ChevronRight className="h-4 w-4" />}
-            >
-              Berikutnya
-            </Button>
-          </div>
-        )}
-      </div>
+      <Pagination pagination={pagination} onPageChange={onPageChange} />
     </div>
   );
 }

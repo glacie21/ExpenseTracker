@@ -9,6 +9,7 @@ import { Category, Transaction, TransactionType } from "@/types";
 import { formatRupiah, formatDateForInput } from "@/lib/formatters";
 import { normalizeAmount } from "@/lib/validations";
 import { FIELD, FIELD_LABEL } from "@/components/ui/fieldStyles";
+import { TypeToggle } from "@/components/ui/TypeToggle";
 
 export interface TransactionModalProps {
   isOpen: boolean;
@@ -157,24 +158,7 @@ export function TransactionModal({
         )}
 
         {/* Transaction Type Switcher */}
-        <fieldset>
-          <legend className="sr-only">Tipe transaksi</legend>
-          <div className="grid grid-cols-2 rounded-sm border border-rule p-0.5">
-            {(["EXPENSE", "INCOME"] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                aria-pressed={type === t}
-                onClick={() => handleTypeChange(t)}
-                className={`rounded-[1px] py-2 text-sm transition-colors ${
-                  type === t ? "bg-ink font-medium text-paper" : "text-ink-2 hover:bg-sunken hover:text-ink"
-                }`}
-              >
-                {t === "EXPENSE" ? "Pengeluaran" : "Pemasukan"}
-              </button>
-            ))}
-          </div>
-        </fieldset>
+        <TypeToggle value={type} onChange={handleTypeChange} legend="Tipe transaksi" />
 
         {/* Transaction Title */}
         <Input

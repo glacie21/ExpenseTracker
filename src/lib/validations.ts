@@ -40,6 +40,11 @@ export const PASSWORD_MIN_LENGTH = 8;
 const PASSWORD_MAX_BYTES = 72;
 
 /** Error message for a new password, or null when it is acceptable. */
+/** JSON bodies are untyped: anything that is not a string counts as empty. */
+function asString(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
 export function passwordError(password: string): string | null {
   if (!password) return "Password wajib diisi";
   if (password.length < PASSWORD_MIN_LENGTH) {
@@ -60,17 +65,17 @@ export function nameError(name: string): string | null {
 }
 
 export function validateRegisterInput(data: {
-  name?: string;
-  email?: string;
-  password?: string;
-  confirmPassword?: string;
+  name?: unknown;
+  email?: unknown;
+  password?: unknown;
+  confirmPassword?: unknown;
 }): ValidationResult {
   const errors: Record<string, string> = {};
 
-  const name = data.name?.trim() || "";
-  const email = data.email?.trim() || "";
-  const password = data.password || "";
-  const confirmPassword = data.confirmPassword || "";
+  const name = asString(data.name).trim();
+  const email = asString(data.email).trim();
+  const password = asString(data.password);
+  const confirmPassword = asString(data.confirmPassword);
 
   const nameProblem = nameError(name);
   if (nameProblem) errors.name = nameProblem;
@@ -128,13 +133,13 @@ export function validatePasswordChangeInput(data: {
 }
 
 export function validateLoginInput(data: {
-  email?: string;
-  password?: string;
+  email?: unknown;
+  password?: unknown;
 }): ValidationResult {
   const errors: Record<string, string> = {};
 
-  const email = data.email?.trim() || "";
-  const password = data.password || "";
+  const email = asString(data.email).trim();
+  const password = asString(data.password);
 
   if (!email) {
     errors.email = "Email wajib diisi";

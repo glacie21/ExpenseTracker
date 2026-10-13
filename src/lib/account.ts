@@ -5,6 +5,7 @@ import {
   ACCOUNT_PASSWORD_RULE,
   checkRateLimit,
   hitRateLimit,
+  releaseRateLimit,
   resetRateLimit,
   tooManyRequestsMessage,
 } from "@/lib/rateLimit";
@@ -38,14 +39,17 @@ export async function verifyCurrentPassword(
     };
   }
 
+  // Counted before the password is compared so parallel guesses cannot all pass
+  hitRateLimit(key, ACCOUNT_PASSWORD_RULE);
+
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { password: true } });
   if (!user) {
     return { ok: false, response: NextResponse.json(UNAUTHORIZED, { status: 401 }) };
   }
 
   const valid = typeof password === "string" && password !== "" && (await comparePassword(password, user.password));
+  if (valid) releaseRateLimit(key);
   if (!valid) {
-    hitRateLimit(key, ACCOUNT_PASSWORD_RULE);
     return {
       ok: false,
       response: NextResponse.json(

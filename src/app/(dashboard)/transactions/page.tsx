@@ -11,6 +11,7 @@ import { TransactionModal } from "@/components/transactions/TransactionModal";
 import { Category, PaginatedTransactions, Transaction, TransactionType } from "@/types";
 import { Download, Plus, RefreshCw } from "lucide-react";
 import { downloadFile } from "@/lib/download";
+import { useExternalNavigationKey } from "@/lib/useExternalNavigationKey";
 
 const PAGE_SIZE = 10;
 const SEARCH_DEBOUNCE_MS = 400;
@@ -33,7 +34,7 @@ interface LoadResult {
   error: string | null;
 }
 
-function TransactionsView() {
+function TransactionsView({ writeQuery }: { writeQuery: (pathname: string, query: string) => void }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -106,8 +107,8 @@ function TransactionsView() {
 
   // Simpan filter di URL (tanpa menambah history atau request server) agar bertahan saat reload
   useEffect(() => {
-    window.history.replaceState(null, "", filterQuery ? `${pathname}?${filterQuery}` : pathname);
-  }, [filterQuery, pathname]);
+    writeQuery(pathname, filterQuery);
+  }, [filterQuery, pathname, writeQuery]);
 
   // Load categories
   useEffect(() => {
@@ -388,6 +389,12 @@ function TransactionsView() {
   );
 }
 
+// A sidebar link or Back/Forward remounts the view so it re-reads the filters from the URL
+function TransactionsRoute() {
+  const [navigationKey, writeQuery] = useExternalNavigationKey();
+  return <TransactionsView key={navigationKey} writeQuery={writeQuery} />;
+}
+
 export default function TransactionsPage() {
   return (
     <Suspense
@@ -395,7 +402,7 @@ export default function TransactionsPage() {
         <div className="h-64 animate-pulse rounded-sm border border-rule bg-surface" />
       }
     >
-      <TransactionsView />
+      <TransactionsRoute />
     </Suspense>
   );
 }

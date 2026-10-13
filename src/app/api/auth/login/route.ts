@@ -8,6 +8,7 @@ import {
   checkRateLimit,
   clientIp,
   hitRateLimit,
+  releaseRateLimit,
   resetRateLimit,
   tooManyRequestsMessage,
 } from "@/lib/rateLimit";
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const email = body.email.trim().toLowerCase();
+    const email = String(body.email).trim().toLowerCase();
     const password = body.password;
     const rememberMe = Boolean(body.rememberMe);
 
@@ -50,6 +51,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Count the attempt before the slow password check, so a burst of parallel
+    // requests cannot all slip past the check above; a valid login gives it back
+    hitRateLimit(emailKey, LOGIN_EMAIL_RULE);
+    hitRateLimit(ipKey, LOGIN_IP_RULE);
+
     const user = await prisma.user.findUnique({
       where: { email },
     });
@@ -60,12 +66,11 @@ export async function POST(request: NextRequest) {
       : (await burnPasswordCheck(password), false);
 
     if (!user || !isPasswordValid) {
-      hitRateLimit(emailKey, LOGIN_EMAIL_RULE);
-      hitRateLimit(ipKey, LOGIN_IP_RULE);
       return NextResponse.json(INVALID_CREDENTIALS, { status: 401 });
     }
 
     resetRateLimit(emailKey);
+    releaseRateLimit(ipKey);
 
     const token = await createSessionToken(user, rememberMe);
 

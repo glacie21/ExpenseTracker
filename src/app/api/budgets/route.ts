@@ -5,9 +5,9 @@ import {
   DUPLICATE_BUDGET_MESSAGE,
   currentMonthYear,
   getBudgetsWithProgress,
-  isDuplicateBudgetError,
   parseBudgetBody,
 } from "@/lib/budgets";
+import { isUniqueViolation } from "@/lib/dbErrors";
 import { BUDGET_MAX_YEAR, BUDGET_MIN_YEAR } from "@/lib/validations";
 
 const UNAUTHORIZED = {
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    if (isDuplicateBudgetError(error)) {
+    if (isUniqueViolation(error)) {
       return NextResponse.json(
         { success: false, message: DUPLICATE_BUDGET_MESSAGE, errors: { categoryId: "Anggaran sudah ada" } },
         { status: 409 }

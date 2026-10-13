@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { PERIOD_PRESETS, PeriodPreset } from "@/lib/dates";
+import { tabClass } from "@/components/ui/fieldStyles";
 
 interface PeriodFilterProps {
   preset: PeriodPreset;
@@ -31,6 +32,18 @@ export function PeriodFilter({ preset, start, end, label, actions, children }: P
   const [customStart, setCustomStart] = useState(start);
   const [customEnd, setCustomEnd] = useState(end);
   const [error, setError] = useState<string | null>(null);
+
+  // The component stays mounted across navigations; when the URL's period
+  // changes underneath it (Back/Forward), reset the form to match
+  const periodKey = `${preset}|${start}|${end}`;
+  const [syncedKey, setSyncedKey] = useState(periodKey);
+  if (periodKey !== syncedKey) {
+    setSyncedKey(periodKey);
+    setShowCustom(preset === "custom");
+    setCustomStart(start);
+    setCustomEnd(end);
+    setError(null);
+  }
 
   const navigate = (params: Record<string, string>) => {
     startTransition(() => {
@@ -81,11 +94,7 @@ export function PeriodFilter({ preset, start, end, label, actions, children }: P
                   type="button"
                   onClick={() => selectPreset(p.value)}
                   aria-pressed={active}
-                  className={`shrink-0 border-b-2 pb-2.5 text-sm transition-colors ${
-                    active
-                      ? "border-ink font-medium text-ink"
-                      : "border-transparent text-ink-3 hover:text-ink"
-                  }`}
+                  className={tabClass(active)}
                 >
                   {p.label}
                 </button>

@@ -138,6 +138,58 @@ describe("registration and login hardening", () => {
   });
 });
 
+describe("input and race hardening", () => {
+  test("parallel wrong guesses cannot get past the lockout", async () => {
+    await registerUser("burst");
+    const results = await Promise.all(Array.from({ length: 10 }, () => login("burst", "wrong-password")));
+    const statuses = results.map(({ res }) => res.status);
+    assert.ok(statuses.filter((s) => s === 401).length <= 5, `statuses: ${statuses}`);
+    assert.ok(statuses.every((s) => s === 401 || s === 429), `statuses: ${statuses}`);
+  });
+
+  test("non-string credentials are a 400, not a server error", async () => {
+    const loginRes = await new Client().post("/api/auth/login", { email: emailFor("nonstring"), password: 12345678 });
+    assert.equal(loginRes.status, 400);
+    const emailRes = await new Client().post("/api/auth/login", { email: 1, password: PASSWORD });
+    assert.equal(emailRes.status, 400);
+    const registerRes = await new Client().post("/api/auth/register", {
+      name: "Angka",
+      email: emailFor("nonstring"),
+      password: 12345678,
+      confirmPassword: 12345678,
+    });
+    assert.equal(registerRes.status, 400);
+  });
+
+  test("two registrations with one email at once: one wins, the other gets 409", async () => {
+    const body = { name: "Kembar", email: emailFor("twin"), password: PASSWORD, confirmPassword: PASSWORD };
+    const results = await Promise.all([new Client().post("/api/auth/register", body), new Client().post("/api/auth/register", body)]);
+    assert.deepEqual(results.map((r) => r.status).sort(), [201, 409]);
+  });
+
+  test("two identical category creates at once: one wins, the other gets 409", async () => {
+    const client = await registerUser("cat-race");
+    const body = { name: "Balapan", type: "EXPENSE" };
+    const results = await Promise.all([client.post("/api/categories", body), client.post("/api/categories", body)]);
+    assert.deepEqual(results.map((r) => r.status).sort(), [201, 409]);
+  });
+
+  test("deleting every category does not bring the defaults back", async () => {
+    const client = await registerUser("no-cats");
+    const { categories } = (await client.get("/api/categories")).json.data;
+    assert.equal(categories.length, 13);
+    for (const c of categories) assert.equal((await client.delete(`/api/categories/${c.id}`)).status, 200);
+    assert.equal((await client.get("/api/categories")).json.data.categories.length, 0);
+  });
+
+  test("an absurd page number returns an empty page", async () => {
+    const client = await registerUser("paging");
+    const res = await client.get("/api/transactions?page=99999999999999999999&limit=100");
+    assert.equal(res.status, 200);
+    assert.equal(res.json.data.transactions.length, 0);
+  });
+});
+
 describe("profile", () => {
   test("name can be updated and is validated", async () => {
     const client = await registerUser("profile");

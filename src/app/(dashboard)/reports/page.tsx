@@ -7,6 +7,9 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Amount } from "@/components/ui/Amount";
+import { ErrorState } from "@/components/ui/States";
+import { PeriodStatement, StatementRow } from "@/components/dashboard/PeriodStatement";
+import { useExternalNavigationKey } from "@/lib/useExternalNavigationKey";
 import { FIELD_SM, FILTER_LABEL, tabClass } from "@/components/ui/fieldStyles";
 import { ExpenseBreakdown, BreakdownItem } from "@/components/charts/ExpenseBreakdown";
 import { ReportTransactionsTable } from "@/components/reports/ReportTransactionsTable";
@@ -23,7 +26,7 @@ import {
   yearRange,
 } from "@/lib/dates";
 import { formatPercent } from "@/lib/finance";
-import { formatRupiah } from "@/lib/formatters";
+import { categoryOptionLabel, formatRupiah } from "@/lib/formatters";
 import { downloadFile } from "@/lib/download";
 import { Category, PaginatedTransactions, Transaction, TransactionType } from "@/types";
 
@@ -81,73 +84,30 @@ function shiftAnchor(periodType: PeriodType, anchor: string, direction: 1 | -1):
 
 function ReportStatement({ report }: { report: ReportData }) {
   const { summary, topExpenseCategory } = report;
-  const net = summary.netBalance;
   return (
-    <section aria-labelledby="report-statement" className="h-full rounded-sm border border-rule bg-surface">
-      <div className="border-b border-rule-soft px-5 py-4 sm:px-6">
-        <h2 id="report-statement" className="font-serif text-lg font-medium text-ink">
-          Neraca
-        </h2>
-      </div>
-      <table className="w-full text-sm">
-        <caption className="sr-only">Pemasukan, pengeluaran, dan saldo bersih {report.period.label}</caption>
-        <tbody>
-          <tr className="border-b border-rule-soft">
-            <th scope="row" className="px-5 py-3.5 text-left font-normal sm:px-6">
-              <span className="block text-ink">Pemasukan</span>
-              <span className="block text-xs text-ink-3">{summary.incomeCount} transaksi</span>
-            </th>
-            <td className="px-5 py-3.5 text-right align-top sm:px-6">
-              <Amount value={summary.totalIncome} className="text-base" />
-            </td>
-          </tr>
-          <tr className="border-b border-rule-soft">
-            <th scope="row" className="px-5 py-3.5 text-left font-normal sm:px-6">
-              <span className="block text-ink">Pengeluaran</span>
-              <span className="block text-xs text-ink-3">{summary.expenseCount} transaksi</span>
-            </th>
-            <td className="px-5 py-3.5 text-right align-top sm:px-6">
-              <Amount value={-summary.totalExpense} className="text-base" />
-            </td>
-          </tr>
-          <tr>
-            <th scope="row" className="px-5 pt-5 pb-2 text-left font-medium text-ink sm:px-6">
-              {net < 0 ? "Defisit" : "Saldo bersih"}
-            </th>
-            <td className="px-5 pt-5 pb-2 text-right sm:px-6">
-              <span className="rule-total inline-block pb-1">
-                <Amount value={net} className="text-2xl font-semibold" />
-              </span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <dl className="mt-3 space-y-2 border-t border-rule-soft px-5 py-4 text-sm sm:px-6">
-        <div className="flex justify-between gap-4">
-          <dt className="text-ink-3">Tingkat tabungan</dt>
-          <dd className="num text-ink">
-            {summary.totalIncome > 0 ? formatPercent(summary.savingsRate) : "–"}
-          </dd>
-        </div>
-        <div className="flex justify-between gap-4">
-          <dt className="shrink-0 text-ink-3">Pengeluaran terbesar</dt>
-          <dd className="min-w-0 truncate text-right text-ink">
-            {topExpenseCategory ? (
-              <>
-                {topExpenseCategory.name}{" "}
-                <span className="num text-ink-3">{formatPercent(topExpenseCategory.percent)}</span>
-              </>
-            ) : (
-              "–"
-            )}
-          </dd>
-        </div>
-      </dl>
-    </section>
+    <PeriodStatement
+      title="Neraca"
+      income={summary.totalIncome}
+      expense={summary.totalExpense}
+      incomeCount={summary.incomeCount}
+      expenseCount={summary.expenseCount}
+      savingsRate={summary.savingsRate}
+    >
+      <StatementRow label="Pengeluaran terbesar">
+        {topExpenseCategory ? (
+          <>
+            {topExpenseCategory.name}{" "}
+            <span className="num text-ink-3">{formatPercent(topExpenseCategory.percent)}</span>
+          </>
+        ) : (
+          "–"
+        )}
+      </StatementRow>
+    </PeriodStatement>
   );
 }
 
-function ReportsView() {
+function ReportsView({ writeQuery }: { writeQuery: (pathname: string, query: string) => void }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -194,8 +154,8 @@ function ReportsView() {
     }
     if (type !== "ALL") params.set("type", type);
     if (categoryId) params.set("categoryId", categoryId);
-    window.history.replaceState(null, "", `${pathname}?${params.toString()}`);
-  }, [periodType, anchor, customStart, customEnd, type, categoryId, pathname]);
+    writeQuery(pathname, params.toString());
+  }, [periodType, anchor, customStart, customEnd, type, categoryId, pathname, writeQuery]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -233,7 +193,11 @@ function ReportsView() {
 
   // Transactions table (server-paginated)
   const tableKey = `${summaryKey}#${page}`;
-  const [table, setTable] = useState<{ key: string; data: PaginatedTransactions | null } | null>(null);
+  const [table, setTable] = useState<{
+    key: string;
+    data: PaginatedTransactions | null;
+    error: string | null;
+  } | null>(null);
   useEffect(() => {
     if (!reportQuery) return;
     const controller = new AbortController();
@@ -242,10 +206,18 @@ function ReportsView() {
     params.set("page", String(page));
     params.set("limit", String(PAGE_SIZE));
     fetch(`/api/transactions?${params.toString()}`, { signal: controller.signal })
-      .then((res) => res.json())
-      .then((json) => setTable({ key: tableKey, data: json.success ? json.data : null }))
+      .then(async (res) => ({ res, json: await res.json() }))
+      .then(({ res, json }) =>
+        setTable({
+          key: tableKey,
+          data: res.ok && json.success ? json.data : null,
+          error: res.ok && json.success ? null : json.message || "Daftar transaksi gagal dimuat.",
+        })
+      )
       .catch((err) => {
-        if (err?.name !== "AbortError") setTable({ key: tableKey, data: null });
+        if (err?.name !== "AbortError") {
+          setTable({ key: tableKey, data: null, error: "Terjadi gangguan jaringan saat memuat transaksi." });
+        }
       });
     return () => controller.abort();
   }, [reportQuery, page, tableKey]);
@@ -457,7 +429,7 @@ function ReportsView() {
               <option value="">Semua kategori</option>
               {filteredCategories.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {type === "ALL" ? `${c.name} (${c.type === "INCOME" ? "pemasukan" : "pengeluaran"})` : c.name}
+                  {categoryOptionLabel(c, type)}
                 </option>
               ))}
             </select>
@@ -469,7 +441,7 @@ function ReportsView() {
             Pilih rentang tanggal yang valid (tanggal awal tidak setelah tanggal akhir, maksimal 5 tahun).
           </p>
         )}
-        {report && (
+        {range && report && (
           <p className="flex flex-wrap items-baseline gap-x-3">
             <span className="font-serif text-2xl text-ink">{report.period.label}</span>
             <span className="text-xs text-ink-3">dibanding {report.period.previousLabel}</span>
@@ -477,14 +449,12 @@ function ReportsView() {
         )}
       </div>
 
-      {summary?.error && !summaryLoading ? (
-        <section className="rounded-sm border border-rule bg-surface px-6 py-12 text-center">
-          <h2 className="font-serif text-lg text-ink">Laporan gagal dimuat</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-ink-2">{summary.error}</p>
-          <Button variant="outline" onClick={() => setReloadToken((t) => t + 1)} className="mt-5">
-            Coba lagi
-          </Button>
-        </section>
+      {!range ? null : summary?.error && !summaryLoading ? (
+        <ErrorState
+          title="Laporan gagal dimuat"
+          message={summary.error}
+          onRetry={() => setReloadToken((t) => t + 1)}
+        />
       ) : !report ? (
         <div className="h-72 animate-pulse rounded-sm border border-rule bg-surface" aria-busy="true" />
       ) : (
@@ -585,6 +555,8 @@ function ReportsView() {
               transactions={(table?.data?.transactions ?? []) as Transaction[]}
               pagination={table?.data?.pagination ?? { page: 1, limit: PAGE_SIZE, total: 0, totalPages: 1 }}
               isLoading={tableLoading}
+              error={table?.error}
+              onRetry={() => setReloadToken((t) => t + 1)}
               onPageChange={setPage}
             />
           </CardContent>
@@ -594,6 +566,12 @@ function ReportsView() {
   );
 }
 
+// A sidebar link or Back/Forward remounts the view so it re-reads the selection from the URL
+function ReportsRoute() {
+  const [navigationKey, writeQuery] = useExternalNavigationKey();
+  return <ReportsView key={navigationKey} writeQuery={writeQuery} />;
+}
+
 export default function ReportsPage() {
   return (
     <Suspense
@@ -601,7 +579,7 @@ export default function ReportsPage() {
         <div className="h-64 animate-pulse rounded-sm border border-rule bg-surface" />
       }
     >
-      <ReportsView />
+      <ReportsRoute />
     </Suspense>
   );
 }

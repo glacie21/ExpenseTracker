@@ -9,13 +9,10 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { BudgetLedger, BudgetView, BUDGET_STATUS } from "@/components/budgets/BudgetLedger";
 import { BudgetModal, BudgetFormData } from "@/components/budgets/BudgetModal";
 import { formatPercent } from "@/lib/finance";
-import { todayLocalISO } from "@/lib/dates";
+import { MONTH_NAMES, todayLocalISO } from "@/lib/dates";
+import { useExternalNavigationKey } from "@/lib/useExternalNavigationKey";
+import { EmptyBlock, ErrorState } from "@/components/ui/States";
 import { Category } from "@/types";
-
-const MONTHS = [
-  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
-];
 
 interface BudgetsData {
   budgets: BudgetView[];
@@ -41,7 +38,7 @@ function parseMonthParam(value: string | null): { month: number; year: number } 
   return { year: Number(today.slice(0, 4)), month: Number(today.slice(5, 7)) };
 }
 
-function BudgetsView() {
+function BudgetsView({ writeQuery }: { writeQuery: (pathname: string, query: string) => void }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -60,8 +57,8 @@ function BudgetsView() {
   const requestKey = `${monthParam}#${reloadToken}`;
 
   useEffect(() => {
-    window.history.replaceState(null, "", `${pathname}?month=${monthParam}`);
-  }, [monthParam, pathname]);
+    writeQuery(pathname, `month=${monthParam}`);
+  }, [monthParam, pathname, writeQuery]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -125,7 +122,7 @@ function BudgetsView() {
 
   const alerts = data?.budgets.filter((b) => b.status !== "ok") ?? [];
 
-  const periodLabel = `${MONTHS[month - 1]} ${year}`;
+  const periodLabel = `${MONTH_NAMES[month - 1]} ${year}`;
   const openCreate = () => setModal({ categoryId: "", amount: "", month, year });
 
   return (
@@ -164,28 +161,16 @@ function BudgetsView() {
       )}
 
       {result?.error && !isLoading ? (
-        <section className="rounded-sm border border-rule bg-surface px-6 py-12 text-center">
-          <h2 className="font-serif text-lg text-ink">Anggaran gagal dimuat</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-ink-2">{result.error}</p>
-          <Button variant="outline" onClick={reload} className="mt-5">
-            Coba lagi
-          </Button>
-        </section>
+        <ErrorState title="Anggaran gagal dimuat" message={result.error} onRetry={reload} />
       ) : !data ? (
         <div className="h-64 animate-pulse rounded-sm border border-rule bg-surface" aria-busy="true" />
       ) : (
         <div className={`space-y-6 transition-opacity ${isLoading ? "opacity-50" : ""}`} aria-busy={isLoading}>
           {data.budgets.length === 0 ? (
-            <section className="rounded-sm border border-dashed border-rule px-6 py-12 text-center sm:py-16">
-              <h2 className="font-serif text-xl text-ink">Belum ada anggaran untuk {periodLabel}</h2>
-              <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-ink-2">
-                Tetapkan batas bulanan untuk kategori pengeluaran. Anda akan diberi tahu di sini saat
-                pemakaiannya mendekati batas.
-              </p>
-              <Button onClick={openCreate} className="mt-6">
-                Buat anggaran
-              </Button>
-            </section>
+            <EmptyBlock title={`Belum ada anggaran untuk ${periodLabel}`} action={<Button onClick={openCreate}>Buat anggaran</Button>}>
+              Tetapkan batas bulanan untuk kategori pengeluaran. Anda akan diberi tahu di sini saat pemakaiannya
+              mendekati batas.
+            </EmptyBlock>
           ) : (
             <>
               {alerts.length > 0 && (
@@ -239,7 +224,7 @@ function BudgetsView() {
         onClose={() => setToDelete({ budget: null, isDeleting: false })}
         onConfirm={handleDelete}
         title="Hapus anggaran?"
-        message={`Anggaran ${toDelete.budget?.category.name ?? ""} untuk ${MONTHS[(toDelete.budget?.month ?? 1) - 1]} ${toDelete.budget?.year ?? ""} akan dihapus. Transaksi tidak terpengaruh.`}
+        message={`Anggaran ${toDelete.budget?.category.name ?? ""} untuk ${MONTH_NAMES[(toDelete.budget?.month ?? 1) - 1]} ${toDelete.budget?.year ?? ""} akan dihapus. Transaksi tidak terpengaruh.`}
         confirmLabel="Hapus"
         isLoading={toDelete.isDeleting}
         variant="danger"
@@ -248,12 +233,18 @@ function BudgetsView() {
   );
 }
 
+// A sidebar link or Back/Forward remounts the view so it re-reads the month from the URL
+function BudgetsRoute() {
+  const [navigationKey, writeQuery] = useExternalNavigationKey();
+  return <BudgetsView key={navigationKey} writeQuery={writeQuery} />;
+}
+
 export default function BudgetsPage() {
   return (
     <Suspense
       fallback={<div className="h-64 animate-pulse rounded-sm border border-rule bg-surface" />}
     >
-      <BudgetsView />
+      <BudgetsRoute />
     </Suspense>
   );
 }

@@ -1,4 +1,10 @@
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
+
+/** A unique constraint rejected the write (P2002), e.g. two requests raced past a duplicate check. */
+export function isUniqueViolation(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+}
 
 /**
  * PostgreSQL rejects text it cannot store in the database encoding

@@ -61,6 +61,14 @@ export function hitRateLimit(key: string, rule: RateLimitRule, now = Date.now())
   buckets.set(key, { count: 1, resetAt: now + rule.windowMs });
 }
 
+/** Give back one hit counted by `hitRateLimit`, e.g. once an attempt turns out to be valid. */
+export function releaseRateLimit(key: string, now = Date.now()): void {
+  const bucket = liveBucket(key, now);
+  if (!bucket) return;
+  bucket.count -= 1;
+  if (bucket.count <= 0) buckets.delete(key);
+}
+
 /** Forget `key`, e.g. after a successful login. */
 export function resetRateLimit(key: string): void {
   buckets.delete(key);

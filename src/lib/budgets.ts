@@ -143,9 +143,5 @@ export async function parseBudgetBody(body: unknown, userId: string): Promise<Pa
   };
 }
 
-export function isDuplicateBudgetError(error: unknown): boolean {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
-}
-
 export const DUPLICATE_BUDGET_MESSAGE =
   "Anggaran untuk kategori ini pada bulan dan tahun tersebut sudah ada. Edit anggaran yang ada.";

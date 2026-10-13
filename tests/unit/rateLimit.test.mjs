@@ -8,6 +8,7 @@ import {
   clearRateLimits,
   clientIp,
   hitRateLimit,
+  releaseRateLimit,
   resetRateLimit,
   tooManyRequestsMessage,
 } from "../../src/lib/rateLimit.ts";
@@ -60,4 +61,15 @@ test("client IP prefers x-real-ip, then the first x-forwarded-for entry", () => 
 test("message rounds the wait up to whole minutes", () => {
   assert.match(tooManyRequestsMessage(61), /2 menit/);
   assert.match(tooManyRequestsMessage(1), /1 menit/);
+});
+
+test("a released hit no longer counts toward the limit", () => {
+  for (let i = 0; i < 3; i++) hitRateLimit("k", RULE, T0);
+  assert.equal(checkRateLimit("k", RULE, T0).limited, true);
+  releaseRateLimit("k", T0);
+  assert.equal(checkRateLimit("k", RULE, T0).limited, false);
+  // Releasing more than was counted never goes below an empty bucket
+  for (let i = 0; i < 5; i++) releaseRateLimit("k", T0);
+  for (let i = 0; i < 2; i++) hitRateLimit("k", RULE, T0);
+  assert.equal(checkRateLimit("k", RULE, T0).limited, false);
 });

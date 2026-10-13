@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { DUPLICATE_BUDGET_MESSAGE, isDuplicateBudgetError, parseBudgetBody } from "@/lib/budgets";
+import { DUPLICATE_BUDGET_MESSAGE, parseBudgetBody } from "@/lib/budgets";
+import { isUniqueViolation } from "@/lib/dbErrors";
 import { isValidId } from "@/lib/validations";
 
 interface RouteParams {
@@ -67,7 +68,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       data: { budget: { ...budget, amount: budget.amount.toNumber() } },
     });
   } catch (error) {
-    if (isDuplicateBudgetError(error)) {
+    if (isUniqueViolation(error)) {
       return NextResponse.json(
         { success: false, message: DUPLICATE_BUDGET_MESSAGE, errors: { categoryId: "Anggaran sudah ada" } },
         { status: 409 }

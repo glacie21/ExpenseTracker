@@ -7,7 +7,9 @@ import { Alert } from "@/components/ui/Alert";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CategoryModal } from "@/components/categories/CategoryModal";
 import { Category, TransactionType } from "@/types";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
+import { RowActions } from "@/components/ui/RowActions";
+import { EmptyBlock, ErrorState } from "@/components/ui/States";
 import { tabClass } from "@/components/ui/fieldStyles";
 
 const TYPE_HEADING: Record<TransactionType, string> = {
@@ -175,26 +177,7 @@ export default function CategoriesPage() {
         ) : (
           <span className="shrink-0 text-xs text-ink-3">belum dipakai</span>
         )}
-        <span className="flex shrink-0">
-          <button
-            type="button"
-            onClick={() => handleEdit(cat)}
-            aria-label={`Ubah ${cat.name}`}
-            title="Ubah"
-            className="rounded-sm p-1.5 text-ink-3 transition-colors hover:bg-sunken hover:text-ink"
-          >
-            <Pencil className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => handleDeletePrompt(cat)}
-            aria-label={`Hapus ${cat.name}`}
-            title="Hapus"
-            className="rounded-sm p-1.5 text-ink-3 transition-colors hover:bg-neg-soft hover:text-neg"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-        </span>
+        <RowActions label={cat.name} onEdit={() => handleEdit(cat)} onDelete={() => handleDeletePrompt(cat)} />
       </li>
     );
   };
@@ -233,28 +216,20 @@ export default function CategoriesPage() {
       )}
 
       {loadError && !isLoading ? (
-        <section className="rounded-sm border border-rule bg-surface px-6 py-12 text-center">
-          <h2 className="font-serif text-lg text-ink">Kategori gagal dimuat</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-ink-2">{loadError}</p>
-          <Button onClick={fetchCategories} variant="outline" className="mt-5">
-            Coba lagi
-          </Button>
-        </section>
+        <ErrorState title="Kategori gagal dimuat" message={loadError} onRetry={fetchCategories} />
       ) : isLoading ? (
         <div className="h-64 animate-pulse rounded-sm border border-rule bg-surface" aria-busy="true" />
       ) : filteredCategories.length === 0 ? (
-        <section className="rounded-sm border border-dashed border-rule px-6 py-12 text-center sm:py-16">
-          <h2 className="font-serif text-xl text-ink">Belum ada kategori</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-ink-2">
-            Kategori mengelompokkan transaksi, dan menjadi dasar anggaran bulanan.
-          </p>
-          <Button
-            onClick={() => handleOpenAddModal(activeTab === "INCOME" ? "INCOME" : "EXPENSE")}
-            className="mt-6"
-          >
-            Tambah kategori
-          </Button>
-        </section>
+        <EmptyBlock
+          title="Belum ada kategori"
+          action={
+            <Button onClick={() => handleOpenAddModal(activeTab === "INCOME" ? "INCOME" : "EXPENSE")}>
+              Tambah kategori
+            </Button>
+          }
+        >
+          Kategori mengelompokkan transaksi, dan menjadi dasar anggaran bulanan.
+        </EmptyBlock>
       ) : (
         <div className={`grid grid-cols-1 gap-6 ${groups.length > 1 ? "lg:grid-cols-2" : ""}`}>
           {groups.map((group) => (

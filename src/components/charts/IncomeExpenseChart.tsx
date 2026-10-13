@@ -44,6 +44,9 @@ export function IncomeExpenseChart({ series, granularity }: IncomeExpenseChartPr
   const [width, setWidth] = useState(0);
   const [active, setActive] = useState<number | null>(null);
 
+  const hasData = series.some((p) => p.income > 0 || p.expense > 0);
+
+  // The container only exists while there is data, so re-attach when that changes
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -52,9 +55,7 @@ export function IncomeExpenseChart({ series, granularity }: IncomeExpenseChartPr
     });
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
-
-  const hasData = series.some((p) => p.income > 0 || p.expense > 0);
+  }, [hasData]);
   const legend = (
     <div className="flex items-center gap-4 text-xs text-ink-2">
       <span className="inline-flex items-center gap-1.5">

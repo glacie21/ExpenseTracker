@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Amount } from "@/components/ui/Amount";
+import { Pagination } from "@/components/ui/Pagination";
 import { formatDate } from "@/lib/formatters";
 import { PaginatedTransactions, Transaction } from "@/types";
 
@@ -11,6 +11,8 @@ interface ReportTransactionsTableProps {
   transactions: Transaction[];
   pagination: PaginatedTransactions["pagination"];
   isLoading: boolean;
+  error?: string | null;
+  onRetry?: () => void;
   onPageChange: (page: number) => void;
 }
 
@@ -19,8 +21,23 @@ export function ReportTransactionsTable({
   transactions,
   pagination,
   isLoading,
+  error,
+  onRetry,
   onPageChange,
 }: ReportTransactionsTableProps) {
+  if (error && !isLoading) {
+    return (
+      <div role="alert" className="px-5 py-10 text-center sm:px-6">
+        <p className="text-sm text-ink-2">{error}</p>
+        {onRetry && (
+          <Button variant="outline" size="sm" onClick={onRetry} className="mt-4">
+            Coba lagi
+          </Button>
+        )}
+      </div>
+    );
+  }
+
   if (isLoading && transactions.length === 0) {
     return (
       <div className="space-y-2 p-5 sm:p-6" aria-busy="true">
@@ -83,41 +100,7 @@ export function ReportTransactionsTable({
         </table>
       </div>
 
-      <div className="flex flex-col items-center justify-between gap-3 border-t border-rule px-5 py-3 sm:flex-row sm:px-6">
-        <p className="text-xs text-ink-3">
-          <span className="num text-sm text-ink">
-            {(pagination.page - 1) * pagination.limit + 1}–
-            {Math.min(pagination.page * pagination.limit, pagination.total)}
-          </span>{" "}
-          dari <span className="num text-sm text-ink">{pagination.total}</span> transaksi
-        </p>
-        {pagination.totalPages > 1 && (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(pagination.page - 1)}
-              disabled={pagination.page <= 1}
-              leftIcon={<ChevronLeft className="h-4 w-4" />}
-            >
-              Sebelumnya
-            </Button>
-            <span className="px-1 text-xs text-ink-3">
-              Hal. <span className="num text-sm text-ink">{pagination.page}</span> /{" "}
-              <span className="num text-sm text-ink">{pagination.totalPages}</span>
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(pagination.page + 1)}
-              disabled={pagination.page >= pagination.totalPages}
-              rightIcon={<ChevronRight className="h-4 w-4" />}
-            >
-              Berikutnya
-            </Button>
-          </div>
-        )}
-      </div>
+      <Pagination pagination={pagination} onPageChange={onPageChange} />
     </div>
   );
 }

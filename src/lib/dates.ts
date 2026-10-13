@@ -257,6 +257,11 @@ export function bucketStarts(range: DateRange, granularity: Granularity): Date[]
   return buckets;
 }
 
+export const MONTH_NAMES = [
+  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+];
+
 const MONTHS_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 
 /** Short Indonesian label, e.g. "8 Okt 2026" (or "8 Okt" without year). */

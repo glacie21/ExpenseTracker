@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { getDashboardSummary } from "@/lib/dashboard";
 import { getDashboardAnalytics, resolvePeriodFromParams } from "@/lib/analytics";
 import { PeriodStatement } from "@/components/dashboard/PeriodStatement";
+import { QuickActions } from "@/components/dashboard/QuickActions";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { PeriodFilter } from "@/components/dashboard/PeriodFilter";
@@ -17,23 +17,6 @@ interface DashboardPageProps {
 }
 
 const GRANULARITY_LABEL = { day: "per hari", week: "per minggu", month: "per bulan" } as const;
-
-const QUICK_ACTIONS = (
-  <>
-    <Link
-      href="/transactions?add=EXPENSE"
-      className="inline-flex h-9 items-center rounded-sm bg-ink px-4 text-sm font-medium text-paper transition-colors hover:bg-ink/85"
-    >
-      Catat pengeluaran
-    </Link>
-    <Link
-      href="/transactions?add=INCOME"
-      className="inline-flex h-9 items-center rounded-sm border border-rule bg-surface px-4 text-sm font-medium text-ink transition-colors hover:bg-sunken"
-    >
-      Catat pemasukan
-    </Link>
-  </>
-);
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const user = await getCurrentUser();
@@ -59,7 +42,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       start={period.start}
       end={period.end}
       label={period.label}
-      actions={QUICK_ACTIONS}
+      actions={<QuickActions />}
     >
       {!validPeriod && (params.period || params.start || params.end) && (
         <Alert variant="warning" className="mb-6">

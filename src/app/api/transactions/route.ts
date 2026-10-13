@@ -16,6 +16,8 @@ import {
  * Query: search, type (INCOME|EXPENSE), categoryId, startDate, endDate (YYYY-MM-DD),
  * month (1-12), year, sort (newest|oldest), page, limit (max 100).
  */
+const MAX_PAGE = 1_000_000;
+
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
@@ -27,7 +29,8 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
+    // Upper bound keeps skip a safe integer; pages past the end just come back empty
+    const page = Math.min(MAX_PAGE, Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1));
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "10", 10) || 10));
 
     // Filter yang sama dipakai oleh ekspor CSV dan laporan; selalu dibatasi ke user login

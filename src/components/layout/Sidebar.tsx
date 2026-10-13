@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -35,6 +35,15 @@ const NAVIGATION = [
 export function Sidebar({ user, isOpen = false, onClose, onLogout }: SidebarProps) {
   const pathname = usePathname();
 
+  useEffect(() => {
+    if (!isOpen || !onClose) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   return (
     <>
       {/* Mobile Backdrop */}
@@ -43,8 +52,8 @@ export function Sidebar({ user, isOpen = false, onClose, onLogout }: SidebarProp
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-rule bg-paper transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-rule bg-paper transition-[transform,visibility] duration-200 lg:visible lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
+          isOpen ? "visible translate-x-0" : "invisible -translate-x-full"
         }`}
       >
         <div className="flex h-16 items-center justify-between px-6">

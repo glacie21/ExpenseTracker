@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
 
 export const metadata = {
-  title: "Pengaturan - Expense Tracker",
+  title: "Pengaturan",
 };
 
 export default async function SettingsPage() {

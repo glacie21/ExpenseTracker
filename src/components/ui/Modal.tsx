@@ -10,7 +10,13 @@ export interface ModalProps {
   description?: string;
   children: React.ReactNode;
   maxWidth?: "sm" | "md" | "lg" | "xl";
+  /** Id of a heading inside `children` that names the dialog, when `title` is not used. */
+  labelledBy?: string;
+  describedBy?: string;
 }
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export function Modal({
   isOpen,
@@ -19,6 +25,8 @@ export function Modal({
   description,
   children,
   maxWidth = "md",
+  labelledBy,
+  describedBy,
 }: ModalProps) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -35,6 +43,26 @@ export function Modal({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen) {
         onClose();
+        return;
+      }
+      // Wrap Tab and Shift+Tab so focus never reaches the page behind the backdrop
+      const dialog = dialogRef.current;
+      if (e.key !== "Tab" || !dialog) return;
+      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE));
+      if (focusable.length === 0) {
+        e.preventDefault();
+        dialog.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const current = document.activeElement;
+      if (e.shiftKey && (current === first || current === dialog)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (current === last || !dialog.contains(current))) {
+        e.preventDefault();
+        first.focus();
       }
     };
     if (isOpen) {
@@ -66,7 +94,8 @@ export function Modal({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={title ? titleId : undefined}
+        aria-labelledby={title ? titleId : labelledBy}
+        aria-describedby={describedBy}
         tabIndex={-1}
         className={`relative z-10 w-full outline-none ${maxWidthStyles[maxWidth]} rounded-sm border border-rule bg-surface p-6 shadow-[0_12px_32px_-12px_rgb(0_0_0/0.35)]`}
       >

@@ -4,21 +4,8 @@ import React from "react";
 import { Category, TransactionType } from "@/types";
 import { Search } from "lucide-react";
 import { FIELD_SM, FILTER_LABEL, tabClass } from "@/components/ui/fieldStyles";
-
-const MONTH_NAMES = [
-  "Januari",
-  "Februari",
-  "Maret",
-  "April",
-  "Mei",
-  "Juni",
-  "Juli",
-  "Agustus",
-  "September",
-  "Oktober",
-  "November",
-  "Desember",
-];
+import { MONTH_NAMES } from "@/lib/dates";
+import { categoryOptionLabel } from "@/lib/formatters";
 
 const TYPE_TABS: { value: "ALL" | TransactionType; label: string }[] = [
   { value: "ALL", label: "Semua" },
@@ -138,9 +125,7 @@ export function TransactionFilters({
             <option value="">Semua kategori</option>
             {filteredCategories.map((c) => (
               <option key={c.id} value={c.id}>
-                {type === "ALL"
-                  ? `${c.name} (${c.type === "INCOME" ? "pemasukan" : "pengeluaran"})`
-                  : c.name}
+                {categoryOptionLabel(c, type)}
               </option>
             ))}
           </select>

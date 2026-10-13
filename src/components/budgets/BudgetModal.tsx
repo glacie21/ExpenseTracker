@@ -9,6 +9,7 @@ import { formatRupiah } from "@/lib/formatters";
 import { normalizeAmount } from "@/lib/validations";
 import { Category } from "@/types";
 import { FIELD, FIELD_LABEL } from "@/components/ui/fieldStyles";
+import { MONTH_NAMES } from "@/lib/dates";
 
 export interface BudgetFormData {
   id?: string;
@@ -24,11 +25,6 @@ interface BudgetModalProps {
   initialData: BudgetFormData;
   categories: Category[];
 }
-
-const MONTHS = [
-  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
-];
 
 /** Create/edit a monthly budget. Parent mounts it with a fresh `key` per open. */
 export function BudgetModal({ onClose, onSuccess, initialData, categories }: BudgetModalProps) {
@@ -157,7 +153,7 @@ export function BudgetModal({ onClose, onSuccess, initialData, categories }: Bud
               onChange={(e) => setMonth(Number(e.target.value))}
               className={FIELD}
             >
-              {MONTHS.map((name, i) => (
+              {MONTH_NAMES.map((name, i) => (
                 <option key={name} value={i + 1}>
                   {name}
                 </option>

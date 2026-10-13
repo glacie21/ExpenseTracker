@@ -1,6 +1,7 @@
 import React from "react";
-import { AlertOctagon, AlertTriangle, Check, Pencil, Trash2 } from "lucide-react";
+import { AlertOctagon, AlertTriangle, Check } from "lucide-react";
 import { Amount } from "@/components/ui/Amount";
+import { RowActions } from "@/components/ui/RowActions";
 import { BudgetStatus, formatPercent } from "@/lib/finance";
 
 export interface BudgetView {
@@ -146,24 +147,11 @@ export function BudgetLedger({ budgets, totals, periodLabel, onEdit, onDelete }:
                 </span>
               </td>
               <td className="py-2.5 pr-3 pl-0 text-right align-top whitespace-nowrap sm:pr-5 md:align-middle">
-                <button
-                  type="button"
-                  onClick={() => onEdit(budget)}
-                  aria-label={`Ubah anggaran ${budget.category.name}`}
-                  title="Ubah"
-                  className="rounded-sm p-1.5 text-ink-3 transition-colors hover:bg-sunken hover:text-ink"
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onDelete(budget)}
-                  aria-label={`Hapus anggaran ${budget.category.name}`}
-                  title="Hapus"
-                  className="rounded-sm p-1.5 text-ink-3 transition-colors hover:bg-neg-soft hover:text-neg"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <RowActions
+                  label={`anggaran ${budget.category.name}`}
+                  onEdit={() => onEdit(budget)}
+                  onDelete={() => onDelete(budget)}
+                />
               </td>
             </tr>
           ))}

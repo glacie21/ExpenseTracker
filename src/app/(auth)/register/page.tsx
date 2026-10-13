@@ -3,24 +3,11 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
 import { AuthFrame } from "@/components/layout/AuthFrame";
-
-function RevealButton({ shown, onToggle }: { shown: boolean; onToggle: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className="text-ink-3 hover:text-ink"
-      aria-label={shown ? "Sembunyikan sandi" : "Tampilkan sandi"}
-    >
-      {shown ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-    </button>
-  );
-}
+import { RevealButton } from "@/components/ui/RevealButton";
 
 export default function RegisterPage() {
   const router = useRouter();

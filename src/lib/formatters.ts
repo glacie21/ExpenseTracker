@@ -87,3 +87,12 @@ export function formatDateForInput(date: string | Date | null | undefined): stri
   if (isNaN(d.getTime())) return todayLocalISO();
   return d.toISOString().split("T")[0];
 }
+
+/** Option text in a category select; the type is spelled out only when both types are listed. */
+export function categoryOptionLabel(
+  category: { name: string; type: "INCOME" | "EXPENSE" },
+  listedType: "ALL" | "INCOME" | "EXPENSE"
+): string {
+  if (listedType !== "ALL") return category.name;
+  return `${category.name} (${category.type === "INCOME" ? "pemasukan" : "pengeluaran"})`;
+}

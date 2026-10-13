@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib/dbErrors";
+import { isUniqueViolation, isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib/dbErrors";
+import { duplicateCategoryResponse } from "@/lib/categories";
 import { isValidId, validateCategoryInput } from "@/lib/validations";
 
 interface RouteParams {
@@ -75,16 +76,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       },
     });
 
-    if (conflict) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: `Kategori "${newName}" sudah ada untuk tipe ${category.type}.`,
-          errors: { name: "Nama kategori sudah ada" },
-        },
-        { status: 409 }
-      );
-    }
+    if (conflict) return duplicateCategoryResponse(newName, category.type);
 
     const updated = await prisma.category.update({
       where: { id: category.id },
@@ -101,6 +93,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     });
   } catch (error) {
     if (isUnsupportedCharacterError(error)) return unsupportedCharacterResponse();
+    if (isUniqueViolation(error)) return duplicateCategoryResponse();
     console.error("PUT /api/categories/[id] error:", error);
     return NextResponse.json(
       { success: false, message: "Gagal memperbarui kategori." },
