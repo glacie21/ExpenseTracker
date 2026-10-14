@@ -87,6 +87,12 @@ export const LOGIN_EMAIL_RULE: RateLimitRule = { limit: 5, windowMs: 15 * MINUTE
 export const LOGIN_IP_RULE: RateLimitRule = { limit: 50, windowMs: 15 * MINUTE };
 /** New accounts from one client IP. */
 export const REGISTER_IP_RULE: RateLimitRule = { limit: 50, windowMs: 60 * MINUTE };
+/**
+ * Registrations refused because the email is taken, per client IP. Each one
+ * tells the caller that the address has an account, so this caps how fast
+ * a list of emails can be checked.
+ */
+export const REGISTER_TAKEN_RULE: RateLimitRule = { limit: 10, windowMs: 60 * MINUTE };
 /** Wrong current-password attempts on account settings, per user. */
 export const ACCOUNT_PASSWORD_RULE: RateLimitRule = { limit: 5, windowMs: 15 * MINUTE };
 

@@ -3,7 +3,15 @@ import { prisma } from "@/lib/prisma";
 import { createSessionToken, hashPassword, setSessionCookie } from "@/lib/auth";
 import { validateRegisterInput } from "@/lib/validations";
 import { isUniqueViolation } from "@/lib/dbErrors";
-import { REGISTER_IP_RULE, checkRateLimit, clientIp, hitRateLimit, tooManyRequestsMessage } from "@/lib/rateLimit";
+import {
+  REGISTER_IP_RULE,
+  REGISTER_TAKEN_RULE,
+  checkRateLimit,
+  clientIp,
+  hitRateLimit,
+  releaseRateLimit,
+  tooManyRequestsMessage,
+} from "@/lib/rateLimit";
 
 function emailTakenResponse() {
   return NextResponse.json(
@@ -18,9 +26,13 @@ function emailTakenResponse() {
 
 export async function POST(request: NextRequest) {
   try {
-    const ipKey = `register:ip:${clientIp(request.headers)}`;
-    const limit = checkRateLimit(ipKey, REGISTER_IP_RULE);
-    if (limit.limited) {
+    const ip = clientIp(request.headers);
+    const ipKey = `register:ip:${ip}`;
+    const takenKey = `register:taken:${ip}`;
+    const limit = [checkRateLimit(ipKey, REGISTER_IP_RULE), checkRateLimit(takenKey, REGISTER_TAKEN_RULE)].find(
+      (status) => status.limited
+    );
+    if (limit) {
       return NextResponse.json(
         { success: false, message: tooManyRequestsMessage(limit.retryAfter) },
         { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
@@ -44,6 +56,11 @@ export async function POST(request: NextRequest) {
     const email = String(body.email).trim().toLowerCase();
     const name = String(body.name).trim();
     const password = body.password;
+
+    // A 409 reveals that the email has an account, so every lookup counts
+    // until the account is actually created. Counted before the lookup, so a
+    // burst of parallel requests cannot all get an answer.
+    hitRateLimit(takenKey, REGISTER_TAKEN_RULE);
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -72,6 +89,7 @@ export async function POST(request: NextRequest) {
       },
     });
     hitRateLimit(ipKey, REGISTER_IP_RULE);
+    releaseRateLimit(takenKey);
 
     // Initialize default categories for new user
     const { ensureUserCategories } = await import("@/lib/categories");

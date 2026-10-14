@@ -17,8 +17,10 @@ const PASSWORD = "Password123!";
 const prisma = new PrismaClient();
 
 class Client {
-  constructor() {
+  /** `headers` are sent with every request, e.g. an x-forwarded-for IP. */
+  constructor(headers = {}) {
     this.cookie = "";
+    this.headers = headers;
   }
 
   async request(method, path, body) {
@@ -26,6 +28,7 @@ class Client {
       method,
       redirect: "manual",
       headers: {
+        ...this.headers,
         ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
         ...(this.cookie ? { Cookie: this.cookie } : {}),
       },
@@ -136,6 +139,29 @@ describe("registration and login hardening", () => {
     for (let i = 0; i < 4; i++) await login("recover", "wrong-password");
     assert.equal((await login("recover")).res.status, 200);
   });
+});
+
+// Each test gets its own client IP, so it does not fill the shared bucket
+let ipCounter = 0;
+const freshIp = () => `198.51.${Math.floor(Math.random() * 250)}.${++ipCounter % 250}`;
+
+describe("rate limits per client IP", () => {
+  test("register cannot be used to check which emails have an account", async () => {
+    await registerUser("enum-target");
+    const client = new Client({ "X-Forwarded-For": freshIp() });
+    const body = { name: "Pengintai", email: emailFor("enum-target"), password: PASSWORD, confirmPassword: PASSWORD };
+
+    for (let i = 0; i < 10; i++) {
+      assert.equal((await client.post("/api/auth/register", body)).status, 409, `attempt ${i + 1}`);
+    }
+    // Further checks are refused, whether or not the email is taken
+    const taken = await client.post("/api/auth/register", body);
+    assert.equal(taken.status, 429);
+    assert.ok(Number(taken.headers.get("retry-after")) > 0);
+    const free = await client.post("/api/auth/register", { ...body, email: emailFor("enum-free") });
+    assert.equal(free.status, 429);
+  });
+
 });
 
 describe("input and race hardening", () => {

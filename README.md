@@ -88,6 +88,7 @@ Aplikasi web untuk mencatat dan memantau kondisi keuangan pribadi: pemasukan, pe
   | Login gagal per email | 5 per 15 menit; selama terkunci, password yang benar pun ditolak (`429` + `Retry-After`) |
   | Login gagal per IP | 50 per 15 menit |
   | Registrasi per IP | 50 per jam |
+  | Registrasi dengan email yang sudah terdaftar, per IP | 10 per jam; setelah itu semua registrasi dari IP tersebut ditolak, supaya daftar email tidak bisa dicek satu per satu |
   | Password saat ini salah (ganti password / hapus akun), per pengguna | 5 per 15 menit |
 - Login dengan email yang tidak terdaftar memakan waktu yang sama dengan password salah, sehingga keberadaan email tidak bisa ditebak dari waktu respons.
 - Password minimal **8 karakter** dan maksimal 72 byte (batas bcrypt).
