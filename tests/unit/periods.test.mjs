@@ -7,6 +7,8 @@ import assert from "node:assert/strict";
 import {
   bucketStarts,
   chooseGranularity,
+  comparisonRanges,
+  formatComparisonLabel,
   parseDateOnly,
   previousPeriod,
   resolvePeriod,
@@ -62,6 +64,63 @@ describe("previousPeriod", () => {
   test("custom: same number of days immediately before", () => {
     const range = { start: d("2026-10-01"), end: d("2026-10-10") };
     assert.deepEqual(fmt(previousPeriod("custom", range)), ["2026-09-21", "2026-09-30"]);
+  });
+});
+
+describe("comparisonRanges", () => {
+  // Wednesday 14 October 2026
+  const MID = d("2026-10-14");
+  const compare = (preset, today = MID) => {
+    const c = comparisonRanges(preset, resolvePeriod(preset, today), today);
+    return { current: fmt(c.current), previous: fmt(c.previous), partial: c.partial };
+  };
+
+  test("a running period is compared up to today on both sides", () => {
+    assert.deepEqual(compare("this_week"), {
+      current: ["2026-10-12", "2026-10-14"],
+      previous: ["2026-10-05", "2026-10-07"],
+      partial: true,
+    });
+    assert.deepEqual(compare("this_month"), {
+      current: ["2026-10-01", "2026-10-14"],
+      previous: ["2026-09-01", "2026-09-14"],
+      partial: true,
+    });
+    assert.deepEqual(compare("last_3_months"), {
+      current: ["2026-08-01", "2026-10-14"],
+      previous: ["2026-05-01", "2026-07-14"],
+      partial: true,
+    });
+    assert.deepEqual(compare("this_year"), {
+      current: ["2026-01-01", "2026-10-14"],
+      previous: ["2025-01-01", "2025-10-14"],
+      partial: true,
+    });
+  });
+
+  test("the same date is clamped to the end of a shorter previous month", () => {
+    assert.deepEqual(compare("this_month", d("2026-03-30")).previous, ["2026-02-01", "2026-02-28"]);
+  });
+
+  test("a finished period, or one on its last day, is compared whole", () => {
+    assert.deepEqual(compare("last_month"), {
+      current: ["2026-09-01", "2026-09-30"],
+      previous: ["2026-08-01", "2026-08-31"],
+      partial: false,
+    });
+    assert.equal(compare("this_month", d("2026-10-31")).partial, false);
+  });
+
+  test("a custom range that includes today is cut at today", () => {
+    const range = { start: d("2026-10-01"), end: d("2026-10-31") };
+    const c = comparisonRanges("custom", range, MID);
+    assert.deepEqual(fmt(c.current), ["2026-10-01", "2026-10-14"]);
+    assert.deepEqual(fmt(c.previous), ["2026-08-31", "2026-09-13"]);
+  });
+
+  test("the label says when the comparison was cut", () => {
+    const c = comparisonRanges("this_month", resolvePeriod("this_month", MID), MID);
+    assert.equal(formatComparisonLabel(c), "1 Sep 2026 – 14 Sep 2026 (sampai tanggal yang sama)");
   });
 });
 

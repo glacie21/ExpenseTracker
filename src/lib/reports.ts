@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { APP_TIMEZONE } from "@/lib/config";
 import {
   AnalyticsScope,
   CategoryBreakdownItem,
@@ -10,10 +11,12 @@ import {
 import {
   DateRange,
   PeriodPreset,
+  comparisonRanges,
+  formatComparisonLabel,
   formatRangeLabel,
   parseDateOnly,
-  previousPeriod,
   toDateOnlyString,
+  todayInTimeZone,
   validateCustomRange,
 } from "@/lib/dates";
 import { centsToAmount, periodChange } from "@/lib/finance";
@@ -116,27 +119,36 @@ function categoryIncreases(
 
 /** Full report data for the signed-in user (scoped by `userId`). */
 export async function getReport(userId: string, params: ReportParams) {
-  const previousRange = previousPeriod(PERIOD_TO_PRESET[params.periodType], params.range);
+  const comparison = comparisonRanges(
+    PERIOD_TO_PRESET[params.periodType],
+    params.range,
+    todayInTimeZone(APP_TIMEZONE)
+  );
   const scope: AnalyticsScope = {
     userId,
     range: params.range,
     type: params.type,
     categoryId: params.categoryId,
   };
-  const previousScope: AnalyticsScope = { ...scope, range: previousRange };
+  // A running period is compared up to today (see comparisonRanges)
+  const comparedScope: AnalyticsScope | null = comparison.partial ? { ...scope, range: comparison.current } : null;
+  const previousScope: AnalyticsScope = { ...scope, range: comparison.previous };
 
-  const [totals, previousTotals, breakdown, previousBreakdown, category] = await Promise.all([
-    getPeriodTotals(scope),
-    getPeriodTotals(previousScope),
-    getExpenseBreakdown(scope),
-    getExpenseBreakdown(previousScope),
-    params.categoryId
-      ? prisma.category.findFirst({
-          where: { id: params.categoryId, userId },
-          select: { id: true, name: true, type: true },
-        })
-      : Promise.resolve(null),
-  ]);
+  const [totals, comparedTotals, previousTotals, breakdown, comparedBreakdown, previousBreakdown, category] =
+    await Promise.all([
+      getPeriodTotals(scope),
+      comparedScope ? getPeriodTotals(comparedScope) : null,
+      getPeriodTotals(previousScope),
+      getExpenseBreakdown(scope),
+      comparedScope ? getExpenseBreakdown(comparedScope) : null,
+      getExpenseBreakdown(previousScope),
+      params.categoryId
+        ? prisma.category.findFirst({
+            where: { id: params.categoryId, userId },
+            select: { id: true, name: true, type: true },
+          })
+        : Promise.resolve(null),
+    ]);
 
   return {
     period: {
@@ -144,19 +156,19 @@ export async function getReport(userId: string, params: ReportParams) {
       start: toDateOnlyString(params.range.start),
       end: toDateOnlyString(params.range.end),
       label: formatRangeLabel(params.range),
-      previousStart: toDateOnlyString(previousRange.start),
-      previousEnd: toDateOnlyString(previousRange.end),
-      previousLabel: formatRangeLabel(previousRange),
+      previousStart: toDateOnlyString(comparison.previous.start),
+      previousEnd: toDateOnlyString(comparison.previous.end),
+      previousLabel: formatComparisonLabel(comparison),
     },
     filters: {
       type: params.type ?? "ALL",
       category,
     },
     summary: toSummaryStats(totals),
-    trends: computeTrends(totals, previousTotals),
+    trends: computeTrends(comparedTotals ?? totals, previousTotals),
     topExpenseCategory: breakdown[0] ?? null,
     breakdown,
-    categoryIncreases: categoryIncreases(breakdown, previousBreakdown),
+    categoryIncreases: categoryIncreases(comparedBreakdown ?? breakdown, previousBreakdown),
   };
 }
 

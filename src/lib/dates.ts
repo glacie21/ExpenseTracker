@@ -227,6 +227,63 @@ export function previousPeriod(preset: PeriodPreset, range: DateRange): DateRang
   }
 }
 
+/** The same day of the month `months` away, clamped to that month's last day. */
+function addMonthsKeepDayUTC(date: Date, months: number): Date {
+  const target = addMonthsUTC(date, months);
+  const day = Math.min(date.getUTCDate(), endOfMonthUTC(target).getUTCDate());
+  return new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), day));
+}
+
+/** Where `day` falls in the previous period, e.g. 14 Oct -> 14 Sep for a month. */
+function sameDayInPreviousPeriod(preset: PeriodPreset, range: DateRange, day: Date): Date {
+  switch (preset) {
+    case "this_week":
+      return addDaysUTC(day, -7);
+    case "this_month":
+    case "last_month":
+      return addMonthsKeepDayUTC(day, -1);
+    case "last_3_months":
+      return addMonthsKeepDayUTC(day, -3);
+    case "this_year":
+      return addMonthsKeepDayUTC(day, -12);
+    case "custom":
+      return addDaysUTC(day, -rangeLengthDays(range));
+  }
+}
+
+export interface Comparison {
+  /** The part of the period being compared: up to today while it is still running. */
+  current: DateRange;
+  previous: DateRange;
+  /** True when the period is still running and both sides were cut at today. */
+  partial: boolean;
+}
+
+/**
+ * The ranges to compare for trends. A period still in progress (today falls
+ * before its last day) is compared up to today against the previous period
+ * up to the same date, so 1–14 Oct is measured against 1–14 Sep rather than
+ * against the whole of September.
+ */
+export function comparisonRanges(preset: PeriodPreset, range: DateRange, today: Date): Comparison {
+  const previous = previousPeriod(preset, range);
+  if (today.getTime() < range.start.getTime() || today.getTime() >= range.end.getTime()) {
+    return { current: range, previous, partial: false };
+  }
+  const sameDay = sameDayInPreviousPeriod(preset, range, today);
+  return {
+    current: { start: range.start, end: today },
+    previous: { start: previous.start, end: sameDay.getTime() < previous.end.getTime() ? sameDay : previous.end },
+    partial: true,
+  };
+}
+
+/** Label for the comparison side, e.g. "1 Sep 2026 – 14 Sep 2026 (sampai tanggal yang sama)". */
+export function formatComparisonLabel(comparison: Comparison): string {
+  const label = formatRangeLabel(comparison.previous);
+  return comparison.partial ? `${label} (sampai tanggal yang sama)` : label;
+}
+
 export type Granularity = "day" | "week" | "month";
 
 /** Daily up to ~1 month, weekly up to ~3 months, monthly beyond. */

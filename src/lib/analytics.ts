@@ -3,16 +3,18 @@ import { prisma } from "@/lib/prisma";
 import { APP_TIMEZONE } from "@/lib/config";
 import { decimalToCents } from "@/lib/money";
 import {
+  Comparison,
   DateRange,
   Granularity,
   PeriodPreset,
   bucketStarts,
   chooseGranularity,
+  comparisonRanges,
   endOfDayUTC,
+  formatComparisonLabel,
   formatRangeLabel,
   isPeriodPreset,
   parseDateOnly,
-  previousPeriod,
   resolvePeriod,
   toDateOnlyString,
   todayInTimeZone,
@@ -224,7 +226,8 @@ export function computeTrends(current: PeriodTotals, previous: PeriodTotals): Tr
 export interface ResolvedPeriod {
   preset: PeriodPreset;
   range: DateRange;
-  previous: DateRange;
+  /** What the trends compare; cut at today while the period is still running. */
+  comparison: Comparison;
   label: string;
   previousLabel: string;
   /** Query string values to reproduce the period */
@@ -232,14 +235,14 @@ export interface ResolvedPeriod {
   end: string;
 }
 
-function describe(preset: PeriodPreset, range: DateRange): ResolvedPeriod {
-  const previous = previousPeriod(preset, range);
+function describe(preset: PeriodPreset, range: DateRange, today: Date): ResolvedPeriod {
+  const comparison = comparisonRanges(preset, range, today);
   return {
     preset,
     range,
-    previous,
+    comparison,
     label: formatRangeLabel(range),
-    previousLabel: formatRangeLabel(previous),
+    previousLabel: formatComparisonLabel(comparison),
     start: toDateOnlyString(range.start),
     end: toDateOnlyString(range.end),
   };
@@ -263,28 +266,31 @@ export function resolvePeriodFromParams(params: {
       start: parseDateOnly(params.start),
       end: parseDateOnly(params.end),
     });
-    if (range) return { valid: true, period: describe(preset, range) };
+    if (range) return { valid: true, period: describe(preset, range, today) };
   }
 
   return {
     valid: false,
-    period: describe("this_month", resolvePeriod("this_month", today)!),
+    period: describe("this_month", resolvePeriod("this_month", today)!, today),
   };
 }
 
 /** Everything the dashboard needs for one period. */
 export async function getDashboardAnalytics(userId: string, period: ResolvedPeriod) {
   const current: AnalyticsScope = { userId, range: period.range };
-  const [totals, previousTotals, series, breakdown] = await Promise.all([
+  const { comparison } = period;
+  const [totals, comparedTotals, previousTotals, series, breakdown] = await Promise.all([
     getPeriodTotals(current),
-    getPeriodTotals({ userId, range: period.previous }),
+    // Only a running period needs its own to-date totals for the trends
+    comparison.partial ? getPeriodTotals({ userId, range: comparison.current }) : null,
+    getPeriodTotals({ userId, range: comparison.previous }),
     getTimeSeries(current),
     getExpenseBreakdown(current),
   ]);
 
   return {
     summary: toSummaryStats(totals),
-    trends: computeTrends(totals, previousTotals),
+    trends: computeTrends(comparedTotals ?? totals, previousTotals),
     hasPreviousData: previousTotals.incomeCount + previousTotals.expenseCount > 0,
     granularity: chooseGranularity(period.range),
     series,

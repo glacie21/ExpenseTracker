@@ -56,7 +56,7 @@ Aplikasi web untuk mencatat dan memantau kondisi keuangan pribadi: pemasukan, pe
 - **Dashboard analitik** (`/dashboard`):
   - **Pemilih periode**: Minggu ini, Bulan ini, Bulan lalu, 3 bulan terakhir, Tahun ini, Rentang lain. Semua angka dan grafik mengikuti periode yang dipilih, dan label periodenya selalu ditampilkan.
   - **Neraca periode**: pemasukan, pengeluaran, dan saldo bersih (atau defisit) dalam satu tabel, ditutup garis ganda, plus tingkat tabungan.
-  - **Tren** dibanding periode sebelumnya, untuk pemasukan, pengeluaran, dan saldo bersih: selisih nominal dan persentase. Jika periode pembanding bernilai nol, ditampilkan "Belum ada data pembanding", bukan persentase yang menyesatkan.
+  - **Tren** dibanding periode sebelumnya, untuk pemasukan, pengeluaran, dan saldo bersih: selisih nominal dan persentase. Periode yang masih berjalan dibandingkan sampai hari ini dengan periode sebelumnya sampai tanggal yang sama (misalnya 1–14 Okt vs 1–14 Sep), bukan dengan satu bulan penuh. Jika periode pembanding bernilai nol, ditampilkan "Belum ada data pembanding", bukan persentase yang menyesatkan.
   - **Grafik arus kas** (pemasukan vs pengeluaran): harian, mingguan, atau bulanan tergantung panjang periode. Tooltip menampilkan tanggal dan nominal Rupiah, tersedia lewat mouse maupun keyboard, ukurannya responsif, dan ada tabel data sebagai alternatif.
   - **Pengeluaran per kategori**: bar per kategori dengan nominal, persentase, warna kategori, dan tooltip.
   - Saldo dari seluruh catatan sejak awal ditampilkan di bawah dashboard.
