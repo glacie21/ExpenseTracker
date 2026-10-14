@@ -9,6 +9,8 @@ import {
   chooseGranularity,
   comparisonRanges,
   formatComparisonLabel,
+  isWholePeriod,
+  latestTransactionDate,
   parseDateOnly,
   previousPeriod,
   resolvePeriod,
@@ -124,6 +126,23 @@ describe("comparisonRanges", () => {
   });
 });
 
+describe("isWholePeriod", () => {
+  const range = (a, b) => ({ start: d(a), end: d(b) });
+
+  test("weeks, months and years must cover exactly that unit", () => {
+    assert.equal(isWholePeriod("this_week", range("2026-10-12", "2026-10-18")), true);
+    assert.equal(isWholePeriod("this_week", range("2026-10-01", "2026-10-30")), false);
+    assert.equal(isWholePeriod("this_month", range("2028-02-01", "2028-02-29")), true);
+    assert.equal(isWholePeriod("this_month", range("2026-10-01", "2026-12-31")), false);
+    assert.equal(isWholePeriod("this_year", range("2026-01-01", "2026-12-31")), true);
+    assert.equal(isWholePeriod("this_year", range("2026-01-01", "2026-06-30")), false);
+  });
+
+  test("custom accepts any range", () => {
+    assert.equal(isWholePeriod("custom", range("2026-10-03", "2026-11-17")), true);
+  });
+});
+
 describe("chart buckets", () => {
   test("granularity follows the range length", () => {
     assert.equal(chooseGranularity(resolvePeriod("this_month", TODAY)), "day");
@@ -154,5 +173,32 @@ describe("timezone", () => {
   test("impossible dates are rejected", () => {
     assert.equal(parseDateOnly("2026-02-30"), null);
     assert.equal(parseDateOnly("2028-02-29")?.toISOString(), "2028-02-29T00:00:00.000Z");
+  });
+});
+
+describe("parseDateOnly", () => {
+  test("accepts a calendar day, or the API's UTC-midnight timestamp", () => {
+    assert.equal(toDateOnlyString(d("2026-10-14")), "2026-10-14");
+    assert.equal(toDateOnlyString(d(" 2026-10-14 ")), "2026-10-14");
+    assert.equal(toDateOnlyString(d("2026-10-14T00:00:00.000Z")), "2026-10-14");
+  });
+
+  test("rejects trailing text, times and offsets instead of dropping them", () => {
+    assert.equal(d("2026-10-14garbage"), null);
+    assert.equal(d("2026-10-14T23:00-05:00"), null);
+    assert.equal(d("2026-10-14T10:30:00Z"), null);
+    assert.equal(d("2026-10-1"), null);
+  });
+
+  test("rejects years outside 1900–2100", () => {
+    assert.equal(d("0226-10-14"), null);
+    assert.equal(d("9026-10-14"), null);
+    assert.equal(toDateOnlyString(d("1900-01-01")), "1900-01-01");
+    assert.equal(toDateOnlyString(d("2100-12-31")), "2100-12-31");
+  });
+
+  test("transactions may be dated up to a year ahead", () => {
+    const now = new Date("2026-10-14T12:00:00Z");
+    assert.equal(toDateOnlyString(latestTransactionDate(now)), "2027-10-15");
   });
 });

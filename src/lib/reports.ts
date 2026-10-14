@@ -14,6 +14,7 @@ import {
   comparisonRanges,
   formatComparisonLabel,
   formatRangeLabel,
+  isWholePeriod,
   parseDateOnly,
   toDateOnlyString,
   todayInTimeZone,
@@ -76,7 +77,10 @@ export function parseReportParams(search: URLSearchParams): ParseResult {
   return {
     ok: true,
     params: {
-      periodType: periodParam as ReportPeriodType,
+      // A range that is not exactly that week/month/year is compared as a custom range
+      periodType: isWholePeriod(PERIOD_TO_PRESET[periodParam as ReportPeriodType], range)
+        ? (periodParam as ReportPeriodType)
+        : "custom",
       range,
       type: typeParam === "ALL" ? undefined : (typeParam as TransactionType),
       categoryId: categoryId || undefined,

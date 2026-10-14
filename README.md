@@ -64,6 +64,7 @@ Aplikasi web untuk mencatat dan memantau kondisi keuangan pribadi: pemasukan, pe
   - Periode mingguan, bulanan, tahunan, atau rentang khusus, dengan navigasi sebelumnya/berikutnya. Filter jenis transaksi dan kategori.
   - Neraca: pemasukan, pengeluaran, saldo bersih, tingkat tabungan, dan kategori pengeluaran terbesar.
   - **Wawasan kategori**: pengeluaran per kategori, dan tabel kategori yang pengeluarannya naik dibanding periode sebelumnya.
+  - Periode pembanding mengikuti aturan yang sama dengan dashboard. Rentang yang tidak tepat satu minggu/bulan/tahun dibandingkan sebagai rentang khusus (jumlah hari yang sama tepat sebelumnya).
   - Tabel transaksi sesuai filter dengan pagination di server.
   - **Unduh CSV** dan **Unduh PDF** dengan filter yang sama.
 - **Anggaran** (`/budgets`):

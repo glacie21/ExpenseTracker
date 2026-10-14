@@ -197,6 +197,20 @@ describe("transactions", () => {
     expenseId = res.json.data.transaction.id;
   });
 
+  test("dates with trailing text, a time, or an absurd year are rejected", async () => {
+    for (const date of ["2026-10-09garbage", "2026-10-09T23:00-05:00", "9026-10-09", "2126-10-09"]) {
+      const res = await alice.post("/api/transactions", {
+        type: "EXPENSE",
+        title: "Tanggal aneh",
+        amount: "1000",
+        categoryId: food.id,
+        date,
+      });
+      assert.equal(res.status, 400, date);
+      assert.ok(res.json.errors.date, date);
+    }
+  });
+
   test("transaction dates do not shift across timezones", async () => {
     const res = await alice.get(`/api/transactions/${expenseId}`);
     assert.equal(res.json.data.transaction.date, "2026-10-09T00:00:00.000Z");

@@ -1,4 +1,4 @@
-import { parseDateOnly } from "@/lib/dates";
+import { latestTransactionDate, parseDateOnly } from "@/lib/dates";
 
 export interface ValidationResult {
   isValid: boolean;
@@ -209,8 +209,13 @@ export function validateTransactionInput(data: {
   // Date validation (calendar day, see lib/dates.ts)
   if (!data.date) {
     errors.date = "Tanggal transaksi wajib diisi";
-  } else if (!parseDateOnly(data.date)) {
-    errors.date = "Format tanggal tidak valid";
+  } else {
+    const date = parseDateOnly(data.date);
+    if (!date) {
+      errors.date = "Format tanggal tidak valid";
+    } else if (date.getTime() > latestTransactionDate().getTime()) {
+      errors.date = "Tanggal transaksi maksimal 1 tahun dari hari ini";
+    }
   }
 
   // Description validation (optional, but check type and length)

@@ -9,12 +9,22 @@
  * This module has no imports so it can be unit-tested directly with Node.
  */
 
-const DATE_ONLY_REGEX = /^(\d{4})-(\d{2})-(\d{2})/;
+/**
+ * "YYYY-MM-DD", or a full ISO timestamp at exactly UTC midnight (how the API
+ * serialises stored dates). Anything else after the day is rejected, so a
+ * time or UTC offset is never silently dropped.
+ */
+const DATE_ONLY_REGEX = /^(\d{4})-(\d{2})-(\d{2})(?:T00:00(?::00(?:\.0{1,3})?)?Z)?$/;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/** Years accepted wherever a calendar day is parsed; catches typos like 0226 or 9026. */
+export const MIN_DATE_YEAR = 1900;
+export const MAX_DATE_YEAR = 2100;
+
 /**
- * Parse "YYYY-MM-DD" (or an ISO string starting with it) into UTC midnight.
- * Returns null for malformed or impossible dates (e.g. 2026-02-30).
+ * Parse "YYYY-MM-DD" into UTC midnight.
+ * Returns null for malformed or impossible dates (e.g. 2026-02-30) and for
+ * years outside MIN_DATE_YEAR..MAX_DATE_YEAR.
  */
 export function parseDateOnly(value: unknown): Date | null {
   if (value instanceof Date) {
@@ -29,6 +39,7 @@ export function parseDateOnly(value: unknown): Date | null {
   const year = Number(match[1]);
   const month = Number(match[2]);
   const day = Number(match[3]);
+  if (year < MIN_DATE_YEAR || year > MAX_DATE_YEAR) return null;
   const date = new Date(Date.UTC(year, month - 1, day));
 
   if (
@@ -39,6 +50,14 @@ export function parseDateOnly(value: unknown): Date | null {
     return null;
   }
   return date;
+}
+
+/** How far ahead a transaction may be dated: a planned bill yes, a mistyped year no. */
+export const MAX_FUTURE_DAYS = 366;
+
+/** The latest day a transaction may have, counted from today (UTC). */
+export function latestTransactionDate(now: Date = new Date()): Date {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) + MAX_FUTURE_DAYS * DAY_MS);
 }
 
 /**
@@ -225,6 +244,30 @@ export function previousPeriod(preset: PeriodPreset, range: DateRange): DateRang
       return { start: addDaysUTC(range.start, -length), end: addDaysUTC(range.start, -1) };
     }
   }
+}
+
+/**
+ * Whether `range` is exactly the calendar unit `preset` stands for: one
+ * Monday–Sunday week, one whole month, or one whole year. Other presets
+ * (3 months, custom) accept any range.
+ */
+export function isWholePeriod(preset: PeriodPreset, range: DateRange): boolean {
+  let whole: DateRange;
+  switch (preset) {
+    case "this_week":
+      whole = weekRange(range.start);
+      break;
+    case "this_month":
+    case "last_month":
+      whole = monthRange(range.start);
+      break;
+    case "this_year":
+      whole = yearRange(range.start);
+      break;
+    default:
+      return true;
+  }
+  return whole.start.getTime() === range.start.getTime() && whole.end.getTime() === range.end.getTime();
 }
 
 /** The same day of the month `months` away, clamped to that month's last day. */

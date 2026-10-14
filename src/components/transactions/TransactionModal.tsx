@@ -8,6 +8,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Category, Transaction, TransactionType } from "@/types";
 import { formatRupiah, formatDateForInput } from "@/lib/formatters";
 import { normalizeAmount } from "@/lib/validations";
+import { latestTransactionDate, toDateOnlyString } from "@/lib/dates";
 import { FIELD, FIELD_LABEL } from "@/components/ui/fieldStyles";
 import { TypeToggle } from "@/components/ui/TypeToggle";
 
@@ -239,6 +240,7 @@ export function TransactionModal({
             <Input
               label="Tanggal"
               type="date"
+              max={toDateOnlyString(latestTransactionDate())}
               value={date}
               onChange={(e) => {
                 setDate(e.target.value);

@@ -174,6 +174,16 @@ describe("reports", () => {
     assert.equal(bills.percent, null, "new category spending has no percentage");
   });
 
+  test("a range that is not one whole month is compared as a custom range", async () => {
+    // periodType=month over a quarter: the previous period is the quarter before
+    const res = await alice.client.get("/api/reports?startDate=2024-01-01&endDate=2024-03-31&periodType=month");
+    assert.equal(res.status, 200);
+    const { period } = res.json.data;
+    assert.equal(period.type, "custom");
+    assert.equal(period.previousStart, "2023-10-02");
+    assert.equal(period.previousEnd, "2023-12-31");
+  });
+
   test("type and category filters are applied", async () => {
     let res = await alice.client.get(`/api/reports?${MARCH}&type=INCOME`);
     assert.equal(res.json.data.summary.totalExpense, 0);
