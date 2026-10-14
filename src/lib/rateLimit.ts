@@ -81,8 +81,17 @@ export function clearRateLimits(): void {
 
 const MINUTE = 60_000;
 
-/** Failed logins for one email address (protects a single account). */
-export const LOGIN_EMAIL_RULE: RateLimitRule = { limit: 5, windowMs: 15 * MINUTE };
+/**
+ * Failed logins for one email address from one client IP. Keyed per IP so a
+ * stranger cannot lock the owner out by guessing wrong on purpose.
+ */
+export const LOGIN_EMAIL_IP_RULE: RateLimitRule = { limit: 5, windowMs: 15 * MINUTE };
+/**
+ * Failed logins for one email address from any IP (guessing spread over many
+ * IPs). Also the only per-email limit when the client IP is unknown, so it
+ * falls back to the strict 5 there; see loginRules().
+ */
+export const LOGIN_EMAIL_RULE: RateLimitRule = { limit: 20, windowMs: 15 * MINUTE };
 /** Failed logins from one client IP across all emails (credential stuffing). */
 export const LOGIN_IP_RULE: RateLimitRule = { limit: 50, windowMs: 15 * MINUTE };
 /** New accounts from one client IP. */
@@ -97,18 +106,48 @@ export const REGISTER_TAKEN_RULE: RateLimitRule = { limit: 10, windowMs: 60 * MI
 export const ACCOUNT_PASSWORD_RULE: RateLimitRule = { limit: 5, windowMs: 15 * MINUTE };
 
 /**
- * Best-effort client IP. `x-forwarded-for` is only trustworthy behind a reverse
- * proxy that sets it, which is why per-email limits are the primary defence.
+ * How many reverse proxies in front of the app append to `x-forwarded-for`.
+ * TRUST_PROXY: unset/"false" = 0, "true" = 1, or a number. On Vercel it
+ * defaults to 1. Without a trusted proxy the header is written by the client
+ * itself, so it is ignored.
  */
-export function clientIp(headers: Headers): string {
-  const realIp = headers.get("x-real-ip")?.trim();
-  if (realIp) return realIp;
-  const forwarded = headers.get("x-forwarded-for");
-  if (forwarded) {
-    const first = forwarded.split(",")[0]?.trim();
-    if (first) return first;
-  }
-  return "unknown";
+export function trustedProxyHops(env: Record<string, string | undefined> = process.env): number {
+  const value = env.TRUST_PROXY?.trim().toLowerCase();
+  if (!value) return env.VERCEL ? 1 : 0;
+  if (value === "true") return 1;
+  const hops = Number(value);
+  return Number.isInteger(hops) && hops > 0 ? hops : 0;
+}
+
+/**
+ * The client IP as seen by the closest trusted proxy, or null when it cannot
+ * be known. Each proxy appends the address it received the request from, so
+ * the real client is `hops` entries from the end; anything further left was
+ * sent by the client and may be forged. `x-real-ip` is never read: whether
+ * it was set by a proxy or by the client cannot be told apart.
+ */
+export function clientIp(headers: Headers, hops: number = trustedProxyHops()): string | null {
+  if (hops < 1) return null;
+  const entries = (headers.get("x-forwarded-for") ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  return entries[entries.length - hops] ?? null;
+}
+
+/**
+ * Rate limit keys and rules for one login attempt.
+ * With a known IP: per email+IP (strict), per email (looser), per IP.
+ * Without one, every client shares a single IP, so per-IP limits would let
+ * one person lock everybody out; only a strict per-email limit is used.
+ */
+export function loginRules(email: string, ip: string | null): { key: string; rule: RateLimitRule }[] {
+  if (!ip) return [{ key: `login:email:${email}`, rule: LOGIN_EMAIL_IP_RULE }];
+  return [
+    { key: `login:email-ip:${email}|${ip}`, rule: LOGIN_EMAIL_IP_RULE },
+    { key: `login:email:${email}`, rule: LOGIN_EMAIL_RULE },
+    { key: `login:ip:${ip}`, rule: LOGIN_IP_RULE },
+  ];
 }
 
 export function tooManyRequestsMessage(retryAfter: number): string {

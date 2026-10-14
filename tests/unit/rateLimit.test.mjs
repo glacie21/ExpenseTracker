@@ -8,9 +8,11 @@ import {
   clearRateLimits,
   clientIp,
   hitRateLimit,
+  loginRules,
   releaseRateLimit,
   resetRateLimit,
   tooManyRequestsMessage,
+  trustedProxyHops,
 } from "../../src/lib/rateLimit.ts";
 
 const RULE = { limit: 3, windowMs: 60_000 };
@@ -52,10 +54,55 @@ test("retryAfter is at least one second", () => {
   assert.equal(checkRateLimit("k", RULE, T0 + 59_999).retryAfter, 1);
 });
 
-test("client IP prefers x-real-ip, then the first x-forwarded-for entry", () => {
-  assert.equal(clientIp(new Headers({ "x-real-ip": "1.1.1.1", "x-forwarded-for": "2.2.2.2" })), "1.1.1.1");
-  assert.equal(clientIp(new Headers({ "x-forwarded-for": " 3.3.3.3 , 10.0.0.1" })), "3.3.3.3");
-  assert.equal(clientIp(new Headers()), "unknown");
+test("without a trusted proxy, client-sent IP headers are ignored", () => {
+  const spoofed = new Headers({ "x-real-ip": "1.1.1.1", "x-forwarded-for": "2.2.2.2" });
+  assert.equal(clientIp(spoofed, 0), null);
+  assert.equal(clientIp(new Headers(), 1), null);
+});
+
+test("behind trusted proxies, the client is that many entries from the end", () => {
+  // The client forged "6.6.6.6"; each proxy appended the address it really saw
+  const headers = new Headers({ "x-forwarded-for": "6.6.6.6, 3.3.3.3 , 10.0.0.1" });
+  assert.equal(clientIp(headers, 1), "10.0.0.1");
+  assert.equal(clientIp(headers, 2), "3.3.3.3");
+  // x-real-ip may come from the client, so it never decides the IP
+  assert.equal(clientIp(new Headers({ "x-real-ip": "1.1.1.1", "x-forwarded-for": "4.4.4.4" }), 1), "4.4.4.4");
+  // Fewer entries than hops: the request did not pass all proxies
+  assert.equal(clientIp(new Headers({ "x-forwarded-for": "4.4.4.4" }), 2), null);
+});
+
+test("TRUST_PROXY sets the number of trusted proxies", () => {
+  assert.equal(trustedProxyHops({}), 0);
+  assert.equal(trustedProxyHops({ TRUST_PROXY: "false" }), 0);
+  assert.equal(trustedProxyHops({ TRUST_PROXY: "true" }), 1);
+  assert.equal(trustedProxyHops({ TRUST_PROXY: "2" }), 2);
+  assert.equal(trustedProxyHops({ TRUST_PROXY: "-1" }), 0);
+  assert.equal(trustedProxyHops({ VERCEL: "1" }), 1);
+  assert.equal(trustedProxyHops({ VERCEL: "1", TRUST_PROXY: "false" }), 0);
+});
+
+const isLimited = (rules) => rules.some(({ key, rule }) => checkRateLimit(key, rule, T0).limited);
+
+test("login lockout is per email and IP, so others cannot lock the owner out", () => {
+  const attacker = loginRules("owner@example.com", "6.6.6.6");
+  for (let i = 0; i < 5; i++) {
+    for (const { key, rule } of attacker) hitRateLimit(key, rule, T0);
+  }
+  assert.equal(isLimited(attacker), true);
+  assert.equal(isLimited(loginRules("owner@example.com", "1.1.1.1")), false);
+});
+
+test("guesses spread over many IPs still hit the per-email limit", () => {
+  for (let i = 0; i < 20; i++) {
+    for (const { key, rule } of loginRules("owner@example.com", "9.9.9." + i)) hitRateLimit(key, rule, T0);
+  }
+  assert.equal(isLimited(loginRules("owner@example.com", "1.1.1.1")), true);
+});
+
+test("with an unknown IP, only a strict per-email limit applies", () => {
+  const rules = loginRules("owner@example.com", null);
+  assert.equal(rules.length, 1, "no shared per-IP bucket that everyone could be locked out of");
+  assert.equal(rules[0].rule.limit, 5);
 });
 
 test("message rounds the wait up to whole minutes", () => {

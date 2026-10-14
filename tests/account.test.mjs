@@ -141,11 +141,14 @@ describe("registration and login hardening", () => {
   });
 });
 
-// Each test gets its own client IP, so it does not fill the shared bucket
+// These send x-forwarded-for, which the app only reads with TRUST_PROXY set
+// (CI sets it for the app and the tests). Without it every request shares one
+// IP, and filling that bucket would block the other tests' registrations.
+const TRUSTED_PROXY = Boolean(process.env.TRUST_PROXY && process.env.TRUST_PROXY !== "false");
 let ipCounter = 0;
 const freshIp = () => `198.51.${Math.floor(Math.random() * 250)}.${++ipCounter % 250}`;
 
-describe("rate limits per client IP", () => {
+describe("rate limits per client IP", { skip: !TRUSTED_PROXY && "set TRUST_PROXY=1 for the app and the tests" }, () => {
   test("register cannot be used to check which emails have an account", async () => {
     await registerUser("enum-target");
     const client = new Client({ "X-Forwarded-For": freshIp() });
@@ -162,6 +165,17 @@ describe("rate limits per client IP", () => {
     assert.equal(free.status, 429);
   });
 
+  test("a stranger's wrong guesses do not lock the owner out", async () => {
+    await registerUser("lock-abuse");
+    const attacker = new Client({ "X-Forwarded-For": freshIp() });
+    const credentials = { email: emailFor("lock-abuse"), password: "wrong-password" };
+    for (let i = 0; i < 5; i++) await attacker.post("/api/auth/login", credentials);
+    assert.equal((await attacker.post("/api/auth/login", credentials)).status, 429);
+
+    const owner = new Client({ "X-Forwarded-For": freshIp() });
+    const res = await owner.post("/api/auth/login", { email: emailFor("lock-abuse"), password: PASSWORD });
+    assert.equal(res.status, 200);
+  });
 });
 
 describe("input and race hardening", () => {

@@ -85,11 +85,13 @@ Aplikasi web untuk mencatat dan memantau kondisi keuangan pribadi: pemasukan, pe
 
   | Aksi | Batas |
   | :--- | :--- |
-  | Login gagal per email | 5 per 15 menit; selama terkunci, password yang benar pun ditolak (`429` + `Retry-After`) |
+  | Login gagal per email dari satu IP | 5 per 15 menit; selama terkunci, password yang benar pun ditolak (`429` + `Retry-After`) |
+  | Login gagal per email dari semua IP | 20 per 15 menit (tebakan yang disebar ke banyak IP) |
   | Login gagal per IP | 50 per 15 menit |
   | Registrasi per IP | 50 per jam |
   | Registrasi dengan email yang sudah terdaftar, per IP | 10 per jam; setelah itu semua registrasi dari IP tersebut ditolak, supaya daftar email tidak bisa dicek satu per satu |
   | Password saat ini salah (ganti password / hapus akun), per pengguna | 5 per 15 menit |
+- **IP klien** hanya dibaca dari `x-forwarded-for` bila `TRUST_PROXY` diisi (otomatis di Vercel), dengan mengambil entri yang ditambahkan proxy tepercaya, bukan entri dari klien. Tanpa proxy tepercaya, IP dianggap tidak diketahui: batas login per IP dimatikan (supaya satu orang tidak bisa mengunci semua pengguna) dan batas per email kembali ke 5 per 15 menit. Penguncian per email + IP membuat orang lain tidak bisa mengunci pemilik akun hanya dengan sengaja salah menebak.
 - Login dengan email yang tidak terdaftar memakan waktu yang sama dengan password salah, sehingga keberadaan email tidak bisa ditebak dari waktu respons.
 - Password minimal **8 karakter** dan maksimal 72 byte (batas bcrypt).
 - Halaman **404** dan **error** dengan tombol "Coba lagi", serta `global-error` untuk kegagalan di root layout.
@@ -195,9 +197,9 @@ Cakupan:
 - **Integrasi Tahap 2**: CRUD transaksi, filter, validasi nominal dan kategori, isolasi antar pengguna, ringkasan, persistensi, dan akses tanpa login.
 - **Integrasi Tahap 3**: analitik per periode (termasuk transaksi di hari pertama/terakhir rentang), laporan dengan filter, validasi backend, ekspor CSV (isi, escaping, BOM, hanya data sendiri, 404 bila kosong), PDF (valid, periode kosong), anggaran (progres dari pengeluaran aktual, berubah saat transaksi diedit/dihapus, duplikat, kategori pemasukan ditolak), isolasi anggaran/laporan/ekspor antar pengguna, dan semua endpoint/halaman baru menolak akses tanpa login.
 - **Integrasi Tahap 4**: penguncian login (429), aturan password, ubah profil, ganti password (sesi lain dicabut, sesi ini tetap), batas tebakan password, logout semua perangkat, hapus akun beserta seluruh datanya, akses tanpa login, dan header CSP.
-- **Unit Tahap 4**: rate limiter (batas, reset jendela waktu, isolasi key) dan pembacaan IP klien.
+- **Unit Tahap 4**: rate limiter (batas, reset jendela waktu, isolasi key), pembacaan IP klien dari proxy tepercaya, dan aturan penguncian login per email + IP.
 
-Rate limiter menyimpan hitungan di memori server. Satu kali `npm test` memakai sekitar 15 registrasi dan 20-an login gagal dari IP yang sama. Jika test dijalankan berkali-kali dalam satu jam lalu registrasi mendapat `429`, restart aplikasi untuk mengosongkan hitungan.
+Rate limiter menyimpan hitungan di memori server. Satu kali `npm test` memakai sekitar 25 registrasi dan 20-an login gagal dari IP yang sama. Test batas per IP (cek email lewat registrasi, penguncian oleh orang lain) hanya berjalan bila aplikasi **dan** test dijalankan dengan `TRUST_PROXY=1`, seperti di CI; tanpa itu test tersebut dilewati. Jika test dijalankan berkali-kali dalam satu jam lalu registrasi mendapat `429`, restart aplikasi untuk mengosongkan hitungan.
 
 ### CI
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) berjalan di setiap push ke `main` dan setiap pull request:
@@ -235,7 +237,7 @@ npm start                   # jalankan di port 3000 (atur PORT bila perlu)
 - Set `DATABASE_URL` dan `JWT_SECRET` di environment platform. Jangan commit `.env`.
 - Jalankan `npm run db:deploy` sebagai langkah rilis **sebelum** versi baru menerima traffic. Jangan pernah memakai `migrate dev`, `migrate reset`, atau `db push` di produksi.
 - Untuk platform serverless (misalnya Vercel), gunakan PostgreSQL terkelola dengan connection pooling (misalnya PgBouncer atau pooler bawaan penyedia), lalu jalankan `prisma migrate deploy` di pipeline rilis.
-- Rate limiting disimpan di memori proses. Ini cukup untuk **satu instance** (VPS atau satu container). Jika aplikasi berjalan di beberapa instance atau serverless, tiap instance menghitung sendiri-sendiri, jadi gunakan store bersama (misalnya Redis). Batas per IP membaca `x-real-ip` / `x-forwarded-for`, jadi pastikan reverse proxy Anda menimpa header tersebut. Batas per email tidak bergantung pada IP.
+- Rate limiting disimpan di memori proses. Ini cukup untuk **satu instance** (VPS atau satu container). Jika aplikasi berjalan di beberapa instance atau serverless, tiap instance menghitung sendiri-sendiri, jadi gunakan store bersama (misalnya Redis). Batas per IP hanya aktif bila `TRUST_PROXY` diisi jumlah reverse proxy di depan aplikasi (`1` untuk satu nginx/Caddy/load balancer); proxy tersebut harus menambahkan alamat klien ke `x-forwarded-for`. `x-real-ip` tidak dipakai karena tidak bisa dibedakan dari header kiriman klien. Tanpa `TRUST_PROXY`, semua klien berbagi satu "IP" untuk batas registrasi. Batas per email tidak bergantung pada IP.
 - Aplikasi mengirim header keamanan (`Content-Security-Policy`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, dan `Strict-Transport-Security` di produksi) dan `Cache-Control: no-store` untuk seluruh API, sehingga data keuangan tidak di-cache.
 - PostgreSQL embedded (`npm run db:start`) hanya untuk development.
 

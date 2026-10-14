@@ -26,7 +26,9 @@ function emailTakenResponse() {
 
 export async function POST(request: NextRequest) {
   try {
-    const ip = clientIp(request.headers);
+    // Without a trusted proxy (see clientIp) all clients share one bucket: a
+    // flood of sign-ups can then hold up everyone's, but cannot enumerate emails
+    const ip = clientIp(request.headers) ?? "unknown";
     const ipKey = `register:ip:${ip}`;
     const takenKey = `register:taken:${ip}`;
     const limit = [checkRateLimit(ipKey, REGISTER_IP_RULE), checkRateLimit(takenKey, REGISTER_TAKEN_RULE)].find(

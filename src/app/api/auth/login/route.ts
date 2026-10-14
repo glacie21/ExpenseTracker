@@ -3,11 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { burnPasswordCheck, comparePassword, createSessionToken, setSessionCookie } from "@/lib/auth";
 import { validateLoginInput } from "@/lib/validations";
 import {
-  LOGIN_EMAIL_RULE,
-  LOGIN_IP_RULE,
   checkRateLimit,
   clientIp,
   hitRateLimit,
+  loginRules,
   releaseRateLimit,
   resetRateLimit,
   tooManyRequestsMessage,
@@ -39,11 +38,10 @@ export async function POST(request: NextRequest) {
     const rememberMe = Boolean(body.rememberMe);
 
     // Lock out before checking the password, so a correct guess is not revealed either
-    const emailKey = `login:email:${email}`;
-    const ipKey = `login:ip:${clientIp(request.headers)}`;
-    const blocked = [checkRateLimit(emailKey, LOGIN_EMAIL_RULE), checkRateLimit(ipKey, LOGIN_IP_RULE)].find(
-      (status) => status.limited
-    );
+    const rules = loginRules(email, clientIp(request.headers));
+    const blocked = rules
+      .map(({ key, rule }) => checkRateLimit(key, rule))
+      .find((status) => status.limited);
     if (blocked) {
       return NextResponse.json(
         { success: false, message: tooManyRequestsMessage(blocked.retryAfter) },
@@ -53,8 +51,7 @@ export async function POST(request: NextRequest) {
 
     // Count the attempt before the slow password check, so a burst of parallel
     // requests cannot all slip past the check above; a valid login gives it back
-    hitRateLimit(emailKey, LOGIN_EMAIL_RULE);
-    hitRateLimit(ipKey, LOGIN_IP_RULE);
+    for (const { key, rule } of rules) hitRateLimit(key, rule);
 
     const user = await prisma.user.findUnique({
       where: { email },
@@ -69,8 +66,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(INVALID_CREDENTIALS, { status: 401 });
     }
 
-    resetRateLimit(emailKey);
-    releaseRateLimit(ipKey);
+    // The first rule is the account's own lockout. The owner proved the password:
+    // forget those failures, and give back this attempt on the shared counters
+    // without wiping hits from other attempts
+    const [strictest, ...others] = rules;
+    resetRateLimit(strictest.key);
+    for (const { key } of others) releaseRateLimit(key);
 
     const token = await createSessionToken(user, rememberMe);
 
