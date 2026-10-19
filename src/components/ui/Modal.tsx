@@ -87,7 +87,7 @@ export function Modal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-ink/40" onClick={onClose} aria-hidden="true" />
+      <div className="fixed inset-0 bg-[#06201b]/45 backdrop-blur-[2px]" onClick={onClose} aria-hidden="true" />
 
       {/* Modal Dialog Content */}
       <div
@@ -97,12 +97,12 @@ export function Modal({
         aria-labelledby={title ? titleId : labelledBy}
         aria-describedby={describedBy}
         tabIndex={-1}
-        className={`relative z-10 w-full outline-none ${maxWidthStyles[maxWidth]} rounded-sm border border-rule bg-surface p-6 shadow-[0_12px_32px_-12px_rgb(0_0_0/0.35)]`}
+        className={`relative z-10 w-full outline-none ${maxWidthStyles[maxWidth]} rounded-2xl bg-surface p-6 shadow-[0_24px_48px_-16px_rgb(6_30_25/0.35)]`}
       >
         <div className="flex items-start justify-between gap-4 pb-4 border-b border-rule-soft">
           <div>
             {title && (
-              <h3 id={titleId} className="font-serif text-xl font-medium text-ink">
+              <h3 id={titleId} className="font-display text-2xl font-semibold text-ink">
                 {title}
               </h3>
             )}
@@ -111,7 +111,7 @@ export function Modal({
           <button
             type="button"
             onClick={onClose}
-            className="-mr-1.5 rounded-sm p-1.5 text-ink-3 transition-colors hover:bg-sunken hover:text-ink"
+            className="-mr-1.5 rounded-lg p-1.5 text-ink-3 transition-colors hover:bg-sunken hover:text-ink"
             aria-label="Tutup modal"
           >
             <X className="w-5 h-5" />

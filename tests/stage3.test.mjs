@@ -7,6 +7,7 @@ import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { PrismaClient } from "@prisma/client";
 import { PDFDocument } from "pdf-lib";
+import ExcelJS from "exceljs";
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 const RUN_ID = `s3${Date.now()}${Math.floor(Math.random() * 1e6)}`;
@@ -31,7 +32,7 @@ class Client {
     const type = res.headers.get("content-type") || "";
     let payload;
     if (type.includes("application/json")) payload = await res.json();
-    else if (type.includes("application/pdf")) payload = new Uint8Array(await res.arrayBuffer());
+    else if (type.includes("application/pdf") || type.includes("openxmlformats")) payload = new Uint8Array(await res.arrayBuffer());
     // Response.text() strips a UTF-8 BOM; decode manually to be able to assert it
     else payload = new TextDecoder("utf-8", { ignoreBOM: true }).decode(await res.arrayBuffer());
     return { status: res.status, headers: res.headers, json: payload, body: payload };
@@ -286,6 +287,67 @@ describe("PDF report", () => {
   });
 });
 
+describe("Excel and Word reports", () => {
+  const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  const DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+  test("Excel report has summary, breakdown and transactions as real numbers and dates", async () => {
+    const res = await alice.client.get(`/api/reports/export?format=xlsx&${MARCH}&periodType=month`);
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get("content-type"), XLSX_TYPE);
+    assert.match(res.headers.get("content-disposition"), /laporan-2024-03-01_2024-03-31.xlsx/);
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(Buffer.from(res.body));
+    assert.deepEqual(
+      workbook.worksheets.map((ws) => ws.name).filter((n) => n !== "Pengeluaran naik"),
+      ["Ringkasan", "Per kategori", "Transaksi"]
+    );
+
+    const sheet = workbook.getWorksheet("Transaksi");
+    const rows = [];
+    sheet.eachRow((row, i) => {
+      if (i > 1) rows.push(row.values.slice(1));
+    });
+    assert.equal(rows.length, 4);
+    const [, , , , amount, flow] = rows.find((r) => r[1] === "Makan, \"enak\"");
+    assert.equal(amount, 250000.5);
+    assert.equal(flow, -250000.5);
+    assert.ok(rows[0][0] instanceof Date);
+    assert.equal(rows[0][0].toISOString().slice(0, 10), "2024-03-01");
+    // User text that looks like a formula stays plain text
+    const injected = sheet.getRow(rows.findIndex((r) => String(r[1]).startsWith("=HYPERLINK")) + 2).getCell(2);
+    assert.equal(injected.type, ExcelJS.ValueType.String);
+    // Other users' data never appears
+    assert.ok(!rows.some((r) => r[1] === "Bob secret bill"));
+
+    const summary = workbook.getWorksheet("Ringkasan");
+    const values = new Map();
+    summary.eachRow((row) => values.set(row.getCell(1).value, row.getCell(2).value));
+    assert.equal(values.get("Total pemasukan"), 5000000);
+    assert.equal(values.get("Total pengeluaran"), 1001000.5);
+  });
+
+  test("Word report is a valid .docx document", async () => {
+    const res = await alice.client.get(`/api/reports/export?format=docx&${MARCH}`);
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get("content-type"), DOCX_TYPE);
+    assert.match(res.headers.get("content-disposition"), /.docx"/);
+    const file = Buffer.from(res.body);
+    assert.equal(file.subarray(0, 2).toString(), "PK");
+    assert.ok(file.includes("word/document.xml"));
+  });
+
+  test("rejects unknown formats and invalid filters", async () => {
+    assert.equal((await alice.client.get(`/api/reports/export?format=exe&${MARCH}`)).status, 400);
+    assert.equal((await alice.client.get(`/api/reports/export?${MARCH}`)).status, 400);
+    assert.equal(
+      (await alice.client.get("/api/reports/export?format=xlsx&startDate=2024-03-31&endDate=2024-03-01")).status,
+      400
+    );
+  });
+});
+
 describe("budgets", () => {
   let foodBudgetId;
 
@@ -397,6 +459,7 @@ describe("authentication for stage 3 features", () => {
       "/api/analytics?period=this_month",
       `/api/reports?${MARCH}`,
       `/api/reports/pdf?${MARCH}`,
+      `/api/reports/export?format=xlsx&${MARCH}`,
       "/api/transactions/export",
       "/api/budgets",
     ]) {

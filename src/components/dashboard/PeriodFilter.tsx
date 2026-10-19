@@ -18,7 +18,7 @@ interface PeriodFilterProps {
 }
 
 const DATE_INPUT =
-  "mt-1 block h-9 rounded-sm border border-rule bg-surface px-2.5 text-sm text-ink focus:border-ink focus:outline-none";
+  "mt-1 block h-9 rounded-lg border border-rule bg-surface px-2.5 text-sm text-ink focus:border-accent focus:ring-3 focus:ring-accent/15 focus:outline-none";
 
 /**
  * Date-range filter for the dashboard. It sits above everything it scopes;
@@ -80,9 +80,9 @@ export function PeriodFilter({ preset, start, end, label, actions, children }: P
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <div className="flex flex-col gap-4 border-b border-rule md:flex-row md:items-end md:justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div
-            className="-mb-px flex gap-5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl bg-sunken p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             role="group"
             aria-label="Pilih periode"
           >
@@ -101,7 +101,7 @@ export function PeriodFilter({ preset, start, end, label, actions, children }: P
               );
             })}
           </div>
-          {actions && <div className="flex shrink-0 flex-wrap gap-2 pb-3">{actions}</div>}
+          {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
         </div>
 
         {showCustom && (
@@ -134,7 +134,7 @@ export function PeriodFilter({ preset, start, end, label, actions, children }: P
         )}
 
         <p className="flex items-center gap-2 text-sm text-ink-2">
-          <span className="font-serif text-2xl text-ink">{label}</span>
+          <span className="font-display text-xl font-semibold text-ink">{label}</span>
           {isPending && <Loader2 className="h-4 w-4 animate-spin text-ink-3" aria-label="Memuat periode" />}
         </p>
       </div>

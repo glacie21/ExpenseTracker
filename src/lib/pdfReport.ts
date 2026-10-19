@@ -2,23 +2,7 @@ import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb } from "pdf-lib";
 import { formatPercent } from "@/lib/finance";
 import { formatRupiah } from "@/lib/formatters";
 import { formatDayLabel } from "@/lib/dates";
-import { Report } from "@/lib/reports";
-
-export interface PdfTransactionRow {
-  date: Date;
-  title: string;
-  category: string;
-  type: "INCOME" | "EXPENSE";
-  amount: number;
-}
-
-interface PdfReportInput {
-  report: Report;
-  userName: string;
-  generatedAt: string;
-  transactions: PdfTransactionRow[];
-  totalTransactions: number;
-}
+import { ReportExportData, typeFilterLabel } from "@/lib/reportExport";
 
 const PAGE = { width: 595.28, height: 841.89 }; // A4 portrait
 const MARGIN = 40;
@@ -198,7 +182,7 @@ class ReportWriter {
   }
 }
 
-export async function buildReportPdf(input: PdfReportInput): Promise<Uint8Array> {
+export async function buildReportPdf(input: ReportExportData): Promise<Uint8Array> {
   const { report } = input;
   const doc = await PDFDocument.create();
   doc.setTitle(`Laporan Keuangan ${report.period.label}`);
@@ -212,9 +196,7 @@ export async function buildReportPdf(input: PdfReportInput): Promise<Uint8Array>
   w.gap(4);
   w.text(input.userName, { size: 11, color: COLORS.muted });
   w.text(`Periode: ${report.period.label}`, { size: 10 });
-  const typeLabel =
-    report.filters.type === "INCOME" ? "Pemasukan" : report.filters.type === "EXPENSE" ? "Pengeluaran" : "Semua";
-  w.text(`Filter: tipe ${typeLabel}; kategori ${report.filters.category?.name ?? "Semua"}`, { size: 10 });
+  w.text(`Filter: tipe ${typeFilterLabel(report.filters.type)}; kategori ${report.filters.category?.name ?? "Semua"}`, { size: 10 });
   w.text(`Dibuat: ${input.generatedAt}`, { size: 10, color: COLORS.muted });
 
   // Summary
@@ -257,7 +239,7 @@ export async function buildReportPdf(input: PdfReportInput): Promise<Uint8Array>
   } else {
     if (input.totalTransactions > input.transactions.length) {
       w.text(
-        `Menampilkan ${input.transactions.length} dari ${input.totalTransactions} transaksi. Gunakan Export CSV untuk data lengkap.`,
+        `Menampilkan ${input.transactions.length} dari ${input.totalTransactions} transaksi. Unduh versi Excel atau CSV untuk data lengkap.`,
         { size: 9, color: COLORS.muted }
       );
     }

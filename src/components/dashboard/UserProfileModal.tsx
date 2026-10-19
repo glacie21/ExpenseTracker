@@ -1,17 +1,22 @@
 import React from "react";
 import Link from "next/link";
+import { ChevronRight, LogOut, Settings, Tags } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Avatar } from "@/components/ui/Avatar";
-import { Button } from "@/components/ui/Button";
 import { SafeUser } from "@/types";
 
 interface UserProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onLogout: () => void;
   user: SafeUser | null;
 }
 
-export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProps) {
+const ROW =
+  "flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-ink transition-colors hover:bg-sunken";
+
+/** Profile summary plus the account links that have no slot in the phone tab bar. */
+export function UserProfileModal({ isOpen, onClose, onLogout, user }: UserProfileModalProps) {
   if (!user) return null;
 
   const joinDate = user.createdAt
@@ -23,35 +28,39 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
     : "Baru saja";
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Profil" maxWidth="md">
-      <div className="space-y-6">
+    <Modal isOpen={isOpen} onClose={onClose} title="Akun" maxWidth="sm">
+      <div className="space-y-5">
         <div className="flex items-center gap-4">
           <Avatar name={user.name || "Pengguna"} size="lg" />
           <div className="min-w-0">
-            <p className="truncate font-serif text-lg text-ink">{user.name}</p>
+            <p className="truncate font-display text-lg font-semibold text-ink">{user.name}</p>
             <p className="truncate text-sm text-ink-3">{user.email}</p>
+            <p className="mt-0.5 text-xs text-ink-3">Terdaftar sejak {joinDate}</p>
           </div>
         </div>
 
-        <dl className="border-t border-rule-soft text-sm">
-          <div className="flex justify-between gap-4 border-b border-rule-soft py-2.5">
-            <dt className="text-ink-3">Terdaftar sejak</dt>
-            <dd className="text-ink">{joinDate}</dd>
-          </div>
-        </dl>
-
-        <div className="flex justify-end gap-2">
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            Tutup
-          </Button>
-          <Link
-            href="/settings"
-            onClick={onClose}
-            className="inline-flex h-8 items-center rounded-sm border border-rule bg-surface px-3 text-xs font-medium text-ink transition-colors hover:bg-sunken"
-          >
-            Pengaturan akun
-          </Link>
-        </div>
+        <ul className="divide-y divide-rule-soft overflow-hidden rounded-xl border border-rule">
+          <li>
+            <Link href="/categories" onClick={onClose} className={ROW}>
+              <Tags className="h-4 w-4 text-ink-3" />
+              <span className="flex-1">Kategori</span>
+              <ChevronRight className="h-4 w-4 text-ink-3" />
+            </Link>
+          </li>
+          <li>
+            <Link href="/settings" onClick={onClose} className={ROW}>
+              <Settings className="h-4 w-4 text-ink-3" />
+              <span className="flex-1">Pengaturan akun</span>
+              <ChevronRight className="h-4 w-4 text-ink-3" />
+            </Link>
+          </li>
+          <li>
+            <button type="button" onClick={onLogout} className={`${ROW} text-neg hover:bg-neg-soft`}>
+              <LogOut className="h-4 w-4" />
+              <span className="flex-1">Keluar</span>
+            </button>
+          </li>
+        </ul>
       </div>
     </Modal>
   );

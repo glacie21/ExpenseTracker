@@ -59,11 +59,11 @@ export function IncomeExpenseChart({ series, granularity }: IncomeExpenseChartPr
   const legend = (
     <div className="flex items-center gap-4 text-xs text-ink-2">
       <span className="inline-flex items-center gap-1.5">
-        <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: INCOME_COLOR }} />
+        <span className="h-2.5 w-2.5 rounded-lg" style={{ backgroundColor: INCOME_COLOR }} />
         Pemasukan
       </span>
       <span className="inline-flex items-center gap-1.5">
-        <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: EXPENSE_COLOR }} />
+        <span className="h-2.5 w-2.5 rounded-lg" style={{ backgroundColor: EXPENSE_COLOR }} />
         Pengeluaran
       </span>
     </div>
@@ -71,7 +71,7 @@ export function IncomeExpenseChart({ series, granularity }: IncomeExpenseChartPr
 
   if (!hasData) {
     return (
-      <div className="flex h-[260px] flex-col items-center justify-center rounded-sm border border-dashed border-rule text-center">
+      <div className="flex h-[260px] flex-col items-center justify-center rounded-2xl border border-dashed border-rule text-center">
         <BarChart3 className="mb-2 h-8 w-8 text-ink-3" />
         <p className="text-sm font-medium text-ink-2">
           Belum ada transaksi pada periode ini
@@ -202,7 +202,7 @@ export function IncomeExpenseChart({ series, granularity }: IncomeExpenseChartPr
         {activePoint && activeDate && (
           <div
             role="status"
-            className="pointer-events-none absolute top-2 z-10 min-w-[170px] rounded-sm border border-rule bg-surface px-3 py-2 text-xs shadow-[0_6px_16px_-8px_rgb(0_0_0/0.3)]"
+            className="pointer-events-none absolute top-2 z-10 min-w-[170px] rounded-xl border border-rule bg-surface px-3 py-2 text-xs shadow-[0_8px_20px_-10px_rgb(6_30_25/0.35)]"
             style={
               flipTooltip
                 ? { right: width - tooltipLeft + 12 }
@@ -235,7 +235,7 @@ export function IncomeExpenseChart({ series, granularity }: IncomeExpenseChartPr
         <summary className="cursor-pointer select-none text-ink-3 hover:text-ink">
           Lihat tabel data
         </summary>
-        <div className="mt-2 max-h-64 overflow-auto rounded-sm border border-rule">
+        <div className="mt-2 max-h-64 overflow-auto rounded-lg border border-rule">
           <table className="w-full text-left">
             <thead className="sticky top-0 bg-sunken text-ink-3">
               <tr>

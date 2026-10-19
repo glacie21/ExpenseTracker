@@ -2,8 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Sidebar } from "@/components/layout/Sidebar";
-import { Header } from "@/components/layout/Header";
+import { BottomNav, TopBar } from "@/components/layout/AppNav";
 import { UserProfileModal } from "@/components/dashboard/UserProfileModal";
 import { SafeUser } from "@/types";
 
@@ -12,31 +11,22 @@ interface DashboardShellProps {
   children: React.ReactNode;
 }
 
+const PAGES = [
+  { prefix: "/transactions", title: "Transaksi", subtitle: "Semua pemasukan dan pengeluaran yang tercatat" },
+  { prefix: "/reports", title: "Laporan", subtitle: "Ringkasan per periode, siap diunduh" },
+  { prefix: "/budgets", title: "Anggaran", subtitle: "Batas pengeluaran bulanan per kategori" },
+  { prefix: "/categories", title: "Kategori", subtitle: "Pengelompokan untuk transaksi dan anggaran" },
+  { prefix: "/settings", title: "Pengaturan", subtitle: "Profil, password, dan keamanan akun" },
+];
+
+const DEFAULT_PAGE = { title: "Ringkasan", subtitle: "Kondisi keuangan Anda pada periode yang dipilih" };
+
 export function DashboardShell({ user, children }: DashboardShellProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
 
-  let pageTitle = "Ringkasan";
-  let pageSubtitle = "Kondisi keuangan Anda pada periode yang dipilih";
-
-  if (pathname.startsWith("/transactions")) {
-    pageTitle = "Transaksi";
-    pageSubtitle = "Semua pemasukan dan pengeluaran yang tercatat";
-  } else if (pathname.startsWith("/reports")) {
-    pageTitle = "Laporan";
-    pageSubtitle = "Ringkasan per periode, siap diunduh";
-  } else if (pathname.startsWith("/budgets")) {
-    pageTitle = "Anggaran";
-    pageSubtitle = "Batas pengeluaran bulanan per kategori";
-  } else if (pathname.startsWith("/categories")) {
-    pageTitle = "Kategori";
-    pageSubtitle = "Pengelompokan untuk transaksi dan anggaran";
-  } else if (pathname.startsWith("/settings")) {
-    pageTitle = "Pengaturan";
-    pageSubtitle = "Profil, password, dan keamanan akun";
-  }
+  const page = PAGES.find((p) => pathname.startsWith(p.prefix)) ?? DEFAULT_PAGE;
 
   const handleLogout = async () => {
     try {
@@ -49,34 +39,23 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-paper lg:flex-row">
-      {/* Sidebar */}
-      <Sidebar
-        user={user}
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        onLogout={handleLogout}
-      />
+    <div className="flex min-h-screen flex-col bg-paper">
+      <TopBar user={user} onOpenProfile={() => setProfileModalOpen(true)} />
 
-      {/* Main Content Area */}
-      <div className="flex flex-1 flex-col min-w-0">
-        <Header
-          title={pageTitle}
-          subtitle={pageSubtitle}
-          user={user}
-          onOpenSidebar={() => setSidebarOpen(true)}
-          onOpenProfile={() => setProfileModalOpen(true)}
-        />
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 pb-28 sm:px-8 sm:pt-10 lg:pb-12">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="font-display text-3xl font-semibold text-ink sm:text-4xl">{page.title}</h1>
+          <p className="mt-1 text-sm text-ink-2">{page.subtitle}</p>
+        </div>
+        {children}
+      </main>
 
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-8 sm:py-8">
-          {children}
-        </main>
-      </div>
+      <BottomNav />
 
-      {/* User Profile Modal */}
       <UserProfileModal
         isOpen={profileModalOpen}
         onClose={() => setProfileModalOpen(false)}
+        onLogout={handleLogout}
         user={user}
       />
     </div>

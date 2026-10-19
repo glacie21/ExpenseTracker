@@ -399,7 +399,7 @@ export default function TransactionsPage() {
   return (
     <Suspense
       fallback={
-        <div className="h-64 animate-pulse rounded-sm border border-rule bg-surface" />
+        <div className="h-64 animate-pulse rounded-2xl border border-rule bg-surface" />
       }
     >
       <TransactionsRoute />

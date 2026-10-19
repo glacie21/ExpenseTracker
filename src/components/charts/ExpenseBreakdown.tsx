@@ -31,7 +31,7 @@ export function ExpenseBreakdown({ items, maxItems = 8 }: ExpenseBreakdownProps)
 
   if (items.length === 0) {
     return (
-      <div className="flex h-[200px] flex-col items-center justify-center rounded-sm border border-dashed border-rule text-center">
+      <div className="flex h-[200px] flex-col items-center justify-center rounded-2xl border border-dashed border-rule text-center">
         <PieChart className="mb-2 h-8 w-8 text-ink-3" />
         <p className="text-sm font-medium text-ink-2">
           Belum ada pengeluaran pada periode ini
@@ -79,7 +79,7 @@ export function ExpenseBreakdown({ items, maxItems = 8 }: ExpenseBreakdownProps)
             <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
               <span className="inline-flex min-w-0 items-center gap-2 text-ink">
                 <span
-                  className="h-2.5 w-2.5 shrink-0 rounded-sm"
+                  className="h-2.5 w-2.5 shrink-0 rounded-lg"
                   style={{ backgroundColor: item.color || NEUTRAL_CATEGORY_COLOR }}
                 />
                 <span className="truncate">{item.name}</span>
@@ -93,9 +93,9 @@ export function ExpenseBreakdown({ items, maxItems = 8 }: ExpenseBreakdownProps)
                 </span>
               </span>
             </div>
-            <div className="h-1.5 w-full rounded-sm bg-sunken">
+            <div className="h-2 w-full rounded-full bg-sunken">
               <div
-                className={`h-1.5 rounded-sm transition-opacity ${active && !isActive ? "opacity-50" : ""}`}
+                className={`h-2 rounded-full transition-opacity ${active && !isActive ? "opacity-50" : ""}`}
                 style={{
                   width: `${maxPercent > 0 ? Math.max(2, (item.percent / maxPercent) * 100) : 0}%`,
                   backgroundColor: item.color || NEUTRAL_CATEGORY_COLOR,
@@ -105,14 +105,10 @@ export function ExpenseBreakdown({ items, maxItems = 8 }: ExpenseBreakdownProps)
             {isActive && (
               <div
                 role="status"
-                className="pointer-events-none absolute right-0 top-full z-10 mt-1 rounded-sm border border-rule bg-surface px-3 py-1.5 text-xs shadow-[0_6px_16px_-8px_rgb(0_0_0/0.3)]"
+                className="pointer-events-none absolute right-0 top-full z-10 mt-1 rounded-xl border border-rule bg-surface px-3 py-1.5 text-xs shadow-[0_8px_20px_-10px_rgb(6_30_25/0.35)]"
               >
-                <span className="num font-semibold text-ink">
-                  {formatRupiah(item.total)}
-                </span>
-                <span className="text-ink-3">
-                  {" "}· {formatPercent(item.percent)} · {item.count} transaksi
-                </span>
+                <span className="num font-semibold text-ink">{item.count}</span>
+                <span className="text-ink-3"> transaksi</span>
               </div>
             )}
           </li>

@@ -132,7 +132,7 @@ function BudgetsView({ writeQuery }: { writeQuery: (pathname: string, query: str
           <Button variant="ghost" size="sm" onClick={() => shiftMonth(-1)} aria-label="Bulan sebelumnya" className="px-1.5">
             <ChevronLeft className="h-5 w-5" />
           </Button>
-          <h2 className="min-w-40 text-center font-serif text-2xl text-ink" aria-live="polite">
+          <h2 className="min-w-40 text-center font-display text-2xl font-semibold text-ink" aria-live="polite">
             {periodLabel}
           </h2>
           <Button variant="ghost" size="sm" onClick={() => shiftMonth(1)} aria-label="Bulan berikutnya" className="px-1.5">
@@ -146,7 +146,7 @@ function BudgetsView({ writeQuery }: { writeQuery: (pathname: string, query: str
             type="month"
             value={monthParam}
             onChange={(e) => e.target.value && setPeriod(parseMonthParam(e.target.value))}
-            className="ml-2 hidden h-8 rounded-sm border sm:block border-rule bg-surface px-2 text-xs text-ink-2 hover:border-ink-3 focus:border-ink focus:outline-none"
+            className="ml-2 hidden h-8 rounded-lg border sm:block border-rule bg-surface px-2 text-xs text-ink-2 hover:border-ink-3 focus:border-accent focus:ring-3 focus:ring-accent/15 focus:outline-none"
           />
         </div>
         <Button variant="primary" onClick={openCreate} leftIcon={<Plus className="h-4 w-4" />}>
@@ -163,7 +163,7 @@ function BudgetsView({ writeQuery }: { writeQuery: (pathname: string, query: str
       {result?.error && !isLoading ? (
         <ErrorState title="Anggaran gagal dimuat" message={result.error} onRetry={reload} />
       ) : !data ? (
-        <div className="h-64 animate-pulse rounded-sm border border-rule bg-surface" aria-busy="true" />
+        <div className="h-64 animate-pulse rounded-2xl border border-rule bg-surface" aria-busy="true" />
       ) : (
         <div className={`space-y-6 transition-opacity ${isLoading ? "opacity-50" : ""}`} aria-busy={isLoading}>
           {data.budgets.length === 0 ? (
@@ -242,7 +242,7 @@ function BudgetsRoute() {
 export default function BudgetsPage() {
   return (
     <Suspense
-      fallback={<div className="h-64 animate-pulse rounded-sm border border-rule bg-surface" />}
+      fallback={<div className="h-64 animate-pulse rounded-2xl border border-rule bg-surface" />}
     >
       <BudgetsRoute />
     </Suspense>

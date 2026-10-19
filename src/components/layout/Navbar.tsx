@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Wordmark } from "@/components/layout/Wordmark";
+import { buttonStyles } from "@/components/ui/Button";
 
 export function Navbar() {
   return (
@@ -8,16 +9,10 @@ export function Navbar() {
         <Wordmark />
 
         <div className="flex items-center gap-1 sm:gap-2">
-          <Link
-            href="/login"
-            className="rounded-sm px-3 py-2 text-sm text-ink-2 transition-colors hover:text-ink"
-          >
+          <Link href="/login" className={buttonStyles("ghost")}>
             Masuk
           </Link>
-          <Link
-            href="/register"
-            className="inline-flex h-9 items-center rounded-sm bg-ink px-4 text-sm font-medium text-paper transition-colors hover:bg-ink/85"
-          >
+          <Link href="/register" className={buttonStyles("primary")}>
             Buat akun
           </Link>
         </div>

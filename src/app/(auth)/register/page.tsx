@@ -86,7 +86,7 @@ export default function RegisterPage() {
           Sudah punya akun?{" "}
           <Link
             href="/login"
-            className="text-ink underline decoration-rule underline-offset-4 hover:decoration-ink"
+            className="font-medium text-accent underline-offset-4 hover:underline"
           >
             Masuk
           </Link>

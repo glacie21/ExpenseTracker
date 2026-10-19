@@ -1,62 +1,74 @@
 @import "tailwindcss";
 
 /*
- * Ledger theme: warm paper, black ink, blue ink for the one accent and red ink
- * for money going out. Every color is a token here, so components never need
+ * "Uang kertas" theme: a cool sage canvas, white surfaces, deep green ink and
+ * the teal of a banknote as the one brand color. Money going out is written
+ * in rose-crimson. Every color is a token here, so components never need
  * `dark:` variants; dark mode swaps the tokens below.
  */
 :root {
-  --paper: #f4f1ea;
-  --surface: #fbfaf7;
-  --sunken: #ece8de;
-  --ink: #1c1b18;
-  --ink-2: #57544c;
-  --ink-3: #75716a;
-  --rule: #d8d3c6;
-  --rule-soft: #e7e3d8;
+  --paper: #eef1ed;
+  --surface: #ffffff;
+  --sunken: #e3e8e3;
+  --ink: #13241f;
+  --ink-2: #44544e;
+  --ink-3: #5c6b65;
+  --rule: #d2dad4;
+  --rule-soft: #e5eae6;
 
-  --accent: #2b67a8;
-  --accent-soft: #e3eaf3;
-  --on-accent: #fbfaf7;
+  --accent: #0d5c50;
+  --accent-soft: #dcede7;
+  --on-accent: #ffffff;
+
+  /* The banknote panel: deep teal with lighter engraving lines */
+  --note: #0b4a41;
+  --note-ink: #f2f8f5;
+  --note-ink-2: #a9d3c7;
+  --note-line: #5fb3a0;
 
   /* Money going out / errors */
-  --neg: #b0442a;
-  --neg-soft: #f6e4dd;
+  --neg: #b4234a;
+  --neg-soft: #f9e4ea;
   /* Success and "good" changes */
-  --pos: #2f6b45;
-  --pos-soft: #e2eee4;
-  --warn: #8a5a12;
-  --warn-soft: #f5ead4;
+  --pos: #1b7a4c;
+  --pos-soft: #def1e5;
+  --warn: #8a5800;
+  --warn-soft: #f7ecd1;
 
-  /* Chart series, validated for CVD separation against --surface */
-  --chart-income: #2b67a8;
-  --chart-expense: #c4532b;
+  /* Chart series, separated by lightness as well as hue */
+  --chart-income: #0d5c50;
+  --chart-expense: #e0577a;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #141412;
-    --surface: #1b1a17;
-    --sunken: #23221e;
-    --ink: #ece9e1;
-    --ink-2: #b4afa3;
-    --ink-3: #8f8a7d;
-    --rule: #36342e;
-    --rule-soft: #282722;
+    --paper: #0d1614;
+    --surface: #14201d;
+    --sunken: #1b2925;
+    --ink: #e5eee9;
+    --ink-2: #a8b8b1;
+    --ink-3: #85958e;
+    --rule: #283833;
+    --rule-soft: #1e2c28;
 
-    --accent: #8fb3e6;
-    --accent-soft: #1f2a38;
-    --on-accent: #141412;
+    --accent: #5cc4ae;
+    --accent-soft: #143a33;
+    --on-accent: #06221d;
 
-    --neg: #e88a6c;
-    --neg-soft: #3a221b;
-    --pos: #79c294;
-    --pos-soft: #1b2e22;
-    --warn: #e2b25e;
-    --warn-soft: #33281a;
+    --note: #0f3b34;
+    --note-ink: #eaf5f1;
+    --note-ink-2: #94c7b9;
+    --note-line: #4aa592;
 
-    --chart-income: #5b8fd0;
-    --chart-expense: #d86a45;
+    --neg: #f27b98;
+    --neg-soft: #3b1822;
+    --pos: #6fd09a;
+    --pos-soft: #15301f;
+    --warn: #e5b75a;
+    --warn-soft: #33290f;
+
+    --chart-income: #4fb8a2;
+    --chart-expense: #e8708c;
   }
 }
 
@@ -72,6 +84,10 @@
   --color-accent: var(--accent);
   --color-accent-soft: var(--accent-soft);
   --color-on-accent: var(--on-accent);
+  --color-note: var(--note);
+  --color-note-ink: var(--note-ink);
+  --color-note-ink-2: var(--note-ink-2);
+  --color-note-line: var(--note-line);
   --color-neg: var(--neg);
   --color-neg-soft: var(--neg-soft);
   --color-pos: var(--pos);
@@ -81,9 +97,8 @@
   --color-chart-income: var(--chart-income);
   --color-chart-expense: var(--chart-expense);
 
-  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-source-serif), Georgia, "Times New Roman", serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bricolage), var(--font-instrument), ui-sans-serif, sans-serif;
 }
 
 body {
@@ -97,20 +112,29 @@ body {
   color: var(--on-accent);
 }
 
-/* Money and other figures: serif, lining, every digit the same width */
+/* Money and other figures: every digit the same width so columns line up */
 .num {
-  font-family: var(--font-serif);
   font-variant-numeric: lining-nums tabular-nums;
 }
 
-/* The accountant's double rule under a final total */
-.rule-total {
-  border-bottom: 3px double var(--ink);
+/* Headlines and the big balance: slightly condensed, tight */
+.font-display {
+  font-variation-settings: "wdth" 92;
+  letter-spacing: -0.01em;
 }
 
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
 
 ::-webkit-scrollbar {
@@ -124,4 +148,5 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: var(--rule);
+  border-radius: 8px;
 }
