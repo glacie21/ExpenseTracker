@@ -29,7 +29,7 @@ export function Avatar({
 
   return (
     <div
-      className={`inline-flex shrink-0 items-center justify-center rounded-full border border-rule bg-sunken font-serif text-ink select-none ${sizeStyles[size]} ${className}`}
+      className={`inline-flex shrink-0 items-center justify-center rounded-full bg-accent-soft font-display font-semibold text-accent select-none ${sizeStyles[size]} ${className}`}
       {...props}
     >
       {src ? (

@@ -79,8 +79,8 @@ export function TransactionFilters({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-4 border-b border-rule md:flex-row md:items-end md:justify-between">
-        <div className="-mb-px flex gap-5" role="group" aria-label="Tipe transaksi">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl bg-sunken p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="group" aria-label="Tipe transaksi">
           {TYPE_TABS.map((tab) => (
             <button
               key={tab.value}
@@ -96,7 +96,7 @@ export function TransactionFilters({
             </button>
           ))}
         </div>
-        {actions && <div className="flex shrink-0 flex-wrap gap-2 pb-3">{actions}</div>}
+        {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
       </div>
 
       <div className="relative">
@@ -107,7 +107,7 @@ export function TransactionFilters({
           aria-label="Cari transaksi"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="h-10 w-full rounded-sm border border-rule bg-surface pr-3 pl-9 text-sm text-ink placeholder:text-ink-3 hover:border-ink-3 focus:border-ink focus:outline-none"
+          className="h-10 w-full rounded-lg border border-rule bg-surface pr-3 pl-9 text-sm text-ink placeholder:text-ink-3 hover:border-ink-3 focus:border-accent focus:ring-3 focus:ring-accent/15 focus:outline-none"
         />
       </div>
 

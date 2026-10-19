@@ -42,7 +42,7 @@ export function ReportTransactionsTable({
     return (
       <div className="space-y-2 p-5 sm:p-6" aria-busy="true">
         {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="h-8 animate-pulse rounded-sm bg-sunken" />
+          <div key={i} className="h-8 animate-pulse rounded-lg bg-sunken" />
         ))}
       </div>
     );
@@ -81,7 +81,7 @@ export function ReportTransactionsTable({
           <tbody>
             {transactions.map((tx) => (
               <tr key={tx.id} className="border-b border-rule-soft last:border-0">
-                <td className="w-28 py-3 pr-3 pl-5 align-top font-mono text-xs whitespace-nowrap text-ink-3 sm:pl-6">
+                <td className="w-28 py-3 pr-3 pl-5 align-top num text-xs whitespace-nowrap text-ink-3 sm:pl-6">
                   {formatDate(tx.date)}
                 </td>
                 <td className="px-3 py-3 align-top text-ink">

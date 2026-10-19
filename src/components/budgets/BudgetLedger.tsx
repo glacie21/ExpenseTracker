@@ -82,7 +82,7 @@ interface BudgetLedgerProps {
  */
 export function BudgetLedger({ budgets, totals, periodLabel, onEdit, onDelete }: BudgetLedgerProps) {
   return (
-    <div className="rounded-sm border border-rule bg-surface">
+    <div className="rounded-2xl border border-rule bg-surface">
       <table className="w-full text-sm">
         <caption className="sr-only">Anggaran {periodLabel}</caption>
         <thead className="border-b border-rule text-xs text-ink-3">
@@ -172,7 +172,7 @@ export function BudgetLedger({ budgets, totals, periodLabel, onEdit, onDelete }:
               <Amount value={totals.spent} className="font-semibold" />
             </td>
             <td className="px-3 py-4 text-right">
-              <span className="rule-total inline-block pb-0.5">
+              <span className="inline-block">
                 <Amount value={totals.remaining} className="text-base font-semibold" />
               </span>
             </td>

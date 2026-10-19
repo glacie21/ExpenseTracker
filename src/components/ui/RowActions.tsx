@@ -20,7 +20,7 @@ export function RowActions({
         onClick={onEdit}
         aria-label={`Ubah ${label}`}
         title="Ubah"
-        className="rounded-sm p-1.5 text-ink-3 transition-colors hover:bg-sunken hover:text-ink"
+        className="rounded-lg p-1.5 text-ink-3 transition-colors hover:bg-sunken hover:text-ink"
       >
         <Pencil className="h-4 w-4" />
       </button>
@@ -29,7 +29,7 @@ export function RowActions({
         onClick={onDelete}
         aria-label={`Hapus ${label}`}
         title="Hapus"
-        className="rounded-sm p-1.5 text-ink-3 transition-colors hover:bg-neg-soft hover:text-neg"
+        className="rounded-lg p-1.5 text-ink-3 transition-colors hover:bg-neg-soft hover:text-neg"
       >
         <Trash2 className="h-4 w-4" />
       </button>

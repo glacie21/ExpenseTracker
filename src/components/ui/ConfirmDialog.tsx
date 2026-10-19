@@ -44,7 +44,7 @@ export function ConfirmDialog({
             className={`h-5 w-5 shrink-0 ${variant === "danger" ? "text-neg" : "text-warn"}`}
             aria-hidden="true"
           />
-          <h4 id={titleId} className="font-serif text-lg font-medium text-ink">
+          <h4 id={titleId} className="font-display text-lg font-semibold text-ink">
             {title}
           </h4>
         </div>

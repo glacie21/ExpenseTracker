@@ -61,15 +61,15 @@ export function TransactionTable({
 
   if (isLoading) {
     return (
-      <div className="rounded-sm border border-rule bg-surface" aria-busy="true" aria-label="Memuat transaksi">
+      <div className="rounded-2xl border border-rule bg-surface" aria-busy="true" aria-label="Memuat transaksi">
         {[1, 2, 3, 4, 5, 6].map((i) => (
           <div key={i} className="flex items-center gap-4 border-b border-rule-soft px-5 py-4 last:border-0 sm:px-6">
-            <div className="h-3 w-20 animate-pulse rounded-sm bg-sunken" />
+            <div className="h-3 w-20 animate-pulse rounded-lg bg-sunken" />
             <div className="flex-1 space-y-1.5">
-              <div className="h-3.5 w-40 animate-pulse rounded-sm bg-sunken" />
-              <div className="h-3 w-24 animate-pulse rounded-sm bg-sunken" />
+              <div className="h-3.5 w-40 animate-pulse rounded-lg bg-sunken" />
+              <div className="h-3 w-24 animate-pulse rounded-lg bg-sunken" />
             </div>
-            <div className="h-3.5 w-24 animate-pulse rounded-sm bg-sunken" />
+            <div className="h-3.5 w-24 animate-pulse rounded-lg bg-sunken" />
           </div>
         ))}
       </div>
@@ -96,7 +96,7 @@ export function TransactionTable({
   }
 
   return (
-    <div className="rounded-sm border border-rule bg-surface">
+    <div className="rounded-2xl border border-rule bg-surface">
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <caption className="sr-only">Daftar transaksi</caption>
@@ -122,16 +122,16 @@ export function TransactionTable({
           <tbody>
             {transactions.map((tx) => (
               <tr key={tx.id} className="group border-b border-rule-soft last:border-0 hover:bg-paper/60">
-                <td className="hidden w-32 py-3.5 pl-5 align-top font-mono text-xs whitespace-nowrap text-ink-3 sm:table-cell sm:pl-6">
+                <td className="hidden w-32 py-3.5 pl-5 align-top num text-xs whitespace-nowrap text-ink-3 sm:table-cell sm:pl-6">
                   {formatDate(tx.date)}
                 </td>
                 <td className="py-3.5 pr-3 pl-5 align-top sm:pl-3">
-                  <span className="block text-ink">{tx.title}</span>
+                  <span className="block font-medium text-ink">{tx.title}</span>
                   {tx.description && (
                     <span className="block max-w-xs truncate text-xs text-ink-3">{tx.description}</span>
                   )}
                   <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-ink-3 md:hidden">
-                    <span className="font-mono sm:hidden">{formatDate(tx.date)}</span>
+                    <span className="num sm:hidden">{formatDate(tx.date)}</span>
                     <CategoryLabel tx={tx} />
                   </span>
                 </td>

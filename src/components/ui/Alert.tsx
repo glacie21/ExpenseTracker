@@ -15,7 +15,7 @@ export function Alert({
   className = "",
   ...props
 }: AlertProps) {
-  // A colored left rule marks the kind; the body text stays in ink
+  // A tinted panel and icon mark the kind; the body text stays in ink
   const variantStyles = {
     info: "border-accent bg-accent-soft",
     success: "border-pos bg-pos-soft",
@@ -33,7 +33,7 @@ export function Alert({
   return (
     <div
       role="alert"
-      className={`relative flex items-start gap-3 rounded-sm border-l-[3px] px-4 py-3 text-sm text-ink ${variantStyles[variant]} ${className}`}
+      className={`relative flex items-start gap-3 rounded-xl px-4 py-3 text-sm text-ink ${variantStyles[variant]} ${className}`}
       {...props}
     >
       <div className="mt-0.5">{icons[variant]}</div>
@@ -45,7 +45,7 @@ export function Alert({
         <button
           type="button"
           onClick={onClose}
-          className="rounded-sm p-0.5 text-ink-3 hover:text-ink"
+          className="rounded-lg p-0.5 text-ink-3 hover:text-ink"
           aria-label="Tutup pesan"
         >
           <X className="w-4 h-4" />

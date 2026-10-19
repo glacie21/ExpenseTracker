@@ -54,7 +54,7 @@ function Section({
       className="grid gap-4 border-b border-rule py-8 first:pt-0 last:border-0 md:grid-cols-3 md:gap-8"
     >
       <div>
-        <h2 id={headingId} className={`font-serif text-lg font-medium ${danger ? "text-neg" : "text-ink"}`}>
+        <h2 id={headingId} className={`font-display text-lg font-semibold ${danger ? "text-neg" : "text-ink"}`}>
           {title}
         </h2>
         <p className="mt-1 text-sm leading-relaxed text-ink-3">{description}</p>

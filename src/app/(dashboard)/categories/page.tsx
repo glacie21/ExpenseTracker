@@ -184,8 +184,8 @@ export default function CategoriesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 border-b border-rule sm:flex-row sm:items-end sm:justify-between">
-        <div className="-mb-px flex gap-5" role="group" aria-label="Tipe kategori">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl bg-sunken p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="group" aria-label="Tipe kategori">
           {tabs.map((tab) => (
             <button
               key={tab.value}
@@ -198,7 +198,7 @@ export default function CategoriesPage() {
             </button>
           ))}
         </div>
-        <div className="pb-3">
+        <div>
           <Button
             variant="primary"
             onClick={() => handleOpenAddModal(activeTab === "INCOME" ? "INCOME" : "EXPENSE")}
@@ -218,7 +218,7 @@ export default function CategoriesPage() {
       {loadError && !isLoading ? (
         <ErrorState title="Kategori gagal dimuat" message={loadError} onRetry={fetchCategories} />
       ) : isLoading ? (
-        <div className="h-64 animate-pulse rounded-sm border border-rule bg-surface" aria-busy="true" />
+        <div className="h-64 animate-pulse rounded-2xl border border-rule bg-surface" aria-busy="true" />
       ) : filteredCategories.length === 0 ? (
         <EmptyBlock
           title="Belum ada kategori"
@@ -236,10 +236,10 @@ export default function CategoriesPage() {
             <section
               key={group.type}
               aria-labelledby={`cat-${group.type}`}
-              className="self-start rounded-sm border border-rule bg-surface"
+              className="self-start rounded-2xl border border-rule bg-surface"
             >
               <div className="flex items-baseline justify-between gap-4 border-b border-rule px-5 py-4 sm:px-6">
-                <h2 id={`cat-${group.type}`} className="font-serif text-lg font-medium text-ink">
+                <h2 id={`cat-${group.type}`} className="font-display text-lg font-semibold text-ink">
                   {TYPE_HEADING[group.type]}
                 </h2>
                 <span className="text-xs text-ink-3">

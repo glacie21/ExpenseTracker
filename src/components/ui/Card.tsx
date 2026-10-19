@@ -6,7 +6,7 @@ export function Card({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={`rounded-sm border border-rule bg-surface ${className}`} {...props}>
+    <div className={`rounded-2xl border border-rule bg-surface ${className}`} {...props}>
       {children}
     </div>
   );
@@ -33,7 +33,7 @@ export function CardTitle({
   ...props
 }: React.HTMLAttributes<HTMLHeadingElement>) {
   return (
-    <h3 className={`font-serif text-lg font-medium text-ink ${className}`} {...props}>
+    <h3 className={`font-display text-lg font-semibold text-ink ${className}`} {...props}>
       {children}
     </h3>
   );

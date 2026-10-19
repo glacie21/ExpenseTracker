@@ -10,7 +10,7 @@ import { AuthFrame } from "@/components/layout/AuthFrame";
 import { RevealButton } from "@/components/ui/RevealButton";
 import { safeRedirectPath } from "@/lib/jwt";
 
-const LINK_STYLE = "text-ink underline decoration-rule underline-offset-4 hover:decoration-ink";
+const LINK_STYLE = "font-medium text-accent underline-offset-4 hover:underline";
 
 function LoginForm() {
   const router = useRouter();
@@ -122,7 +122,7 @@ function LoginForm() {
             type="checkbox"
             checked={rememberMe}
             onChange={(e) => setRememberMe(e.target.checked)}
-            className="h-4 w-4 accent-ink"
+            className="h-4 w-4 accent-[var(--accent)]"
           />
           Ingat saya selama 30 hari
         </label>

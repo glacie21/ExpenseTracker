@@ -263,7 +263,7 @@ export function TransactionModal({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             maxLength={500}
-            className="w-full resize-none rounded-sm border border-rule bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-3 transition-colors hover:border-ink-3 focus:border-ink focus:outline-none"
+            className="w-full resize-none rounded-lg border border-rule bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-3 transition-colors hover:border-ink-3 focus:border-accent focus:ring-3 focus:ring-accent/15 focus:outline-none"
           />
           {errors.description && (
             <p className="mt-1 text-xs text-neg">{errors.description}</p>

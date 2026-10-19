@@ -30,6 +30,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Loaded with Node's require: it relies on Node streams and zip libraries
+  serverExternalPackages: ["exceljs"],
   turbopack: {
     rules: {
       "*.css": {

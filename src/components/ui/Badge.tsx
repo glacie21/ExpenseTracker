@@ -22,13 +22,13 @@ export function Badge({
   };
 
   const sizeStyles = {
-    sm: "px-1.5 py-0.5 text-[11px]",
+    sm: "px-2 py-0.5 text-[11px]",
     md: "px-2 py-0.5 text-xs",
   };
 
   return (
     <span
-      className={`inline-flex items-center rounded-sm font-medium leading-tight ${sizeStyles[size]} ${variantStyles[variant]} ${className}`}
+      className={`inline-flex items-center rounded-full font-medium leading-tight ${sizeStyles[size]} ${variantStyles[variant]} ${className}`}
       {...props}
     >
       {children}

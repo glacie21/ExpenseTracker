@@ -2,7 +2,6 @@ import { getCurrentUser } from "@/lib/auth";
 import { getDashboardSummary } from "@/lib/dashboard";
 import { getDashboardAnalytics, resolvePeriodFromParams } from "@/lib/analytics";
 import { PeriodStatement } from "@/components/dashboard/PeriodStatement";
-import { QuickActions } from "@/components/dashboard/QuickActions";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { PeriodFilter } from "@/components/dashboard/PeriodFilter";
@@ -42,7 +41,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       start={period.start}
       end={period.end}
       label={period.label}
-      actions={<QuickActions />}
     >
       {!validPeriod && (params.period || params.start || params.end) && (
         <Alert variant="warning" className="mb-6">
@@ -103,11 +101,15 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             </div>
           </div>
 
-          <p className="border-t border-rule pt-4 text-sm text-ink-3">
-            Saldo dari seluruh catatan sejak awal:{" "}
-            <Amount value={overall.summary.totalBalance} className="text-base" />. Ini selisih
-            transaksi yang tercatat, bukan saldo rekening bank.
-          </p>
+          <div className="flex flex-col gap-1 rounded-2xl bg-sunken px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <p className="text-sm text-ink-2">
+              Saldo dari seluruh catatan sejak awal
+              <span className="block text-xs text-ink-3">
+                Selisih transaksi yang tercatat, bukan saldo rekening bank.
+              </span>
+            </p>
+            <Amount value={overall.summary.totalBalance} className="font-display text-xl font-semibold" />
+          </div>
         </div>
       )}
     </PeriodFilter>

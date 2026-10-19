@@ -2,7 +2,7 @@
 
 import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ChevronLeft, ChevronRight, Download, FileText } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -13,6 +13,7 @@ import { useExternalNavigationKey } from "@/lib/useExternalNavigationKey";
 import { FIELD_SM, FILTER_LABEL, tabClass } from "@/components/ui/fieldStyles";
 import { ExpenseBreakdown, BreakdownItem } from "@/components/charts/ExpenseBreakdown";
 import { ReportTransactionsTable } from "@/components/reports/ReportTransactionsTable";
+import { ExportMenu, ExportFormat } from "@/components/reports/ExportMenu";
 import {
   DateRange,
   addDaysUTC,
@@ -127,7 +128,7 @@ function ReportsView({ writeQuery }: { writeQuery: (pathname: string, query: str
   const [reloadToken, setReloadToken] = useState(0);
   const [categories, setCategories] = useState<Category[]>([]);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
-  const [exporting, setExporting] = useState<"csv" | "pdf" | null>(null);
+  const [exporting, setExporting] = useState<ExportFormat | null>(null);
 
   // Range + query shared by summary, table, CSV and PDF so they always agree
   const { range, reportQuery } = useMemo(() => {
@@ -233,7 +234,7 @@ function ReportsView({ writeQuery }: { writeQuery: (pathname: string, query: str
       setPage(1);
     };
 
-  const handleExport = async (format: "csv" | "pdf") => {
+  const handleExport = async (format: ExportFormat) => {
     if (!reportQuery) return;
     setExporting(format);
     try {
@@ -243,7 +244,7 @@ function ReportsView({ writeQuery }: { writeQuery: (pathname: string, query: str
         params.delete("periodType");
         filename = await downloadFile(`/api/transactions/export?${params.toString()}`, "transaksi.csv");
       } else {
-        filename = await downloadFile(`/api/reports/pdf?${reportQuery}`, "laporan.pdf");
+        filename = await downloadFile(`/api/reports/export?format=${format}&${reportQuery}`, `laporan.${format}`);
       }
       setFeedback({ type: "success", message: `File ${filename} berhasil diunduh.` });
     } catch (error) {
@@ -263,9 +264,9 @@ function ReportsView({ writeQuery }: { writeQuery: (pathname: string, query: str
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 border-b border-rule md:flex-row md:items-end md:justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div
-          className="-mb-px flex gap-5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl bg-sunken p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           role="group"
           aria-label="Jenis periode laporan"
         >
@@ -287,25 +288,8 @@ function ReportsView({ writeQuery }: { writeQuery: (pathname: string, query: str
             </button>
           ))}
         </div>
-        <div className="flex shrink-0 flex-wrap gap-2 pb-3">
-          <Button
-            variant="outline"
-            onClick={() => handleExport("csv")}
-            isLoading={exporting === "csv"}
-            disabled={!reportQuery || exporting !== null}
-            leftIcon={<Download className="h-4 w-4" />}
-          >
-            Unduh CSV
-          </Button>
-          <Button
-            variant="primary"
-            onClick={() => handleExport("pdf")}
-            isLoading={exporting === "pdf"}
-            disabled={!reportQuery || exporting !== null}
-            leftIcon={<FileText className="h-4 w-4" />}
-          >
-            Unduh PDF
-          </Button>
+        <div className="shrink-0">
+          <ExportMenu onSelect={handleExport} exporting={exporting} disabled={!reportQuery} />
         </div>
       </div>
 
@@ -443,7 +427,7 @@ function ReportsView({ writeQuery }: { writeQuery: (pathname: string, query: str
         )}
         {range && report && (
           <p className="flex flex-wrap items-baseline gap-x-3">
-            <span className="font-serif text-2xl text-ink">{report.period.label}</span>
+            <span className="font-display text-2xl font-semibold text-ink">{report.period.label}</span>
             <span className="text-xs text-ink-3">dibanding {report.period.previousLabel}</span>
           </p>
         )}
@@ -456,7 +440,7 @@ function ReportsView({ writeQuery }: { writeQuery: (pathname: string, query: str
           onRetry={() => setReloadToken((t) => t + 1)}
         />
       ) : !report ? (
-        <div className="h-72 animate-pulse rounded-sm border border-rule bg-surface" aria-busy="true" />
+        <div className="h-72 animate-pulse rounded-2xl border border-rule bg-surface" aria-busy="true" />
       ) : (
         <div className={`space-y-6 transition-opacity ${summaryLoading ? "opacity-50" : ""}`} aria-busy={summaryLoading}>
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
@@ -474,9 +458,9 @@ function ReportsView({ writeQuery }: { writeQuery: (pathname: string, query: str
             </Card>
           </div>
 
-          <section aria-labelledby="increases-heading" className="rounded-sm border border-rule bg-surface">
+          <section aria-labelledby="increases-heading" className="rounded-2xl border border-rule bg-surface">
             <div className="flex flex-col gap-0.5 border-b border-rule-soft px-5 py-4 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4 sm:px-6">
-              <h2 id="increases-heading" className="font-serif text-lg font-medium text-ink">
+              <h2 id="increases-heading" className="font-display text-lg font-semibold text-ink">
                 Pengeluaran yang naik
               </h2>
               <span className="text-xs text-ink-3">dibanding {report.period.previousLabel}</span>
@@ -576,7 +560,7 @@ export default function ReportsPage() {
   return (
     <Suspense
       fallback={
-        <div className="h-64 animate-pulse rounded-sm border border-rule bg-surface" />
+        <div className="h-64 animate-pulse rounded-2xl border border-rule bg-surface" />
       }
     >
       <ReportsRoute />

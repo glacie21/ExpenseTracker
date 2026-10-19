@@ -7,6 +7,8 @@ interface TrendLineProps {
   percent: number | null;
   /** true for income/net balance (up is good), false for expense (up is bad) */
   increaseIsGood: boolean;
+  /** Set on the teal banknote panel, where green/red ink would not read. */
+  onNote?: boolean;
 }
 
 /**
@@ -14,10 +16,12 @@ interface TrendLineProps {
  * relies on color alone; shows "belum ada pembanding" when the previous
  * period is zero instead of a misleading percentage.
  */
-export function TrendLine({ difference, percent, increaseIsGood }: TrendLineProps) {
+export function TrendLine({ difference, percent, increaseIsGood, onNote = false }: TrendLineProps) {
+  const muted = onNote ? "text-note-ink-2" : "text-ink-3";
+
   if (percent === null) {
     return (
-      <span className="text-xs text-ink-3">
+      <span className={`text-xs ${muted}`}>
         belum ada pembanding
         {difference !== 0 && <> ({formatRupiahSigned(difference)})</>}
       </span>
@@ -27,7 +31,15 @@ export function TrendLine({ difference, percent, increaseIsGood }: TrendLineProp
   const up = difference > 0;
   const flat = difference === 0;
   const good = flat ? null : up === increaseIsGood;
-  const tone = good === null ? "text-ink-3" : good ? "text-pos" : "text-neg";
+  const tone = onNote
+    ? good === null
+      ? muted
+      : "text-note-ink"
+    : good === null
+      ? muted
+      : good
+        ? "text-pos"
+        : "text-neg";
   const arrow = flat ? "=" : up ? "▲" : "▼";
 
   return (
