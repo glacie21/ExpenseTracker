@@ -46,6 +46,7 @@ Aplikasi web untuk mencatat dan memantau kondisi keuangan pribadi: pemasukan, pe
   - Hapus dengan dialog konfirmasi.
   - **Search** (dengan debounce), **filter** tipe/kategori/rentang tanggal/tahun/bulan, **sorting**, dan **pagination di server**. Filter tersimpan di URL.
   - **Unduh CSV** sesuai filter aktif (Tahap 3).
+  - **Impor CSV**: unggah file CSV mutasi/transaksi dengan pratinjau interaktif, verifikasi format otomatis, deteksi kesalahan per baris, dan pembuatan kategori baru otomatis.
 - **Manajemen kategori** (`/categories`):
   - Tab Semua/Pemasukan/Pengeluaran, tambah, ubah nama/warna, hapus.
   - **13 kategori default** berbahasa Indonesia (Gaji, Makan & minum, Transportasi, dst.) dibuat otomatis per pengguna, tanpa duplikasi. Akun yang dibuat sebelum kategori diterjemahkan tetap memakai nama lamanya; namanya bisa diubah di halaman Kategori.
@@ -275,6 +276,7 @@ Semua endpoint di bawah (kecuali register/login/logout) membutuhkan sesi login. 
 | `GET` / `POST` | `/api/transactions` | Daftar (query: `search`, `type`, `categoryId`, `startDate`, `endDate`, `year`, `month`, `sort`, `page`, `limit` ≤ 100) / tambah |
 | `GET` / `PUT` / `DELETE` | `/api/transactions/[id]` | Detail / ubah / hapus |
 | `GET` | `/api/transactions/export` | **CSV** dengan filter yang sama seperti daftar (maks. 100.000 baris; `404` bila kosong) |
+| `GET` / `POST` | `/api/transactions/import` | Unduh template CSV (`GET`) / validasi (*dry-run*) & impor massal transaksi dari CSV (`POST`) |
 | `GET` / `POST` | `/api/categories` | Daftar (`?type=`) / tambah |
 | `PUT` / `DELETE` | `/api/categories/[id]` | Ubah / hapus (ditolak bila dipakai transaksi atau anggaran) |
 | `GET` | `/api/dashboard/summary` | Ringkasan seluruh transaksi + 5 transaksi terbaru |
