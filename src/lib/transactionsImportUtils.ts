@@ -42,13 +42,28 @@ export interface HeaderIndices {
 
 const DMY_DATE_REGEX = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/;
 
+/**
+ * Column headers of the transactions CSV, in file order. The export writes
+ * them and the import template uses them, so an exported file can be imported again.
+ */
+export const TRANSACTION_CSV_HEADERS = {
+  date: "Tanggal",
+  title: "Judul",
+  type: "Tipe",
+  category: "Kategori",
+  amount: "Nominal",
+  description: "Deskripsi",
+} as const;
+
+const H = TRANSACTION_CSV_HEADERS;
+/** Accepted header names per column (matched case-insensitively); the export header comes first. */
 const HEADER_ALIASES: Record<keyof HeaderIndices, string[]> = {
-  dateCol: ["tanggal", "date", "tgl", "waktu"],
-  titleCol: ["judul", "nama", "title", "name", "keterangan", "transaksi", "uraian"],
-  typeCol: ["tipe", "type", "jenis"],
-  categoryCol: ["kategori", "category", "pos"],
-  amountCol: ["nominal", "amount", "jumlah", "nilai", "total"],
-  descCol: ["deskripsi", "description", "catatan", "note", "notes", "memo"],
+  dateCol: [H.date, "date", "tgl", "waktu"],
+  titleCol: [H.title, "nama", "title", "name", "keterangan", "transaksi", "uraian"],
+  typeCol: [H.type, "type", "jenis"],
+  categoryCol: [H.category, "category", "pos"],
+  amountCol: [H.amount, "amount", "jumlah", "nilai", "total"],
+  descCol: [H.description, "description", "catatan", "note", "notes", "memo"],
 };
 
 /**
@@ -56,7 +71,8 @@ const HEADER_ALIASES: Record<keyof HeaderIndices, string[]> = {
  */
 export function detectHeaderIndices(headerRow: string[]): { indices: HeaderIndices | null; error?: string } {
   const norm = headerRow.map((h) => h.trim().toLowerCase());
-  const find = (key: keyof HeaderIndices) => norm.findIndex((h) => HEADER_ALIASES[key].includes(h));
+  const find = (key: keyof HeaderIndices) =>
+    norm.findIndex((h) => HEADER_ALIASES[key].some((alias) => alias.toLowerCase() === h));
 
   const indices: HeaderIndices = {
     dateCol: find("dateCol"),

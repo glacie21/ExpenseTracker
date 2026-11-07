@@ -27,7 +27,7 @@ const STEPS = [
   },
   {
     title: "Tinjau",
-    body: "Bandingkan bulan ini dengan bulan lalu, lihat kategori yang paling boros, lalu unduh laporannya sebagai PDF atau CSV.",
+    body: "Bandingkan bulan ini dengan bulan lalu, lihat kategori yang paling boros, lalu unduh laporannya sebagai PDF, Excel, Word, atau CSV.",
   },
 ];
 

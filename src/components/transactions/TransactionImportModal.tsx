@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { downloadFile } from "@/lib/download";
-import { MAX_IMPORT_ROWS, type ImportPreviewData } from "@/lib/transactionsImportUtils";
+import { MAX_IMPORT_ROWS, TRANSACTION_CSV_HEADERS, type ImportPreviewData } from "@/lib/transactionsImportUtils";
 
 interface TransactionImportModalProps {
   isOpen: boolean;
@@ -149,7 +149,7 @@ export function TransactionImportModal({
               <div>
                 <p className="font-medium text-ink">Format kolom yang didukung:</p>
                 <p className="mt-0.5 text-ink-3">
-                  <span className="font-mono text-accent">Tanggal, Judul, Tipe, Kategori, Nominal, Deskripsi</span>
+                  <span className="font-mono text-accent">{Object.values(TRANSACTION_CSV_HEADERS).join(", ")}</span>
                 </p>
               </div>
               <Button

@@ -7,6 +7,7 @@ import {
   executeTransactionsImport,
   parseTransactionsCsv,
 } from "@/lib/transactionsImport";
+import { TRANSACTION_CSV_HEADERS } from "@/lib/transactionsImportUtils";
 
 /**
  * GET /api/transactions/import
@@ -15,7 +16,7 @@ import {
 export async function GET() {
   const templateCsv =
     CSV_BOM +
-    "Tanggal,Judul,Tipe,Kategori,Nominal,Deskripsi\r\n" +
+    Object.values(TRANSACTION_CSV_HEADERS).join(",") + "\r\n" +
     "2026-10-01,Gaji Bulanan,INCOME,Gaji,8500000,Gaji bulan Oktober\r\n" +
     "2026-10-02,Makan Siang Resto,EXPENSE,Makan & Minum,65000,Makan siang bersama tim\r\n" +
     "2026-10-03,Bensin Motor,EXPENSE,Transportasi,30000,Isi bensin pertalite\r\n";

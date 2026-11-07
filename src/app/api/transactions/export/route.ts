@@ -5,6 +5,7 @@ import { isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib
 import { buildTransactionFilter } from "@/lib/transactions";
 import { CSV_BOM, CsvColumn, csvHeader, csvRows } from "@/lib/csv";
 import { toDateOnlyString } from "@/lib/dates";
+import { TRANSACTION_CSV_HEADERS } from "@/lib/transactionsImportUtils";
 
 const BATCH_SIZE = 1000;
 const MAX_EXPORT_ROWS = 100_000;
@@ -19,13 +20,13 @@ interface ExportRow {
 }
 
 const COLUMNS: CsvColumn<ExportRow>[] = [
-  { header: "Tanggal", value: (r) => toDateOnlyString(r.date), trusted: true },
-  { header: "Judul", value: (r) => r.title },
-  { header: "Tipe", value: (r) => r.type, trusted: true },
-  { header: "Kategori", value: (r) => r.category.name },
+  { header: TRANSACTION_CSV_HEADERS.date, value: (r) => toDateOnlyString(r.date), trusted: true },
+  { header: TRANSACTION_CSV_HEADERS.title, value: (r) => r.title },
+  { header: TRANSACTION_CSV_HEADERS.type, value: (r) => r.type, trusted: true },
+  { header: TRANSACTION_CSV_HEADERS.category, value: (r) => r.category.name },
   // Plain decimal with a dot (e.g. 5000000.00) so spreadsheets parse it as a number
-  { header: "Nominal", value: (r) => r.amount.toFixed(2), trusted: true },
-  { header: "Deskripsi", value: (r) => r.description },
+  { header: TRANSACTION_CSV_HEADERS.amount, value: (r) => r.amount.toFixed(2), trusted: true },
+  { header: TRANSACTION_CSV_HEADERS.description, value: (r) => r.description },
 ];
 
 /**

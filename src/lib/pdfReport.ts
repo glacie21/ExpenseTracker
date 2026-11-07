@@ -1,8 +1,16 @@
 import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb } from "pdf-lib";
 import { formatPercent } from "@/lib/finance";
-import { formatRupiah } from "@/lib/formatters";
+import { formatRupiah, formatRupiahByType } from "@/lib/formatters";
 import { formatDayLabel } from "@/lib/dates";
-import { ReportExportData, typeFilterLabel } from "@/lib/reportExport";
+import {
+  filterSummary,
+  NO_TRANSACTIONS_TEXT,
+  ReportExportData,
+  reportTitle,
+  summaryRows,
+  truncationNote,
+  typeFilterLabel,
+} from "@/lib/reportExport";
 
 const PAGE = { width: 595.28, height: 841.89 }; // A4 portrait
 const MARGIN = 40;
@@ -40,18 +48,26 @@ class ReportWriter {
 
   /** Standard fonts only cover WinAnsi; replace anything else (emoji, CJK, ...). */
   clean(text: string): string {
-    return Array.from(text.replace(/[\r\n\t]+/g, " "))
+    const flat = text.replace(/[\r\n\t]+/g, " ");
+    // Printable ASCII is always in WinAnsi: skip the per-character check
+    if (/^[\x20-\x7E]*$/.test(flat)) return flat;
+    return Array.from(flat)
       .map((ch) => (this.charset.has(ch.codePointAt(0)!) ? ch : "?"))
       .join("");
   }
 
   fit(text: string, font: PDFFont, size: number, maxWidth: number): string {
-    let value = this.clean(text);
+    const value = this.clean(text);
     if (font.widthOfTextAtSize(value, size) <= maxWidth) return value;
-    while (value.length > 1 && font.widthOfTextAtSize(`${value}…`, size) > maxWidth) {
-      value = value.slice(0, -1);
+    // Longest prefix (at least 1 char) that fits with the ellipsis; width grows with length
+    let lo = 1;
+    let hi = value.length - 1;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      if (font.widthOfTextAtSize(`${value.slice(0, mid)}…`, size) <= maxWidth) lo = mid;
+      else hi = mid - 1;
     }
-    return `${value.trimEnd()}…`;
+    return `${value.slice(0, lo).trimEnd()}…`;
   }
 
   newPage() {
@@ -185,7 +201,7 @@ class ReportWriter {
 export async function buildReportPdf(input: ReportExportData): Promise<Uint8Array> {
   const { report } = input;
   const doc = await PDFDocument.create();
-  doc.setTitle(`Laporan Keuangan ${report.period.label}`);
+  doc.setTitle(reportTitle(report));
   doc.setCreator("Expense Tracker");
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
@@ -196,25 +212,12 @@ export async function buildReportPdf(input: ReportExportData): Promise<Uint8Arra
   w.gap(4);
   w.text(input.userName, { size: 11, color: COLORS.muted });
   w.text(`Periode: ${report.period.label}`, { size: 10 });
-  w.text(`Filter: tipe ${typeFilterLabel(report.filters.type)}; kategori ${report.filters.category?.name ?? "Semua"}`, { size: 10 });
+  w.text(filterSummary(report), { size: 10 });
   w.text(`Dibuat: ${input.generatedAt}`, { size: 10, color: COLORS.muted });
 
   // Summary
   w.section("Ringkasan");
-  const s = report.summary;
-  w.keyValueRows([
-    ["Total Pemasukan", formatRupiah(s.totalIncome)],
-    ["Total Pengeluaran", formatRupiah(s.totalExpense)],
-    ["Saldo Bersih", formatRupiah(s.netBalance)],
-    ["Tingkat Tabungan", formatPercent(s.savingsRate)],
-    ["Jumlah Transaksi", String(s.transactionCount)],
-    [
-      "Kategori Pengeluaran Terbesar",
-      report.topExpenseCategory
-        ? `${report.topExpenseCategory.name} (${formatRupiah(report.topExpenseCategory.total)})`
-        : "-",
-    ],
-  ]);
+  w.keyValueRows(summaryRows(report).map((row) => [row.label, row.value]));
 
   // Category breakdown
   if (report.breakdown.length > 0) {
@@ -235,14 +238,10 @@ export async function buildReportPdf(input: ReportExportData): Promise<Uint8Arra
   // Transactions
   w.section("Daftar Transaksi");
   if (input.transactions.length === 0) {
-    w.text("Tidak ada transaksi yang sesuai dengan filter pada periode ini.", { color: COLORS.muted });
+    w.text(NO_TRANSACTIONS_TEXT, { color: COLORS.muted });
   } else {
-    if (input.totalTransactions > input.transactions.length) {
-      w.text(
-        `Menampilkan ${input.transactions.length} dari ${input.totalTransactions} transaksi. Unduh versi Excel atau CSV untuk data lengkap.`,
-        { size: 9, color: COLORS.muted }
-      );
-    }
+    const note = truncationNote(input, "versi Excel atau CSV");
+    if (note) w.text(note, { size: 9, color: COLORS.muted });
     w.table(
       [
         { header: "Tanggal", width: CONTENT_WIDTH * 0.15 },
@@ -256,8 +255,9 @@ export async function buildReportPdf(input: ReportExportData): Promise<Uint8Arra
           formatDayLabel(t.date),
           t.title,
           t.category,
-          t.type === "INCOME" ? "Pemasukan" : "Pengeluaran",
-          `${t.type === "INCOME" ? "+" : "-"}${formatRupiah(t.amount)}`,
+          typeFilterLabel(t.type),
+          // Standard PDF fonts have no Unicode minus
+          formatRupiahByType(t.amount, t.type, "-"),
         ],
         color: t.type === "INCOME" ? COLORS.income : COLORS.expense,
       }))

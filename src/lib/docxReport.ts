@@ -15,20 +15,26 @@ import {
   WidthType,
 } from "docx";
 import { formatPercent } from "@/lib/finance";
-import { formatRupiah } from "@/lib/formatters";
+import { formatRupiah, formatRupiahByType } from "@/lib/formatters";
 import { formatDayLabel } from "@/lib/dates";
-import { ReportExportData, typeFilterLabel } from "@/lib/reportExport";
+import {
+  filterSummary,
+  NO_TRANSACTIONS_TEXT,
+  REPORT_COLORS,
+  ReportExportData,
+  reportTitle,
+  summaryRows,
+  truncationNote,
+} from "@/lib/reportExport";
 
 /*
- * Word version of the report, with the same sections as the PDF. Unlike the
+ * Word version of the report: the PDF's sections, from the same text helpers. Unlike the
  * PDF it can be edited, e.g. to add notes before sharing it.
  */
 
-const BRAND = "0D5C50";
-const MUTED = "5C6B65";
+const BRAND = REPORT_COLORS.brand;
+const MUTED = REPORT_COLORS.muted;
 const RULE = "D2DAD4";
-const INCOME = "1B7A4C";
-const EXPENSE = "B4234A";
 
 interface Column {
   header: string;
@@ -114,15 +120,12 @@ function muted(text: string) {
 
 export async function buildReportDocx(input: ReportExportData): Promise<Buffer> {
   const { report } = input;
-  const s = report.summary;
 
   const children: (Paragraph | Table)[] = [
     new Paragraph({ text: "Laporan Keuangan", heading: HeadingLevel.TITLE }),
     muted(input.userName),
     new Paragraph({ children: [new TextRun({ text: `Periode: ${report.period.label}`, size: 21 })] }),
-    muted(
-      `Filter: tipe ${typeFilterLabel(report.filters.type)}; kategori ${report.filters.category?.name ?? "Semua"}`
-    ),
+    muted(filterSummary(report)),
     muted(`Dibuat: ${input.generatedAt}`),
 
     heading("Ringkasan"),
@@ -131,24 +134,10 @@ export async function buildReportDocx(input: ReportExportData): Promise<Buffer> 
         { header: "Ringkasan", width: 60 },
         { header: "Nilai", width: 40, align: "right" },
       ],
-      [
-        [{ text: "Total pemasukan" }, { text: formatRupiah(s.totalIncome) }],
-        [{ text: "Total pengeluaran" }, { text: formatRupiah(s.totalExpense) }],
-        [
-          { text: s.netBalance < 0 ? "Defisit" : "Saldo bersih", bold: true },
-          { text: formatRupiah(s.netBalance), bold: true, color: s.netBalance < 0 ? EXPENSE : INCOME },
-        ],
-        [{ text: "Tingkat tabungan" }, { text: s.totalIncome > 0 ? formatPercent(s.savingsRate) : "-" }],
-        [{ text: "Jumlah transaksi" }, { text: String(s.transactionCount) }],
-        [
-          { text: "Kategori pengeluaran terbesar" },
-          {
-            text: report.topExpenseCategory
-              ? `${report.topExpenseCategory.name} (${formatRupiah(report.topExpenseCategory.total)})`
-              : "-",
-          },
-        ],
-      ]
+      summaryRows(report).map((row) => [
+        { text: row.label, bold: row.tone !== undefined },
+        { text: row.value, bold: row.tone !== undefined, color: row.tone && REPORT_COLORS[row.tone] },
+      ])
     ),
   ];
 
@@ -174,15 +163,10 @@ export async function buildReportDocx(input: ReportExportData): Promise<Buffer> 
 
   children.push(heading("Daftar transaksi"));
   if (input.transactions.length === 0) {
-    children.push(muted("Tidak ada transaksi yang sesuai dengan filter pada periode ini."));
+    children.push(muted(NO_TRANSACTIONS_TEXT));
   } else {
-    if (input.totalTransactions > input.transactions.length) {
-      children.push(
-        muted(
-          `Menampilkan ${input.transactions.length} dari ${input.totalTransactions} transaksi. Unduh versi Excel atau CSV untuk data lengkap.`
-        )
-      );
-    }
+    const note = truncationNote(input, "versi Excel atau CSV");
+    if (note) children.push(muted(note));
     children.push(
       table(
         [
@@ -195,10 +179,7 @@ export async function buildReportDocx(input: ReportExportData): Promise<Buffer> 
           { text: formatDayLabel(t.date) },
           { text: t.title },
           { text: t.category },
-          {
-            text: `${t.type === "INCOME" ? "+" : "−"}${formatRupiah(t.amount)}`,
-            color: t.type === "INCOME" ? INCOME : EXPENSE,
-          },
+          { text: formatRupiahByType(t.amount, t.type), color: REPORT_COLORS[t.type === "INCOME" ? "income" : "expense"] },
         ])
       )
     );
@@ -206,7 +187,7 @@ export async function buildReportDocx(input: ReportExportData): Promise<Buffer> 
 
   const doc = new Document({
     creator: "Expense Tracker",
-    title: `Laporan Keuangan ${report.period.label}`,
+    title: reportTitle(report),
     styles: {
       default: { document: { run: { font: "Calibri", size: 21, color: "13241F" } } },
       paragraphStyles: [

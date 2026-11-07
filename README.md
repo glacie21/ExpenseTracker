@@ -282,7 +282,8 @@ Semua endpoint di bawah (kecuali register/login/logout) membutuhkan sesi login. 
 | `GET` | `/api/dashboard/summary` | Ringkasan seluruh transaksi + 5 transaksi terbaru |
 | `GET` | `/api/analytics` | Statistik periode: `period` (`this_week`, `this_month`, `last_month`, `last_3_months`, `this_year`, `custom`), `start`, `end` |
 | `GET` | `/api/reports` | Laporan: `startDate`, `endDate` (wajib, maks. 5 tahun), `periodType` (`week`/`month`/`year`/`custom`), `type`, `categoryId` |
-| `GET` | `/api/reports/pdf` | Laporan **PDF**, parameter sama dengan `/api/reports` |
+| `GET` | `/api/reports/export` | Unduh laporan: `format` (`pdf`/`xlsx`/`docx`), parameter lain sama dengan `/api/reports` |
+| `GET` | `/api/reports/pdf` | Alias lama untuk `/api/reports/export?format=pdf` |
 | `GET` / `POST` | `/api/budgets` | Anggaran + progres untuk `?month=&year=` (default bulan ini) / buat |
 | `PUT` / `DELETE` | `/api/budgets/[id]` | Ubah / hapus anggaran (`409` bila duplikat) |
 
@@ -314,10 +315,10 @@ ExpenseTracker/
 │   │   ├── categories/        # CategoryModal
 │   │   ├── charts/            # IncomeExpenseChart, ExpenseBreakdown, chartTheme
 │   │   ├── dashboard/         # DashboardShell, PeriodStatement, PeriodFilter, TrendLine, RecentTransactions, ...
-│   │   ├── layout/            # Navbar, Sidebar, Header
-│   │   ├── reports/           # ReportTransactionsTable
+│   │   ├── layout/            # AppNav, Navbar, AuthFrame, Wordmark
+│   │   ├── reports/           # ReportTransactionsTable, ExportMenu
 │   │   ├── settings/          # SettingsPanel (profil, password, sesi, hapus akun)
-│   │   ├── transactions/      # TransactionTable, TransactionFilters, TransactionModal
+│   │   ├── transactions/      # TransactionTable, TransactionFilters, TransactionModal, TransactionImportModal
 │   │   └── ui/                # Komponen UI reusable
 │   ├── lib/
 │   │   ├── analytics.ts       # Agregasi periode, deret waktu, breakdown, tren

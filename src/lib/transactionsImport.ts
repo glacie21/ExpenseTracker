@@ -135,7 +135,9 @@ export async function executeTransactionsImport(
 ): Promise<{ importedCount: number; createdCategoriesCount: number }> {
   const missing = new Map<string, { name: string; type: TransactionType }>();
   for (const row of validRows) {
-    if (row.isNewCategory) missing.set(categoryKey(row.type, row.categoryName), { name: row.categoryName, type: row.type });
+    const key = categoryKey(row.type, row.categoryName);
+    // Keep the first spelling seen, as the preview does
+    if (row.isNewCategory && !missing.has(key)) missing.set(key, { name: row.categoryName, type: row.type });
   }
 
   return prisma.$transaction(async (tx) => {
