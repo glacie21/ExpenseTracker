@@ -42,7 +42,8 @@ export interface AnalyticsScope {
   categoryId?: string;
 }
 
-function scopeWhere(scope: AnalyticsScope): Prisma.TransactionWhereInput {
+/** Prisma filter for a scope; shared by the analytics queries and the report export. */
+export function scopeWhere(scope: AnalyticsScope): Prisma.TransactionWhereInput {
   return {
     userId: scope.userId,
     date: { gte: scope.range.start, lte: endOfDayUTC(scope.range.end) },

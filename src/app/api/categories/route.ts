@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isUniqueViolation, isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib/dbErrors";
-import { duplicateCategoryResponse } from "@/lib/categories";
+import { DEFAULT_CATEGORY_COLOR, duplicateCategoryResponse } from "@/lib/categories";
 import { validateCategoryInput } from "@/lib/validations";
 import { TransactionType } from "@/types";
 
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
 
     const name = body.name.trim();
     const type = body.type as TransactionType;
-    const color = (typeof body.color === "string" && body.color.trim()) || "#64748b";
+    const color = (typeof body.color === "string" && body.color.trim()) || DEFAULT_CATEGORY_COLOR;
 
     // Cek duplikasi kategori untuk pengguna ini (tidak peka huruf besar/kecil)
     const existing = await prisma.category.findFirst({

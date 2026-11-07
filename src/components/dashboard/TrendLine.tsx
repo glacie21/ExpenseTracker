@@ -31,15 +31,7 @@ export function TrendLine({ difference, percent, increaseIsGood, onNote = false 
   const up = difference > 0;
   const flat = difference === 0;
   const good = flat ? null : up === increaseIsGood;
-  const tone = onNote
-    ? good === null
-      ? muted
-      : "text-note-ink"
-    : good === null
-      ? muted
-      : good
-        ? "text-pos"
-        : "text-neg";
+  const tone = good === null ? muted : onNote ? "text-note-ink" : good ? "text-pos" : "text-neg";
   const arrow = flat ? "=" : up ? "▲" : "▼";
 
   return (

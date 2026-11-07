@@ -96,3 +96,11 @@ export function categoryOptionLabel(
   if (listedType !== "ALL") return category.name;
   return `${category.name} (${category.type === "INCOME" ? "pemasukan" : "pengeluaran"})`;
 }
+
+/**
+ * Rupiah signed by transaction direction: income "+Rp50.000", expense "−Rp50.000".
+ * `minus` lets outputs without the Unicode minus (PDF standard fonts) use "-".
+ */
+export function formatRupiahByType(amount: number, type: "INCOME" | "EXPENSE", minus = "−"): string {
+  return `${type === "INCOME" ? "+" : minus}${formatRupiah(Math.abs(amount))}`;
+}

@@ -1,6 +1,13 @@
 import ExcelJS from "exceljs";
-import { formatRupiah } from "@/lib/formatters";
-import { ReportExportData, typeFilterLabel } from "@/lib/reportExport";
+import {
+  categoryFilterLabel,
+  REPORT_COLORS,
+  ReportExportData,
+  reportTitle,
+  topCategoryText,
+  truncationNote,
+  typeFilterLabel,
+} from "@/lib/reportExport";
 
 /*
  * Excel workbook for a report: a summary sheet, the expense breakdown, the
@@ -11,11 +18,12 @@ import { ReportExportData, typeFilterLabel } from "@/lib/reportExport";
  * "=1+1" cannot turn into a formula.
  */
 
-const BRAND = "FF0D5C50";
+const argb = (hex: string) => `FF${hex}`;
+const BRAND = argb(REPORT_COLORS.brand);
 const HEADER_TEXT = "FFFFFFFF";
-const INCOME = "FF1B7A4C";
-const EXPENSE = "FFB4234A";
-const MUTED = "FF5C6B65";
+const INCOME = argb(REPORT_COLORS.income);
+const EXPENSE = argb(REPORT_COLORS.expense);
+const MUTED = argb(REPORT_COLORS.muted);
 
 const PERCENT = "0.0%";
 const DATE = "dd/mm/yyyy";
@@ -42,7 +50,7 @@ function tableSheet(workbook: ExcelJS.Workbook, name: string, columns: Partial<E
   return sheet;
 }
 
-export async function buildReportXlsx(input: ReportExportData): Promise<Buffer> {
+export async function buildReportXlsx(input: ReportExportData): Promise<Uint8Array> {
   const { report } = input;
   const s = report.summary;
   const withSen = input.transactions.some((t) => Math.round(t.amount * 100) % 100 !== 0);
@@ -50,7 +58,7 @@ export async function buildReportXlsx(input: ReportExportData): Promise<Buffer> 
 
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Expense Tracker";
-  workbook.title = `Laporan Keuangan ${report.period.label}`;
+  workbook.title = reportTitle(report);
   workbook.created = new Date();
 
   // Summary
@@ -62,7 +70,7 @@ export async function buildReportXlsx(input: ReportExportData): Promise<Buffer> 
   const meta: [string, string][] = [
     ["Periode", report.period.label],
     ["Tipe transaksi", typeFilterLabel(report.filters.type)],
-    ["Kategori", report.filters.category?.name ?? "Semua"],
+    ["Kategori", categoryFilterLabel(report)],
     ["Dibuat", input.generatedAt],
   ];
   for (const [label, value] of meta) {
@@ -85,12 +93,7 @@ export async function buildReportXlsx(input: ReportExportData): Promise<Buffer> 
   const net = summary.getRow(summary.rowCount - 2);
   net.font = { bold: true };
   net.getCell(2).font = { bold: true, color: { argb: s.netBalance < 0 ? EXPENSE : INCOME } };
-  summary.addRow([
-    "Kategori pengeluaran terbesar",
-    report.topExpenseCategory
-      ? `${report.topExpenseCategory.name} (${formatRupiah(report.topExpenseCategory.total)})`
-      : "-",
-  ]);
+  summary.addRow(["Kategori pengeluaran terbesar", topCategoryText(report)]);
 
   summary.addRow([]);
   styleHeader(summary.addRow([`Dibanding ${report.period.previousLabel}`, "Selisih", "Perubahan"]));
@@ -162,7 +165,7 @@ export async function buildReportXlsx(input: ReportExportData): Promise<Buffer> 
       date: t.date,
       title: t.title,
       category: t.category,
-      type: t.type === "INCOME" ? "Pemasukan" : "Pengeluaran",
+      type: typeFilterLabel(t.type),
       amount: t.amount,
       flow: t.type === "INCOME" ? t.amount : -t.amount,
       description: t.description ?? "",
@@ -172,12 +175,13 @@ export async function buildReportXlsx(input: ReportExportData): Promise<Buffer> 
   if (input.transactions.length > 0) {
     transactions.autoFilter = { from: "A1", to: { row: transactions.rowCount, column: 7 } };
   }
-  if (input.totalTransactions > input.transactions.length) {
+  const note = truncationNote(input, "CSV");
+  if (note) {
     transactions.addRow([]);
-    transactions.addRow([
-      `Menampilkan ${input.transactions.length} dari ${input.totalTransactions} transaksi. Unduh CSV untuk data lengkap.`,
-    ]).font = { italic: true, color: { argb: MUTED } };
+    transactions.addRow([note]).font = { italic: true, color: { argb: MUTED } };
   }
 
-  return Buffer.from(await workbook.xlsx.writeBuffer());
+  // On Node, writeBuffer returns a Buffer (a Uint8Array): pass it on without copying
+  const out = await workbook.xlsx.writeBuffer();
+  return out instanceof Uint8Array ? out : new Uint8Array(out);
 }

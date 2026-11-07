@@ -452,6 +452,73 @@ describe("budgets", () => {
   });
 });
 
+describe("CSV import", () => {
+  const importCsv = (user, csvContent, extra = {}) =>
+    user.client.post("/api/transactions/import", { csvContent, ...extra });
+
+  test("template headers match the CSV export, so an export can be re-imported", async () => {
+    const template = await alice.client.get("/api/transactions/import");
+    assert.equal(template.status, 200);
+    const exported = await alice.client.get(`/api/transactions/export?${MARCH}`);
+    assert.equal(template.body.split("\r\n")[0], exported.body.split("\r\n")[0]);
+
+    // Dry run of alice's own export: every row parses and matches existing categories
+    const preview = await importCsv(alice, exported.body, { dryRun: true });
+    assert.equal(preview.status, 200, JSON.stringify(preview.json));
+    assert.equal(preview.json.data.errorCount, 0, JSON.stringify(preview.json.data.errorSamples));
+    assert.equal(preview.json.data.validCount, 4);
+    assert.equal(preview.json.data.newCategories.length, 0);
+  });
+
+  test("dry run reports errors; import needs skipErrors and creates missing categories once", async () => {
+    const carol = await registerUser("carol");
+    const csv = [
+      "Tanggal;Judul;Tipe;Kategori;Nominal;Deskripsi",
+      "15/03/2024;Kopi;Pengeluaran;Kafe Baru;Rp 25.000;",
+      "16/03/2024;Kopi lagi;EXPENSE;kafe baru;25000,50;",
+      "17/03/2024;Gaji;INCOME;;8.500.000;tanpa kategori",
+      "2024-02-30;Tanggal salah;EXPENSE;Tagihan;1000;",
+      "2024-03-18;X;EXPENSE;Tagihan;abc;",
+    ].join("\r\n");
+
+    const preview = await importCsv(carol, csv, { dryRun: true });
+    assert.equal(preview.status, 200, JSON.stringify(preview.json));
+    const data = preview.json.data;
+    assert.equal(data.totalRows, 5);
+    assert.equal(data.validCount, 3);
+    assert.equal(data.errorCount, 2);
+    assert.deepEqual(data.errorSamples.map((e) => e.row), [5, 6]);
+    // "Kafe Baru" and "kafe baru" are one category; an empty category uses the default catch-all
+    assert.deepEqual(data.newCategories, [{ name: "Kafe Baru", type: "EXPENSE" }]);
+    assert.equal(data.previewRows[2].categoryName, "Pemasukan lain");
+    assert.equal(data.previewRows[1].amount, "25000.50");
+
+    const blocked = await importCsv(carol, csv);
+    assert.equal(blocked.status, 400);
+
+    const imported = await importCsv(carol, csv, { skipErrors: true });
+    assert.equal(imported.status, 200, JSON.stringify(imported.json));
+    assert.equal(imported.json.data.importedCount, 3);
+    assert.equal(imported.json.data.createdCategoriesCount, 1);
+    assert.equal(imported.json.data.skippedCount, 2);
+
+    const list = await carol.client.get("/api/transactions?limit=50");
+    const txs = list.json.data.transactions;
+    assert.equal(txs.length, 3);
+    assert.ok(
+      txs.some((t) => t.amount === 25000.5 && t.category.name === "Kafe Baru"),
+      JSON.stringify(txs.map((t) => [t.title, t.amount, t.category?.name, t.date]))
+    );
+  });
+
+  test("rejects unauthenticated imports and files without the required columns", async () => {
+    assert.equal((await new Client().post("/api/transactions/import", { csvContent: "a" })).status, 401);
+    const res = await importCsv(alice, "Nama,Kategori\r\nKopi,Makan", { dryRun: true });
+    assert.equal(res.status, 400);
+    assert.match(res.json.message, /Kolom wajib tidak ditemukan/);
+  });
+});
+
 describe("authentication for stage 3 features", () => {
   test("unauthenticated requests are rejected", async () => {
     const anon = new Client();

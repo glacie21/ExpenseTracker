@@ -8,8 +8,9 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { TransactionTable } from "@/components/transactions/TransactionTable";
 import { TransactionFilters } from "@/components/transactions/TransactionFilters";
 import { TransactionModal } from "@/components/transactions/TransactionModal";
+import { TransactionImportModal } from "@/components/transactions/TransactionImportModal";
 import { Category, PaginatedTransactions, Transaction, TransactionType } from "@/types";
-import { Download, Plus, RefreshCw } from "lucide-react";
+import { Download, Plus, RefreshCw, Upload } from "lucide-react";
 import { downloadFile } from "@/lib/download";
 import { useExternalNavigationKey } from "@/lib/useExternalNavigationKey";
 
@@ -61,11 +62,13 @@ function TransactionsView({ writeQuery }: { writeQuery: (pathname: string, query
   );
   const [page, setPage] = useState(Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1));
   const [reloadToken, setReloadToken] = useState(0);
+  const [categoriesReloadToken, setCategoriesReloadToken] = useState(0);
   const [result, setResult] = useState<LoadResult | null>(null);
 
   // Quick action dari dashboard: /transactions?add=INCOME|EXPENSE langsung membuka form
   const addType = parseType(searchParams.get("add"));
   const [isModalOpen, setIsModalOpen] = useState(addType === "INCOME" || addType === "EXPENSE");
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [modalDefaultType, setModalDefaultType] = useState<TransactionType>(
     addType === "INCOME" ? "INCOME" : "EXPENSE"
   );
@@ -124,7 +127,7 @@ function TransactionsView({ writeQuery }: { writeQuery: (pathname: string, query
         if (err?.name !== "AbortError") console.error("Failed to load categories:", err);
       });
     return () => controller.abort();
-  }, []);
+  }, [categoriesReloadToken]);
 
   // Load transactions; isLoading diturunkan dari key sehingga respons lama diabaikan
   const requestKey = `${filterQuery}#${reloadToken}`;
@@ -319,6 +322,15 @@ function TransactionsView({ writeQuery }: { writeQuery: (pathname: string, query
             >
               Unduh CSV
             </Button>
+            <Button
+              variant="outline"
+              size="md"
+              onClick={() => setIsImportModalOpen(true)}
+              leftIcon={<Upload className="h-4 w-4" />}
+              title="Impor transaksi massal dari file CSV"
+            >
+              Impor CSV
+            </Button>
             <Button variant="primary" size="md" onClick={handleOpenAddModal} leftIcon={<Plus className="h-4 w-4" />}>
               Catat transaksi
             </Button>
@@ -371,6 +383,18 @@ function TransactionsView({ writeQuery }: { writeQuery: (pathname: string, query
           categories={categories}
         />
       )}
+
+      {/* Import CSV Modal */}
+      <TransactionImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={(message, createdCategories) => {
+          setFeedback({ type: "success", message });
+          reload();
+          if (createdCategories > 0) setCategoriesReloadToken((t) => t + 1);
+          router.refresh();
+        }}
+      />
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog

@@ -1,5 +1,5 @@
 import React from "react";
-import { formatRupiah } from "@/lib/formatters";
+import { formatRupiah, formatRupiahByType } from "@/lib/formatters";
 
 interface AmountProps {
   value: number;
@@ -18,7 +18,7 @@ export function Amount({ value, type, className = "" }: AmountProps) {
   let negative: boolean;
   if (type) {
     negative = type === "EXPENSE";
-    text = `${negative ? "−" : "+"}${formatRupiah(Math.abs(value))}`;
+    text = formatRupiahByType(value, type);
   } else {
     negative = value < 0;
     text = negative ? `−${formatRupiah(Math.abs(value))}` : formatRupiah(value);

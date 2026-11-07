@@ -29,6 +29,7 @@ import {
 import { formatPercent } from "@/lib/finance";
 import { categoryOptionLabel, formatRupiah } from "@/lib/formatters";
 import { downloadFile } from "@/lib/download";
+import { REPORT_FORMATS } from "@/lib/reportFormats";
 import { Category, PaginatedTransactions, Transaction, TransactionType } from "@/types";
 
 type PeriodType = "week" | "month" | "year" | "custom";
@@ -244,7 +245,10 @@ function ReportsView({ writeQuery }: { writeQuery: (pathname: string, query: str
         params.delete("periodType");
         filename = await downloadFile(`/api/transactions/export?${params.toString()}`, "transaksi.csv");
       } else {
-        filename = await downloadFile(`/api/reports/export?format=${format}&${reportQuery}`, `laporan.${format}`);
+        filename = await downloadFile(
+          `/api/reports/export?format=${format}&${reportQuery}`,
+          `laporan.${REPORT_FORMATS[format].extension}`
+        );
       }
       setFeedback({ type: "success", message: `File ${filename} berhasil diunduh.` });
     } catch (error) {

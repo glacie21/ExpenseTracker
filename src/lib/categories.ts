@@ -8,13 +8,22 @@ export interface DefaultCategoryItem {
   color: string;
 }
 
+/** Colour for a category created without one (category form, CSV import). */
+export const DEFAULT_CATEGORY_COLOR = "#64748b";
+
+/** Catch-all default category per type, e.g. for imported rows without a category. */
+export const FALLBACK_CATEGORY_NAME: Record<TransactionType, string> = {
+  INCOME: "Pemasukan lain",
+  EXPENSE: "Pengeluaran lain",
+};
+
 export const DEFAULT_CATEGORIES: DefaultCategoryItem[] = [
   // Income categories
   { name: "Gaji", type: "INCOME", color: "#2b67a8" },
   { name: "Pekerjaan lepas", type: "INCOME", color: "#3d8a8a" },
   { name: "Usaha", type: "INCOME", color: "#5b5fa8" },
   { name: "Investasi", type: "INCOME", color: "#4f7d3a" },
-  { name: "Pemasukan lain", type: "INCOME", color: "#75716a" },
+  { name: FALLBACK_CATEGORY_NAME.INCOME, type: "INCOME", color: "#75716a" },
 
   // Expense categories
   { name: "Makan & minum", type: "EXPENSE", color: "#c4532b" },
@@ -24,7 +33,7 @@ export const DEFAULT_CATEGORIES: DefaultCategoryItem[] = [
   { name: "Hiburan", type: "EXPENSE", color: "#b8892b" },
   { name: "Kesehatan", type: "EXPENSE", color: "#8a9a2b" },
   { name: "Pendidikan", type: "EXPENSE", color: "#7a6a55" },
-  { name: "Pengeluaran lain", type: "EXPENSE", color: "#75716a" },
+  { name: FALLBACK_CATEGORY_NAME.EXPENSE, type: "EXPENSE", color: "#75716a" },
 ];
 
 /**

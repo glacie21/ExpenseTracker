@@ -3,8 +3,10 @@
 import React, { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown, Download, FileSpreadsheet, FileText, FileType, Table2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import type { ReportFormatId } from "@/lib/reportFormats";
 
-export type ExportFormat = "pdf" | "xlsx" | "docx" | "csv";
+/** The report file formats plus raw CSV, which comes from the transactions export. */
+export type ExportFormat = ReportFormatId | "csv";
 
 const OPTIONS: { value: ExportFormat; label: string; hint: string; icon: React.ElementType }[] = [
   { value: "pdf", label: "PDF", hint: "Siap dicetak atau dibagikan", icon: FileText },
