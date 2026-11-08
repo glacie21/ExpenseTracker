@@ -7,18 +7,55 @@ import { BarChart3, LayoutDashboard, PiggyBank, Plus, Receipt, Settings, Tags } 
 import { Avatar } from "@/components/ui/Avatar";
 import { buttonStyles } from "@/components/ui/Button";
 import { Wordmark } from "@/components/layout/Wordmark";
+import { addTransactionHref } from "@/lib/routes";
 import { SafeUser } from "@/types";
 
-const NAVIGATION = [
-  { name: "Ringkasan", href: "/dashboard", icon: LayoutDashboard, mobile: true },
-  { name: "Transaksi", href: "/transactions", icon: Receipt, mobile: true },
-  { name: "Anggaran", href: "/budgets", icon: PiggyBank, mobile: true },
-  { name: "Laporan", href: "/reports", icon: BarChart3, mobile: true },
-  { name: "Kategori", href: "/categories", icon: Tags, mobile: false },
-  { name: "Pengaturan", href: "/settings", icon: Settings, mobile: false },
+export const NAVIGATION = [
+  {
+    name: "Ringkasan",
+    subtitle: "Kondisi keuangan Anda pada periode yang dipilih",
+    href: "/dashboard",
+    icon: LayoutDashboard,
+    mobile: true,
+  },
+  {
+    name: "Transaksi",
+    subtitle: "Semua pemasukan dan pengeluaran yang tercatat",
+    href: "/transactions",
+    icon: Receipt,
+    mobile: true,
+  },
+  {
+    name: "Anggaran",
+    subtitle: "Batas pengeluaran bulanan per kategori",
+    href: "/budgets",
+    icon: PiggyBank,
+    mobile: true,
+  },
+  {
+    name: "Laporan",
+    subtitle: "Ringkasan per periode, siap diunduh",
+    href: "/reports",
+    icon: BarChart3,
+    mobile: true,
+  },
+  {
+    name: "Kategori",
+    subtitle: "Pengelompokan untuk transaksi dan anggaran",
+    href: "/categories",
+    icon: Tags,
+    mobile: false,
+  },
+  {
+    name: "Pengaturan",
+    subtitle: "Profil, password, dan keamanan akun",
+    href: "/settings",
+    icon: Settings,
+    mobile: false,
+  },
 ];
 
-const ADD_HREF = "/transactions?add=EXPENSE";
+const ADD_HREF = addTransactionHref("EXPENSE");
 
 function useIsActive() {
   const pathname = usePathname();

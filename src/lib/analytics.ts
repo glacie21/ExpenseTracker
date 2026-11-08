@@ -52,6 +52,22 @@ export function scopeWhere(scope: AnalyticsScope): Prisma.TransactionWhereInput 
   };
 }
 
+/** Whether any transaction in the scope has a fractional amount (sen). */
+export async function scopeHasFractionalAmount(scope: AnalyticsScope): Promise<boolean> {
+  const rows = await prisma.$queryRaw<{ found: boolean }[]>`
+    SELECT EXISTS (
+      SELECT 1 FROM "transactions"
+      WHERE "userId" = ${scope.userId}
+        AND "date" >= ${toDateOnlyString(scope.range.start)}::date
+        AND "date" < (${toDateOnlyString(scope.range.end)}::date + 1)
+        AND "amount" <> trunc("amount")
+        ${scope.type ? Prisma.sql`AND "type" = ${scope.type}::"TransactionType"` : Prisma.empty}
+        ${scope.categoryId ? Prisma.sql`AND "categoryId" = ${scope.categoryId}` : Prisma.empty}
+    ) AS found
+  `;
+  return rows[0]?.found ?? false;
+}
+
 export interface PeriodTotals {
   incomeCents: number;
   expenseCents: number;

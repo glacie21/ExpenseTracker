@@ -1,4 +1,5 @@
 import React from "react";
+import { NEUTRAL_CATEGORY_COLOR } from "@/components/charts/chartTheme";
 
 /**
  * A rounded tile with the category's initial on a tint of its color, as in a
@@ -6,7 +7,7 @@ import React from "react";
  * tile is decorative.
  */
 export function CategoryMark({ name, color }: { name?: string | null; color?: string | null }) {
-  const tint = color ?? "var(--ink-3)";
+  const tint = color ?? NEUTRAL_CATEGORY_COLOR;
   return (
     <span
       aria-hidden="true"

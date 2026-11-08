@@ -328,6 +328,38 @@ describe("Excel and Word reports", () => {
     assert.equal(values.get("Total pengeluaran"), 1001000.5);
   });
 
+  test("a report larger than one read batch lists every transaction once, in order", async () => {
+    const dave = await registerUser("dave");
+    const ROWS = 1250;
+    const lines = ["Tanggal,Judul,Tipe,Kategori,Nominal"];
+    for (let i = 1; i <= ROWS; i++) {
+      // All on one day, so only createdAt and id keep the batches apart
+      lines.push(`2024-03-10,Baris ${i},EXPENSE,Tagihan,${i === 7 ? "1000.50" : "1000"}`);
+    }
+    const imported = await dave.client.post("/api/transactions/import", { csvContent: lines.join("\r\n") });
+    assert.equal(imported.status, 200, JSON.stringify(imported.json));
+
+    const res = await dave.client.get(`/api/reports/export?format=xlsx&${MARCH}&periodType=month`);
+    assert.equal(res.status, 200);
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(Buffer.from(res.body));
+
+    const sheet = workbook.getWorksheet("Transaksi");
+    const titles = new Set();
+    sheet.eachRow((row, i) => {
+      if (i > 1) titles.add(row.getCell(2).value);
+    });
+    assert.equal(titles.size, ROWS);
+    assert.equal(sheet.getRow(2).getCell(5).numFmt.includes("0.00"), true, "one amount has sen");
+    assert.ok(sheet.autoFilter);
+
+    const summary = workbook.getWorksheet("Ringkasan");
+    const values = new Map();
+    summary.eachRow((row) => values.set(row.getCell(1).value, row.getCell(2).value));
+    assert.equal(values.get("Jumlah transaksi"), ROWS);
+    assert.equal(values.get("Total pengeluaran"), 1000 * ROWS + 0.5);
+  });
+
   test("Word report is a valid .docx document", async () => {
     const res = await alice.client.get(`/api/reports/export?format=docx&${MARCH}`);
     assert.equal(res.status, 200);

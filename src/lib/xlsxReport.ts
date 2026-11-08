@@ -1,8 +1,9 @@
+import { PassThrough, Readable } from "node:stream";
 import ExcelJS from "exceljs";
 import {
   categoryFilterLabel,
   REPORT_COLORS,
-  ReportExportData,
+  ReportStreamData,
   reportTitle,
   topCategoryText,
   truncationNote,
@@ -16,6 +17,10 @@ import {
  * filtered in Excel. Text cells are always stored as strings; ExcelJS only
  * writes a formula for an explicit `{ formula }` value, so user text such as
  * "=1+1" cannot turn into a formula.
+ *
+ * The file is written as a stream, with transactions read in batches, so a
+ * large report does not have to fit in memory. A streamed sheet has no
+ * rowCount, and each row is final once committed.
  */
 
 const argb = (hex: string) => `FF${hex}`;
@@ -43,20 +48,23 @@ function styleHeader(row: ExcelJS.Row) {
 }
 
 /** A data sheet with a styled, frozen header row and column widths. */
-function tableSheet(workbook: ExcelJS.Workbook, name: string, columns: Partial<ExcelJS.Column>[]) {
+function tableSheet(workbook: ExcelJS.stream.xlsx.WorkbookWriter, name: string, columns: Partial<ExcelJS.Column>[]) {
   const sheet = workbook.addWorksheet(name, { views: [{ state: "frozen", ySplit: 1 }] });
   sheet.columns = columns;
   styleHeader(sheet.getRow(1));
   return sheet;
 }
 
-export async function buildReportXlsx(input: ReportExportData): Promise<Uint8Array> {
+async function writeWorkbook(input: ReportStreamData, output: PassThrough, isCancelled: () => boolean) {
   const { report } = input;
   const s = report.summary;
-  const withSen = input.transactions.some((t) => Math.round(t.amount * 100) % 100 !== 0);
-  const RUPIAH = rupiahFormat(withSen);
+  const RUPIAH = rupiahFormat(input.hasFractionalAmount);
 
-  const workbook = new ExcelJS.Workbook();
+  const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+    stream: output,
+    useStyles: true,
+    useSharedStrings: false,
+  });
   workbook.creator = "Expense Tracker";
   workbook.title = reportTitle(report);
   workbook.created = new Date();
@@ -89,10 +97,11 @@ export async function buildReportXlsx(input: ReportExportData): Promise<Uint8Arr
   for (const [label, value, numFmt] of totals) {
     const row = summary.addRow([label, value]);
     row.getCell(2).numFmt = numFmt;
+    if (label === "Saldo bersih") {
+      row.font = { bold: true };
+      row.getCell(2).font = { bold: true, color: { argb: s.netBalance < 0 ? EXPENSE : INCOME } };
+    }
   }
-  const net = summary.getRow(summary.rowCount - 2);
-  net.font = { bold: true };
-  net.getCell(2).font = { bold: true, color: { argb: s.netBalance < 0 ? EXPENSE : INCOME } };
   summary.addRow(["Kategori pengeluaran terbesar", topCategoryText(report)]);
 
   summary.addRow([]);
@@ -107,6 +116,7 @@ export async function buildReportXlsx(input: ReportExportData): Promise<Uint8Arr
     row.getCell(2).numFmt = RUPIAH;
     if (trend.percent !== null) row.getCell(3).numFmt = PERCENT;
   }
+  summary.commit();
 
   // Expense breakdown
   const breakdown = tableSheet(workbook, "Per kategori", [
@@ -119,7 +129,7 @@ export async function buildReportXlsx(input: ReportExportData): Promise<Uint8Arr
     breakdown.addRow({ name: b.name, count: b.count, share: b.percent / 100, total: b.total });
   }
   if (report.breakdown.length > 0) {
-    const last = breakdown.rowCount;
+    const last = report.breakdown.length + 1; // after the header row
     const total = breakdown.addRow({
       name: "Total",
       count: { formula: `SUM(B2:B${last})`, result: report.breakdown.reduce((n, b) => n + b.count, 0) },
@@ -129,6 +139,7 @@ export async function buildReportXlsx(input: ReportExportData): Promise<Uint8Arr
   } else {
     breakdown.addRow({ name: "Belum ada pengeluaran pada periode ini." });
   }
+  breakdown.commit();
 
   // Categories whose spending grew
   if (report.categoryIncreases.length > 0) {
@@ -148,6 +159,7 @@ export async function buildReportXlsx(input: ReportExportData): Promise<Uint8Arr
         percent: c.percent === null ? "baru" : c.percent / 100,
       });
     }
+    increases.commit();
   }
 
   // Transactions
@@ -160,28 +172,48 @@ export async function buildReportXlsx(input: ReportExportData): Promise<Uint8Arr
     { header: "Arus kas", key: "flow", width: 18, style: { numFmt: RUPIAH } },
     { header: "Deskripsi", key: "description", width: 40 },
   ]);
-  for (const t of input.transactions) {
-    const row = transactions.addRow({
-      date: t.date,
-      title: t.title,
-      category: t.category,
-      type: typeFilterLabel(t.type),
-      amount: t.amount,
-      flow: t.type === "INCOME" ? t.amount : -t.amount,
-      description: t.description ?? "",
-    });
-    row.getCell("flow").font = { color: { argb: t.type === "INCOME" ? INCOME : EXPENSE } };
+  let listed = 0;
+  for await (const batch of input.batches) {
+    if (isCancelled()) return;
+    for (const t of batch) {
+      const row = transactions.addRow({
+        date: t.date,
+        title: t.title,
+        category: t.category,
+        type: typeFilterLabel(t.type),
+        amount: t.amount,
+        flow: t.type === "INCOME" ? t.amount : -t.amount,
+        description: t.description ?? "",
+      });
+      row.getCell("flow").font = { color: { argb: t.type === "INCOME" ? INCOME : EXPENSE } };
+      row.commit();
+    }
+    listed += batch.length;
   }
-  if (input.transactions.length > 0) {
-    transactions.autoFilter = { from: "A1", to: { row: transactions.rowCount, column: 7 } };
+  if (listed > 0) {
+    transactions.autoFilter = { from: "A1", to: { row: listed + 1, column: 7 } };
   }
-  const note = truncationNote(input, "CSV");
+  const note = truncationNote(listed, input.totalTransactions, "CSV");
   if (note) {
-    transactions.addRow([]);
-    transactions.addRow([note]).font = { italic: true, color: { argb: MUTED } };
+    transactions.addRow([]).commit();
+    const row = transactions.addRow([note]);
+    row.font = { italic: true, color: { argb: MUTED } };
+    row.commit();
   }
+  transactions.commit();
 
-  // On Node, writeBuffer returns a Buffer (a Uint8Array): pass it on without copying
-  const out = await workbook.xlsx.writeBuffer();
-  return out instanceof Uint8Array ? out : new Uint8Array(out);
+  await workbook.commit();
+}
+
+/**
+ * The workbook as a byte stream. A failure while writing aborts the download,
+ * since the response status has already been sent by then.
+ */
+export function buildReportXlsx(input: ReportStreamData): ReadableStream<Uint8Array> {
+  const output = new PassThrough();
+  writeWorkbook(input, output, () => output.destroyed).catch((error) => {
+    console.error("Report xlsx export error:", error);
+    output.destroy(error instanceof Error ? error : new Error(String(error)));
+  });
+  return Readable.toWeb(output) as ReadableStream<Uint8Array>;
 }

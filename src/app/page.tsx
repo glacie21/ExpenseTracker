@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
-import { Amount } from "@/components/ui/Amount";
 import { buttonStyles } from "@/components/ui/Button";
-import { CategoryMark } from "@/components/ui/CategoryMark";
 import { Guilloche } from "@/components/ui/Guilloche";
+import { LedgerRow } from "@/components/ui/LedgerRow";
+import { NoteFigure } from "@/components/ui/NoteFigure";
 
 // Illustrative month on the landing page (not user data)
 const SAMPLE_ENTRIES = [
@@ -61,16 +61,15 @@ export default function LandingPage() {
           {/* A sample month: what the app actually produces */}
           <figure className="overflow-hidden rounded-3xl border border-rule bg-surface shadow-[0_30px_60px_-30px_rgb(6_30_25/0.35)]">
             <div className="relative isolate overflow-hidden bg-note px-6 pt-5 pb-6 text-note-ink">
-              <Guilloche className="absolute inset-0 -z-10 h-full w-full text-note-line" />
+              <Guilloche />
               <figcaption className="flex items-baseline justify-between text-sm">
                 <span className="font-medium">Oktober 2026</span>
                 <span className="text-xs text-note-ink-2">Contoh</span>
               </figcaption>
               <p className="mt-8 text-sm text-note-ink-2">Sisa bulan ini</p>
-              <p className="num mt-1.5 font-display text-5xl leading-none font-semibold">
-                <span className="mr-1 align-[0.55em] text-xl font-medium">Rp</span>
-                {net.toLocaleString("id-ID")}
-              </p>
+              <div className="mt-1.5">
+                <NoteFigure value={net} />
+              </div>
               <p className="mt-3 flex gap-5 text-xs text-note-ink-2">
                 <span>
                   Masuk <span className="num text-note-ink">{SAMPLE_INCOME.toLocaleString("id-ID")}</span>
@@ -83,14 +82,15 @@ export default function LandingPage() {
 
             <ul className="p-2" aria-label="Contoh catatan transaksi satu bulan">
               {SAMPLE_ENTRIES.map((entry) => (
-                <li key={entry.title} className="flex items-center gap-3 px-3 py-2.5">
-                  <CategoryMark name={entry.category} color={entry.color} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-ink">{entry.title}</p>
-                    <p className="truncate text-xs text-ink-3">{entry.when}</p>
-                  </div>
-                  <Amount value={entry.amount} type={entry.type} className="text-sm font-semibold" />
-                </li>
+                <LedgerRow
+                  key={entry.title}
+                  category={entry.category}
+                  color={entry.color}
+                  title={entry.title}
+                  subtitle={entry.when}
+                  amount={entry.amount}
+                  type={entry.type}
+                />
               ))}
             </ul>
           </figure>

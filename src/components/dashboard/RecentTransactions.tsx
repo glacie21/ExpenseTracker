@@ -1,7 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { Amount } from "@/components/ui/Amount";
-import { CategoryMark } from "@/components/ui/CategoryMark";
+import { LedgerRow } from "@/components/ui/LedgerRow";
 import { formatDate } from "@/lib/formatters";
 import { Transaction } from "@/types";
 
@@ -26,16 +25,19 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
 
       <ul className="px-2 pb-2 sm:px-3" aria-label="Lima transaksi terakhir dari semua periode">
         {transactions.map((tx) => (
-          <li key={tx.id} className="flex items-center gap-3 rounded-xl px-3 py-2.5">
-            <CategoryMark name={tx.category?.name} color={tx.category?.color} />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-ink">{tx.title}</p>
-              <p className="truncate text-xs text-ink-3">
+          <LedgerRow
+            key={tx.id}
+            category={tx.category?.name}
+            color={tx.category?.color}
+            title={tx.title}
+            subtitle={
+              <>
                 {tx.category?.name ?? "Tanpa kategori"}, <span className="num">{formatDate(tx.date)}</span>
-              </p>
-            </div>
-            <Amount value={Number(tx.amount)} type={tx.type} className="text-sm font-semibold" />
-          </li>
+              </>
+            }
+            amount={Number(tx.amount)}
+            type={tx.type}
+          />
         ))}
       </ul>
     </section>

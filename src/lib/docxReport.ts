@@ -34,7 +34,7 @@ import {
 
 const BRAND = REPORT_COLORS.brand;
 const MUTED = REPORT_COLORS.muted;
-const RULE = "D2DAD4";
+const RULE = REPORT_COLORS.rule;
 
 interface Column {
   header: string;
@@ -165,7 +165,7 @@ export async function buildReportDocx(input: ReportExportData): Promise<Buffer> 
   if (input.transactions.length === 0) {
     children.push(muted(NO_TRANSACTIONS_TEXT));
   } else {
-    const note = truncationNote(input, "versi Excel atau CSV");
+    const note = truncationNote(input.transactions.length, input.totalTransactions, "versi Excel atau CSV");
     if (note) children.push(muted(note));
     children.push(
       table(
@@ -189,13 +189,13 @@ export async function buildReportDocx(input: ReportExportData): Promise<Buffer> 
     creator: "Expense Tracker",
     title: reportTitle(report),
     styles: {
-      default: { document: { run: { font: "Calibri", size: 21, color: "13241F" } } },
+      default: { document: { run: { font: "Calibri", size: 21, color: REPORT_COLORS.ink } } },
       paragraphStyles: [
         {
           id: "Title",
           name: "Title",
           basedOn: "Normal",
-          run: { size: 40, bold: true, color: "13241F" },
+          run: { size: 40, bold: true, color: REPORT_COLORS.ink },
           paragraph: { spacing: { after: 80 } },
         },
         {
