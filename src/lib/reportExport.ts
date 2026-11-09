@@ -1,12 +1,11 @@
-import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { APP_TIMEZONE } from "@/lib/config";
 import { AnalyticsScope, scopeHasFractionalAmount, scopeWhere } from "@/lib/analytics";
 import { formatPercent } from "@/lib/finance";
 import { formatRupiah } from "@/lib/formatters";
 import { Report, ReportParams, ReportSummary, getReport, getReportSummary } from "@/lib/reports";
-
-const BATCH_SIZE = 1000;
+import { transactionOrder } from "@/lib/transactionKeyset";
+import { ExportedTransaction, TRANSACTION_EXPORT_SELECT, transactionExportBatches } from "@/lib/transactions";
 
 export interface ReportTransactionRow {
   date: Date;
@@ -43,26 +42,7 @@ export interface ReportStreamData extends ReportHeader<Report> {
   hasFractionalAmount: boolean;
 }
 
-const TRANSACTION_SELECT = {
-  id: true,
-  date: true,
-  title: true,
-  type: true,
-  amount: true,
-  description: true,
-  category: { select: { name: true } },
-} as const;
-
-/** Oldest first; id breaks ties so that batches never skip or repeat a row. */
-const TRANSACTION_ORDER: Prisma.TransactionOrderByWithRelationInput[] = [
-  { date: "asc" },
-  { createdAt: "asc" },
-  { id: "asc" },
-];
-
-type SelectedTransaction = Prisma.TransactionGetPayload<{ select: typeof TRANSACTION_SELECT }>;
-
-function toRow(r: SelectedTransaction): ReportTransactionRow {
+function toRow(r: ExportedTransaction): ReportTransactionRow {
   return {
     date: r.date,
     title: r.title,
@@ -99,30 +79,18 @@ export async function loadReportExport(
     prisma.transaction.findMany({
       // Same filter as the report totals, so the list always matches the summary
       where: scopeWhere({ userId: user.id, ...params }),
-      select: TRANSACTION_SELECT,
-      orderBy: TRANSACTION_ORDER,
+      select: TRANSACTION_EXPORT_SELECT,
+      orderBy: transactionOrder("asc"),
       take: maxRows,
     }),
   ]);
   return { ...header(user, report), transactions: rows.map(toRow) };
 }
 
-/** Yields up to `maxRows` matching transactions, keeping one batch in memory at a time. */
-async function* transactionBatches(scope: AnalyticsScope, maxRows: number): AsyncGenerator<ReportTransactionRow[]> {
-  let cursor: string | undefined;
-  for (let remaining = maxRows; remaining > 0; ) {
-    const take = Math.min(BATCH_SIZE, remaining);
-    const batch = await prisma.transaction.findMany({
-      where: scopeWhere(scope),
-      select: TRANSACTION_SELECT,
-      orderBy: TRANSACTION_ORDER,
-      take,
-      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-    });
-    if (batch.length > 0) yield batch.map(toRow);
-    if (batch.length < take) return;
-    remaining -= batch.length;
-    cursor = batch[batch.length - 1].id;
+/** Oldest first, up to `maxRows`, one batch in memory at a time. */
+async function* reportRowBatches(scope: AnalyticsScope, maxRows: number): AsyncGenerator<ReportTransactionRow[]> {
+  for await (const batch of transactionExportBatches(scopeWhere(scope), "asc", maxRows)) {
+    yield batch.map(toRow);
   }
 }
 
@@ -137,7 +105,7 @@ export async function loadReportStream(
     getReport(user.id, params),
     scopeHasFractionalAmount(scope),
   ]);
-  return { ...header(user, report), hasFractionalAmount, batches: transactionBatches(scope, maxRows) };
+  return { ...header(user, report), hasFractionalAmount, batches: reportRowBatches(scope, maxRows) };
 }
 
 /*
