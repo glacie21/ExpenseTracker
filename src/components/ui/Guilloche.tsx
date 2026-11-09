@@ -42,7 +42,7 @@ export function Guilloche({ className = "" }: { className?: string }) {
     <svg
       viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
       preserveAspectRatio="xMaxYMid slice"
-      className={className}
+      className={`absolute inset-0 -z-10 h-full w-full text-note-line ${className}`}
       fill="none"
       stroke="currentColor"
       aria-hidden="true"

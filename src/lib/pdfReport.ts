@@ -5,7 +5,9 @@ import { formatDayLabel } from "@/lib/dates";
 import {
   filterSummary,
   NO_TRANSACTIONS_TEXT,
+  REPORT_COLORS,
   ReportExportData,
+  SummaryRow,
   reportTitle,
   summaryRows,
   truncationNote,
@@ -15,13 +17,20 @@ import {
 const PAGE = { width: 595.28, height: 841.89 }; // A4 portrait
 const MARGIN = 40;
 const CONTENT_WIDTH = PAGE.width - MARGIN * 2;
+
+function hexColor(hex: string) {
+  const channel = (start: number) => parseInt(hex.slice(start, start + 2), 16) / 255;
+  return rgb(channel(0), channel(2), channel(4));
+}
+
 const COLORS = {
-  ink: rgb(0.06, 0.09, 0.16),
-  muted: rgb(0.39, 0.45, 0.55),
-  rule: rgb(0.89, 0.91, 0.94),
-  headerFill: rgb(0.95, 0.96, 0.98),
-  income: rgb(0.05, 0.58, 0.53),
-  expense: rgb(0.88, 0.11, 0.28),
+  ink: hexColor(REPORT_COLORS.ink),
+  muted: hexColor(REPORT_COLORS.muted),
+  rule: hexColor(REPORT_COLORS.rule),
+  headerFill: hexColor(REPORT_COLORS.brand),
+  headerText: rgb(1, 1, 1),
+  income: hexColor(REPORT_COLORS.income),
+  expense: hexColor(REPORT_COLORS.expense),
 };
 
 interface Column {
@@ -117,8 +126,8 @@ class ReportWriter {
     this.gap(2);
   }
 
-  keyValueRows(rows: [string, string][]) {
-    for (const [label, value] of rows) {
+  keyValueRows(rows: SummaryRow[]) {
+    for (const { label, value, tone } of rows) {
       this.ensureSpace(18);
       this.y -= 14;
       this.page.drawText(this.clean(label), { x: MARGIN, y: this.y, size: 10, font: this.font, color: COLORS.muted });
@@ -128,7 +137,7 @@ class ReportWriter {
         y: this.y,
         size: 10,
         font: this.bold,
-        color: COLORS.ink,
+        color: tone ? COLORS[tone] : COLORS.ink,
       });
       this.y -= 4;
       this.rule();
@@ -146,7 +155,7 @@ class ReportWriter {
         height: rowHeight,
         color: COLORS.headerFill,
       });
-      this.drawRow(columns, columns.map((c) => c.header), this.bold, size, COLORS.muted);
+      this.drawRow(columns, columns.map((c) => c.header), this.bold, size, COLORS.headerText);
     };
 
     this.ensureSpace(rowHeight * 2);
@@ -217,11 +226,11 @@ export async function buildReportPdf(input: ReportExportData): Promise<Uint8Arra
 
   // Summary
   w.section("Ringkasan");
-  w.keyValueRows(summaryRows(report).map((row) => [row.label, row.value]));
+  w.keyValueRows(summaryRows(report));
 
   // Category breakdown
   if (report.breakdown.length > 0) {
-    w.section("Pengeluaran per Kategori");
+    w.section("Pengeluaran per kategori");
     w.table(
       [
         { header: "Kategori", width: CONTENT_WIDTH * 0.45 },
@@ -236,11 +245,11 @@ export async function buildReportPdf(input: ReportExportData): Promise<Uint8Arra
   }
 
   // Transactions
-  w.section("Daftar Transaksi");
+  w.section("Daftar transaksi");
   if (input.transactions.length === 0) {
     w.text(NO_TRANSACTIONS_TEXT, { color: COLORS.muted });
   } else {
-    const note = truncationNote(input, "versi Excel atau CSV");
+    const note = truncationNote(input.transactions.length, input.totalTransactions, "versi Excel atau CSV");
     if (note) w.text(note, { size: 9, color: COLORS.muted });
     w.table(
       [

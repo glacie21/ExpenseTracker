@@ -1,25 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { UNAUTHORIZED } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib/dbErrors";
-import { buildTransactionFilter } from "@/lib/transactions";
+import { ExportedTransaction, buildTransactionFilter, transactionExportBatches } from "@/lib/transactions";
 import { CSV_BOM, CsvColumn, csvHeader, csvRows } from "@/lib/csv";
 import { toDateOnlyString } from "@/lib/dates";
 import { TRANSACTION_CSV_HEADERS } from "@/lib/transactionsImportUtils";
 
-const BATCH_SIZE = 1000;
 const MAX_EXPORT_ROWS = 100_000;
 
-interface ExportRow {
-  date: Date;
-  title: string;
-  type: string;
-  amount: { toFixed: (digits: number) => string };
-  description: string | null;
-  category: { name: string };
-}
-
-const COLUMNS: CsvColumn<ExportRow>[] = [
+const COLUMNS: CsvColumn<ExportedTransaction>[] = [
   { header: TRANSACTION_CSV_HEADERS.date, value: (r) => toDateOnlyString(r.date), trusted: true },
   { header: TRANSACTION_CSV_HEADERS.title, value: (r) => r.title },
   { header: TRANSACTION_CSV_HEADERS.type, value: (r) => r.type, trusted: true },
@@ -30,6 +21,33 @@ const COLUMNS: CsvColumn<ExportRow>[] = [
 ];
 
 /**
+ * The CSV as a byte stream. The next batch is read only when the client is
+ * ready for more, so memory stays small and a cancelled download stops reading.
+ * A failure midway aborts the download, since the status has already been sent.
+ */
+function csvStream(batches: AsyncGenerator<ExportedTransaction[]>): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(encoder.encode(CSV_BOM + csvHeader(COLUMNS)));
+    },
+    async pull(controller) {
+      try {
+        const { done, value } = await batches.next();
+        if (done) controller.close();
+        else controller.enqueue(encoder.encode(csvRows(COLUMNS, value)));
+      } catch (error) {
+        console.error("GET /api/transactions/export stream error:", error);
+        controller.error(error);
+      }
+    },
+    async cancel() {
+      await batches.return(undefined);
+    },
+  });
+}
+
+/**
  * GET /api/transactions/export
  * Unduh transaksi pengguna yang login sebagai CSV (UTF-8), mengikuti filter
  * yang sama dengan GET /api/transactions.
@@ -38,10 +56,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Akses ditolak. Sesi tidak valid atau telah berakhir." },
-        { status: 401 }
-      );
+      return NextResponse.json(UNAUTHORIZED, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -67,28 +82,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Ambil per batch agar memori tetap kecil untuk data besar
-    let csv = CSV_BOM + csvHeader(COLUMNS);
-    for (let skip = 0; skip < total; skip += BATCH_SIZE) {
-      const batch = await prisma.transaction.findMany({
-        where: filter.where,
-        select: {
-          date: true,
-          title: true,
-          type: true,
-          amount: true,
-          description: true,
-          category: { select: { name: true } },
-        },
-        orderBy: [{ date: filter.sort }, { createdAt: filter.sort }, { id: filter.sort }],
-        skip,
-        take: BATCH_SIZE,
-      });
-      csv += csvRows(COLUMNS, batch);
-    }
-
     const today = toDateOnlyString(new Date());
-    return new Response(csv, {
+    return new Response(csvStream(transactionExportBatches(filter.where, filter.sort, MAX_EXPORT_ROWS)), {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
         "Content-Disposition": `attachment; filename="transaksi-${today}.csv"`,

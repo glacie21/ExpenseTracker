@@ -14,7 +14,7 @@ export function AuthFrame({ title, subtitle, footer, children }: AuthFrameProps)
   return (
     <div className="flex min-h-screen flex-col lg:flex-row">
       <aside className="relative isolate hidden overflow-hidden bg-note text-note-ink lg:flex lg:w-[44%] lg:flex-col lg:justify-between lg:p-12">
-        <Guilloche className="absolute inset-0 -z-10 h-full w-full text-note-line opacity-60" />
+        <Guilloche className="opacity-60" />
         <Wordmark onNote />
         <p className="max-w-sm font-display text-4xl leading-[1.05] font-semibold">
           Setiap rupiah tercatat, setiap bulan terbaca.

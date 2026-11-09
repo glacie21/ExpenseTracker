@@ -1,7 +1,7 @@
 import React from "react";
 import { Amount } from "@/components/ui/Amount";
 import { Guilloche } from "@/components/ui/Guilloche";
-import { formatRupiah } from "@/lib/formatters";
+import { NoteFigure } from "@/components/ui/NoteFigure";
 import { formatPercent } from "@/lib/finance";
 import { TrendLine } from "@/components/dashboard/TrendLine";
 
@@ -34,23 +34,6 @@ export function StatementRow({ label, children }: { label: string; children: Rea
   );
 }
 
-/** The net figure with a smaller "Rp", as printed on a note. */
-function NoteFigure({ value }: { value: number }) {
-  const text = formatRupiah(Math.abs(value)).replace(/^Rp/, "");
-  return (
-    <p className="num font-display text-[2.5rem] leading-none font-semibold sm:text-5xl">
-      {value < 0 && (
-        <>
-          <span className="sr-only">minus </span>
-          <span aria-hidden="true">−</span>
-        </>
-      )}
-      <span className="mr-1 align-[0.55em] text-lg font-medium sm:text-xl">Rp</span>
-      {text}
-    </p>
-  );
-}
-
 /**
  * The period summary. The net result sits on a banknote-style panel (teal,
  * engraved line work); income, expense and the savings rate follow below it.
@@ -75,7 +58,7 @@ export function PeriodStatement({
       className="flex h-full flex-col overflow-hidden rounded-2xl border border-rule bg-surface"
     >
       <div className="relative isolate overflow-hidden bg-note px-5 pt-5 pb-6 text-note-ink sm:px-6">
-        <Guilloche className="absolute inset-0 -z-10 h-full w-full text-note-line" />
+        <Guilloche />
         <h2 id={headingId} className="text-sm font-medium">
           {title}
         </h2>

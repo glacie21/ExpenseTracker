@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { endOfDayUTC, monthRangeUTC, parseDateOnly } from "@/lib/dates";
 import { isValidId, normalizeAmount, validateTransactionInput } from "@/lib/validations";
+import { SortDirection, transactionOrder, transactionsAfter } from "@/lib/transactionKeyset";
 import { TransactionType } from "@/types";
 
 export const TRANSACTION_CATEGORY_SELECT = {
@@ -169,6 +170,44 @@ export function buildTransactionFilter(userId: string, params: URLSearchParams):
 /**
  * Convert Prisma Decimal amount to a JSON-safe number for the client.
  */
+/** Fields of a transaction in the downloadable files (CSV, reports). */
+export const TRANSACTION_EXPORT_SELECT = {
+  id: true,
+  createdAt: true,
+  date: true,
+  title: true,
+  type: true,
+  amount: true,
+  description: true,
+  category: { select: { name: true } },
+} as const;
+
+export type ExportedTransaction = Prisma.TransactionGetPayload<{ select: typeof TRANSACTION_EXPORT_SELECT }>;
+
+const EXPORT_BATCH_SIZE = 1000;
+
+/** Reads up to `maxRows` matching transactions, keeping one batch in memory at a time. */
+export async function* transactionExportBatches(
+  where: Prisma.TransactionWhereInput,
+  sort: SortDirection,
+  maxRows: number
+): AsyncGenerator<ExportedTransaction[]> {
+  let last: ExportedTransaction | undefined;
+  for (let remaining = maxRows; remaining > 0; ) {
+    const take = Math.min(EXPORT_BATCH_SIZE, remaining);
+    const batch: ExportedTransaction[] = await prisma.transaction.findMany({
+      where: last ? { AND: [where, transactionsAfter(last, sort)] } : where,
+      select: TRANSACTION_EXPORT_SELECT,
+      orderBy: transactionOrder(sort),
+      take,
+    });
+    if (batch.length > 0) yield batch;
+    if (batch.length < take) return;
+    remaining -= batch.length;
+    last = batch[batch.length - 1];
+  }
+}
+
 export function serializeTransaction<T extends { amount: Prisma.Decimal }>(
   transaction: T
 ): Omit<T, "amount"> & { amount: number } {

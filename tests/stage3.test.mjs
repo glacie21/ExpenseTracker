@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import { PrismaClient } from "@prisma/client";
 import { PDFDocument } from "pdf-lib";
 import ExcelJS from "exceljs";
+import { transactionOrder, transactionsAfter } from "../src/lib/transactionKeyset.ts";
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 const RUN_ID = `s3${Date.now()}${Math.floor(Math.random() * 1e6)}`;
@@ -258,6 +259,46 @@ describe("CSV export", () => {
     assert.ok(!res.body.includes("Gaji"));
   });
 
+  test("a file larger than one read batch lists every row once, in both sort orders", async () => {
+    const erin = await registerUser("erin");
+    const ROWS = 1250;
+    const lines = ["Tanggal,Judul,Tipe,Kategori,Nominal"];
+    // Several rows per day, so ties on date have to be broken by createdAt and id
+    for (let i = 1; i <= ROWS; i++) lines.push(`2024-03-${String((i % 5) + 1).padStart(2, "0")},Baris ${i},EXPENSE,Tagihan,1000`);
+    const imported = await erin.client.post("/api/transactions/import", { csvContent: lines.join("\r\n") });
+    assert.equal(imported.status, 200, JSON.stringify(imported.json));
+
+    for (const [sort, isOrdered] of [
+      ["oldest", (a, b) => a <= b],
+      ["newest", (a, b) => a >= b],
+    ]) {
+      const res = await erin.client.get(`/api/transactions/export?${MARCH}&sort=${sort}`);
+      assert.equal(res.status, 200);
+      const rows = res.body.slice(1).trim().split("\r\n").slice(1).map((line) => line.split(","));
+      assert.equal(rows.length, ROWS, sort);
+      assert.equal(new Set(rows.map((r) => r[1])).size, ROWS, `${sort}: no repeats`);
+      assert.ok(rows.every((r, i) => i === 0 || isOrdered(rows[i - 1][0], r[0])), `${sort}: ordered`);
+    }
+  });
+
+  test("batches continue past a row deleted during the export", async () => {
+    const frank = await registerUser("frank");
+    const lines = ["Tanggal,Judul,Tipe,Kategori,Nominal"];
+    for (let i = 1; i <= 10; i++) lines.push(`2024-03-${String(i).padStart(2, "0")},Baris ${i},EXPENSE,Tagihan,1000`);
+    await frank.client.post("/api/transactions/import", { csvContent: lines.join("\r\n") });
+
+    const me = await frank.client.get("/api/transactions?limit=1");
+    const where = { userId: me.json.data.transactions[0].userId };
+    const orderBy = transactionOrder("asc");
+    const first = await prisma.transaction.findMany({ where, orderBy, take: 3 });
+    const last = first[first.length - 1];
+    await prisma.transaction.delete({ where: { id: last.id } });
+
+    const next = await prisma.transaction.findMany({ where: { AND: [where, transactionsAfter(last, "asc")] }, orderBy });
+    assert.equal(next.length, 7);
+    assert.equal(next[0].title, "Baris 4");
+  });
+
   test("validates filters on the backend", async () => {
     assert.equal((await alice.client.get("/api/transactions/export?type=FOO")).status, 400);
     assert.equal((await alice.client.get("/api/transactions/export?startDate=nope")).status, 400);
@@ -326,6 +367,38 @@ describe("Excel and Word reports", () => {
     summary.eachRow((row) => values.set(row.getCell(1).value, row.getCell(2).value));
     assert.equal(values.get("Total pemasukan"), 5000000);
     assert.equal(values.get("Total pengeluaran"), 1001000.5);
+  });
+
+  test("a report larger than one read batch lists every transaction once, in order", async () => {
+    const dave = await registerUser("dave");
+    const ROWS = 1250;
+    const lines = ["Tanggal,Judul,Tipe,Kategori,Nominal"];
+    for (let i = 1; i <= ROWS; i++) {
+      // All on one day, so only createdAt and id keep the batches apart
+      lines.push(`2024-03-10,Baris ${i},EXPENSE,Tagihan,${i === 7 ? "1000.50" : "1000"}`);
+    }
+    const imported = await dave.client.post("/api/transactions/import", { csvContent: lines.join("\r\n") });
+    assert.equal(imported.status, 200, JSON.stringify(imported.json));
+
+    const res = await dave.client.get(`/api/reports/export?format=xlsx&${MARCH}&periodType=month`);
+    assert.equal(res.status, 200);
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(Buffer.from(res.body));
+
+    const sheet = workbook.getWorksheet("Transaksi");
+    const titles = new Set();
+    sheet.eachRow((row, i) => {
+      if (i > 1) titles.add(row.getCell(2).value);
+    });
+    assert.equal(titles.size, ROWS);
+    assert.equal(sheet.getRow(2).getCell(5).numFmt.includes("0.00"), true, "one amount has sen");
+    assert.ok(sheet.autoFilter);
+
+    const summary = workbook.getWorksheet("Ringkasan");
+    const values = new Map();
+    summary.eachRow((row) => values.set(row.getCell(1).value, row.getCell(2).value));
+    assert.equal(values.get("Jumlah transaksi"), ROWS);
+    assert.equal(values.get("Total pengeluaran"), 1000 * ROWS + 0.5);
   });
 
   test("Word report is a valid .docx document", async () => {
