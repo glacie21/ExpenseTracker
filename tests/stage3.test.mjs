@@ -299,6 +299,18 @@ describe("CSV export", () => {
     assert.equal(next[0].title, "Baris 4");
   });
 
+  test("check=1 reports problems before a download starts, without sending the file", async () => {
+    const ok = await alice.client.get(`/api/transactions/export?${MARCH}&check=1`);
+    assert.equal(ok.status, 200);
+    assert.deepEqual(ok.json, { success: true });
+    assert.equal(ok.headers.get("content-disposition"), null);
+
+    const empty = await alice.client.get("/api/transactions/export?startDate=2020-01-01&endDate=2020-01-31&check=1");
+    assert.equal(empty.status, 404);
+    assert.ok(empty.json.message);
+    assert.equal((await new Client().get(`/api/transactions/export?${MARCH}&check=1`)).status, 401);
+  });
+
   test("validates filters on the backend", async () => {
     assert.equal((await alice.client.get("/api/transactions/export?type=FOO")).status, 400);
     assert.equal((await alice.client.get("/api/transactions/export?startDate=nope")).status, 400);
@@ -399,6 +411,25 @@ describe("Excel and Word reports", () => {
     summary.eachRow((row) => values.set(row.getCell(1).value, row.getCell(2).value));
     assert.equal(values.get("Jumlah transaksi"), ROWS);
     assert.equal(values.get("Total pengeluaran"), 1000 * ROWS + 0.5);
+  });
+
+  test("check=1 answers before a download starts, without building a file", async () => {
+    const url = `/api/reports/export?format=xlsx&${MARCH}&periodType=month`;
+
+    const ok = await alice.client.get(`${url}&check=1`);
+    assert.equal(ok.status, 200);
+    assert.deepEqual(ok.json, { success: true });
+    assert.equal(ok.headers.get("content-disposition"), null);
+
+    assert.equal((await new Client().get(`${url}&check=1`)).status, 401);
+    const invalid = await alice.client.get("/api/reports/export?format=xlsx&startDate=2024-03-31&endDate=2024-03-01&check=1");
+    assert.equal(invalid.status, 400);
+    assert.ok(invalid.json.message);
+
+    // The URL handed to the browser, without check, is the file itself
+    const file = await alice.client.get(url);
+    assert.equal(file.headers.get("content-type"), XLSX_TYPE);
+    assert.match(file.headers.get("content-disposition"), /attachment; filename="laporan-2024-03-01_2024-03-31.xlsx"/);
   });
 
   test("Word report is a valid .docx document", async () => {

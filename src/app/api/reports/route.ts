@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { UNAUTHORIZED } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
 import { getReport, parseReportParams } from "@/lib/reports";
 
@@ -12,10 +13,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Akses ditolak. Sesi tidak valid atau telah berakhir." },
-        { status: 401 }
-      );
+      return NextResponse.json(UNAUTHORIZED, { status: 401 });
     }
 
     const parsed = parseReportParams(new URL(request.url).searchParams);

@@ -1,5 +1,5 @@
-import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { getTotals, toSummaryStats } from "@/lib/analytics";
 import { TRANSACTION_CATEGORY_SELECT, serializeTransaction } from "@/lib/transactions";
 
 export const RECENT_TRANSACTIONS_LIMIT = 5;
@@ -12,12 +12,7 @@ export const RECENT_TRANSACTIONS_LIMIT = 5;
  */
 export async function getDashboardSummary(userId: string) {
   const [totals, recentTransactions] = await Promise.all([
-    prisma.transaction.groupBy({
-      by: ["type"],
-      where: { userId },
-      _sum: { amount: true },
-      _count: { _all: true },
-    }),
+    getTotals({ userId }),
     prisma.transaction.findMany({
       where: { userId },
       include: { category: { select: TRANSACTION_CATEGORY_SELECT } },
@@ -26,27 +21,21 @@ export async function getDashboardSummary(userId: string) {
     }),
   ]);
 
-  const income = totals.find((t) => t.type === "INCOME");
-  const expense = totals.find((t) => t.type === "EXPENSE");
-
-  // Decimal arithmetic avoids floating-point rounding errors
-  const totalIncome = income?._sum.amount ?? new Prisma.Decimal(0);
-  const totalExpense = expense?._sum.amount ?? new Prisma.Decimal(0);
-  const balance = totalIncome.minus(totalExpense);
-
-  const incomeCount = income?._count._all ?? 0;
-  const expenseCount = expense?._count._all ?? 0;
+  // Same integer-cent arithmetic as the period analytics
+  const stats = toSummaryStats(totals);
 
   return {
     summary: {
-      totalIncome: totalIncome.toNumber(),
-      totalExpense: totalExpense.toNumber(),
-      totalBalance: balance.toNumber(),
-      netSavings: balance.toNumber(),
-      incomeCount,
-      expenseCount,
-      totalCount: incomeCount + expenseCount,
+      totalIncome: stats.totalIncome,
+      totalExpense: stats.totalExpense,
+      totalBalance: stats.netBalance,
+      netSavings: stats.netBalance,
+      incomeCount: stats.incomeCount,
+      expenseCount: stats.expenseCount,
+      totalCount: stats.transactionCount,
     },
     recentTransactions: recentTransactions.map(serializeTransaction),
   };
 }
+
+export type DashboardSummary = Awaited<ReturnType<typeof getDashboardSummary>>;

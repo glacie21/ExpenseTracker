@@ -61,6 +61,11 @@ export async function reportFileResponse(search: URLSearchParams, formatId: Repo
       return NextResponse.json({ success: false, message: parsed.message }, { status: 400 });
     }
 
+    // Asked by startFileDownload before handing the URL to the browser's download manager
+    if (search.has("check")) {
+      return NextResponse.json({ success: true });
+    }
+
     const { body, start, end } = await BUILDERS[formatId](user, parsed.params, format.maxRows);
 
     return new Response(body, {

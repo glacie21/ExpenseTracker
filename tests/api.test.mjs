@@ -296,6 +296,13 @@ describe("transactions", () => {
     res = await alice.get("/api/transactions?year=2026&month=9");
     assert.deepEqual(res.json.data.transactions.map((t) => t.title), ["Proyek freelance"]);
 
+    // A year alone covers 1 Jan through 31 Dec; years outside the date bounds are rejected
+    res = await alice.get("/api/transactions?year=2026&limit=100");
+    const all = await alice.get("/api/transactions?limit=100");
+    assert.equal(res.json.data.pagination.total, all.json.data.pagination.total);
+    assert.equal((await alice.get("/api/transactions?year=2025")).json.data.pagination.total, 0);
+    assert.equal((await alice.get("/api/transactions?year=2101")).status, 400);
+
     res = await alice.get("/api/transactions?startDate=2026-10-08&endDate=2026-10-08");
     assert.deepEqual(res.json.data.transactions.map((t) => t.title), ["Gaji bulanan"]);
 
@@ -340,6 +347,8 @@ describe("transactions", () => {
       date: "2026-10-10",
     });
     assert.equal(edit.status, 404);
+    // "Not yours" wins over an invalid body, so ids cannot be probed through validation errors
+    assert.equal((await bob.put(`/api/transactions/${expenseId}`, { title: "" })).status, 404);
     assert.equal((await bob.delete(`/api/transactions/${expenseId}`)).status, 404);
 
     const unchanged = await alice.get(`/api/transactions/${expenseId}`);

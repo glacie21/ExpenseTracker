@@ -1,6 +1,6 @@
 import { getCurrentUser } from "@/lib/auth";
-import { getDashboardSummary } from "@/lib/dashboard";
-import { getDashboardAnalytics, resolvePeriodFromParams } from "@/lib/analytics";
+import { DashboardSummary, getDashboardSummary } from "@/lib/dashboard";
+import { DashboardAnalytics, getDashboardAnalytics, resolvePeriodFromParams } from "@/lib/analytics";
 import { PeriodStatement } from "@/components/dashboard/PeriodStatement";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
@@ -22,8 +22,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const params = await searchParams;
   const { valid: validPeriod, period } = resolvePeriodFromParams(params);
 
-  let analytics: Awaited<ReturnType<typeof getDashboardAnalytics>> | null = null;
-  let overall: Awaited<ReturnType<typeof getDashboardSummary>> | null = null;
+  let analytics: DashboardAnalytics | null = null;
+  let overall: DashboardSummary | null = null;
   if (user) {
     try {
       [analytics, overall] = await Promise.all([

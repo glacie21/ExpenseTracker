@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { UNAUTHORIZED } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
@@ -9,11 +10,6 @@ import {
 } from "@/lib/budgets";
 import { isUniqueViolation } from "@/lib/dbErrors";
 import { BUDGET_MAX_YEAR, BUDGET_MIN_YEAR } from "@/lib/validations";
-
-const UNAUTHORIZED = {
-  success: false,
-  message: "Akses ditolak. Sesi tidak valid atau telah berakhir.",
-};
 
 /**
  * GET /api/budgets?month=1-12&year=YYYY (default: bulan ini)

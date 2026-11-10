@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { UNAUTHORIZED } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
 import { getDashboardAnalytics, resolvePeriodFromParams } from "@/lib/analytics";
 
@@ -11,10 +12,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Akses ditolak. Sesi tidak valid atau telah berakhir." },
-        { status: 401 }
-      );
+      return NextResponse.json(UNAUTHORIZED, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);

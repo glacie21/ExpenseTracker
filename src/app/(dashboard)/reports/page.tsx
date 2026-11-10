@@ -28,7 +28,7 @@ import {
 } from "@/lib/dates";
 import { formatPercent } from "@/lib/finance";
 import { categoryOptionLabel, formatRupiah } from "@/lib/formatters";
-import { downloadFile } from "@/lib/download";
+import { downloadFile, startFileDownload } from "@/lib/download";
 import { REPORT_FORMATS } from "@/lib/reportFormats";
 import { Category, PaginatedTransactions, Transaction, TransactionType } from "@/types";
 
@@ -239,17 +239,26 @@ function ReportsView({ writeQuery }: { writeQuery: (pathname: string, query: str
     if (!reportQuery) return;
     setExporting(format);
     try {
-      let filename: string;
-      if (format === "csv") {
-        const params = new URLSearchParams(reportQuery);
-        params.delete("periodType");
-        filename = await downloadFile(`/api/transactions/export?${params.toString()}`, "transaksi.csv");
-      } else {
-        filename = await downloadFile(
-          `/api/reports/export?format=${format}&${reportQuery}`,
-          `laporan.${REPORT_FORMATS[format].extension}`
-        );
+      // Excel and CSV can be very large, so they go straight to the browser's download manager
+      if (format === "xlsx" || format === "csv") {
+        let url = `/api/reports/export?format=xlsx&${reportQuery}`;
+        if (format === "csv") {
+          const params = new URLSearchParams(reportQuery);
+          params.delete("periodType");
+          url = `/api/transactions/export?${params.toString()}`;
+        }
+        await startFileDownload(url);
+        setFeedback({
+          type: "success",
+          message: `Unduhan ${format === "csv" ? "CSV" : "Excel"} dimulai. Lihat progresnya di daftar unduhan browser.`,
+        });
+        return;
       }
+
+      const filename = await downloadFile(
+        `/api/reports/export?format=${format}&${reportQuery}`,
+        `laporan.${REPORT_FORMATS[format].extension}`
+      );
       setFeedback({ type: "success", message: `File ${filename} berhasil diunduh.` });
     } catch (error) {
       setFeedback({
