@@ -1,6 +1,7 @@
+import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { endOfDayUTC, monthRangeUTC, parseDateOnly } from "@/lib/dates";
+import { MAX_DATE_YEAR, MIN_DATE_YEAR, endOfDayUTC, monthRangeUTC, parseDateOnly, yearRange } from "@/lib/dates";
 import { isValidId, normalizeAmount, validateTransactionInput } from "@/lib/validations";
 import { SortDirection, transactionOrder, transactionsAfter } from "@/lib/transactionKeyset";
 import { TransactionType } from "@/types";
@@ -12,7 +13,7 @@ export const TRANSACTION_CATEGORY_SELECT = {
   color: true,
 } as const;
 
-export interface TransactionWriteData {
+interface TransactionWriteData {
   type: TransactionType;
   title: string;
   amount: Prisma.Decimal;
@@ -21,9 +22,16 @@ export interface TransactionWriteData {
   date: Date;
 }
 
-type ParseResult =
-  | { ok: true; data: TransactionWriteData }
-  | { ok: false; status: number; message: string; errors?: Record<string, string> };
+type ParseFailure = { ok: false; status: number; message: string; errors?: Record<string, string> };
+type ParseResult = { ok: true; data: TransactionWriteData } | ParseFailure;
+
+/** The response for a body that parseTransactionBody rejected. */
+export function parseErrorResponse(failure: ParseFailure) {
+  return NextResponse.json(
+    { success: false, message: failure.message, errors: failure.errors },
+    { status: failure.status }
+  );
+}
 
 /**
  * Validate a create/update request body and check that the category belongs
@@ -55,6 +63,7 @@ export async function parseTransactionBody(body: unknown, userId: string): Promi
   // findFirst scoped by userId: another user's category behaves as "not found"
   const category = await prisma.category.findFirst({
     where: { id: categoryId, userId },
+    select: { name: true, type: true },
   });
 
   if (!category) {
@@ -144,7 +153,7 @@ export function buildTransactionFilter(userId: string, params: URLSearchParams):
 
   if (yearParam) {
     const year = Number(yearParam);
-    if (!Number.isInteger(year) || year < 1900 || year > 9999) {
+    if (!Number.isInteger(year) || year < MIN_DATE_YEAR || year > MAX_DATE_YEAR) {
       return { ok: false, message: "Filter tahun tidak valid." };
     }
     if (monthParam) {
@@ -154,9 +163,8 @@ export function buildTransactionFilter(userId: string, params: URLSearchParams):
       }
       dateFilters.push({ date: monthRangeUTC(year, month) });
     } else {
-      dateFilters.push({
-        date: { gte: monthRangeUTC(year, 1).gte, lte: monthRangeUTC(year, 12).lte },
-      });
+      const range = yearRange(new Date(Date.UTC(year, 0, 1)));
+      dateFilters.push({ date: { gte: range.start, lte: endOfDayUTC(range.end) } });
     }
   }
 
@@ -167,9 +175,6 @@ export function buildTransactionFilter(userId: string, params: URLSearchParams):
   return { ok: true, where, sort: params.get("sort") === "oldest" ? "asc" : "desc" };
 }
 
-/**
- * Convert Prisma Decimal amount to a JSON-safe number for the client.
- */
 /** Fields of a transaction in the downloadable files (CSV, reports). */
 export const TRANSACTION_EXPORT_SELECT = {
   id: true,
@@ -208,6 +213,9 @@ export async function* transactionExportBatches(
   }
 }
 
+/**
+ * Convert Prisma Decimal amount to a JSON-safe number for the client.
+ */
 export function serializeTransaction<T extends { amount: Prisma.Decimal }>(
   transaction: T
 ): Omit<T, "amount"> & { amount: number } {

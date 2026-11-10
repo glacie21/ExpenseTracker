@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { UNAUTHORIZED } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { DUPLICATE_BUDGET_MESSAGE, parseBudgetBody } from "@/lib/budgets";
@@ -8,11 +9,6 @@ import { isValidId } from "@/lib/validations";
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
-
-const UNAUTHORIZED = {
-  success: false,
-  message: "Akses ditolak. Sesi tidak valid atau telah berakhir.",
-};
 
 // Same response for "does not exist" and "belongs to another user"
 const NOT_FOUND = {

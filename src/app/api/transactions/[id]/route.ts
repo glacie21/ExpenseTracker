@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { UNAUTHORIZED } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib/dbErrors";
 import { isValidId } from "@/lib/validations";
 import {
   TRANSACTION_CATEGORY_SELECT,
+  parseErrorResponse,
   parseTransactionBody,
   serializeTransaction,
 } from "@/lib/transactions";
@@ -13,16 +16,17 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-const UNAUTHORIZED = {
-  success: false,
-  message: "Akses ditolak. Sesi tidak valid atau telah berakhir.",
-};
-
 // Same response for "does not exist" and "belongs to another user" so ids cannot be probed
 const NOT_FOUND = {
   success: false,
   message: "Transaksi tidak ditemukan atau Anda tidak memiliki akses.",
 };
+
+/** The id from the URL, or null when it cannot be a transaction id. */
+async function routeId(params: RouteParams["params"]): Promise<string | null> {
+  const { id } = await params;
+  return isValidId(id) ? id : null;
+}
 
 /**
  * GET /api/transactions/[id]
@@ -35,8 +39,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json(UNAUTHORIZED, { status: 401 });
     }
 
-    const { id } = await params;
-    if (!isValidId(id)) {
+    const id = await routeId(params);
+    if (!id) {
       return NextResponse.json(NOT_FOUND, { status: 404 });
     }
 
@@ -73,44 +77,38 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json(UNAUTHORIZED, { status: 401 });
     }
 
-    const { id } = await params;
-    if (!isValidId(id)) {
+    const id = await routeId(params);
+    if (!id) {
       return NextResponse.json(NOT_FOUND, { status: 404 });
     }
 
-    const existing = await prisma.transaction.findFirst({
-      where: { id, userId: user.id },
-      select: { id: true },
-    });
+    // Ownership and body checks run together; "not found" still wins over a bad body
+    const body = await request.json().catch(() => null);
+    const [existing, parsed] = await Promise.all([
+      prisma.transaction.findFirst({ where: { id, userId: user.id }, select: { id: true } }),
+      parseTransactionBody(body, user.id),
+    ]);
 
     if (!existing) {
       return NextResponse.json(NOT_FOUND, { status: 404 });
     }
+    if (!parsed.ok) return parseErrorResponse(parsed);
 
-    const body = await request.json().catch(() => null);
-    const parsed = await parseTransactionBody(body, user.id);
-
-    if (!parsed.ok) {
-      return NextResponse.json(
-        { success: false, message: parsed.message, errors: parsed.errors },
-        { status: parsed.status }
-      );
+    let updated;
+    try {
+      // Scoped by userId, so the ownership check stays atomic with the write
+      updated = await prisma.transaction.update({
+        where: { id, userId: user.id },
+        data: parsed.data,
+        include: { category: { select: TRANSACTION_CATEGORY_SELECT } },
+      });
+    } catch (error) {
+      // Deleted between the check and the update
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+        return NextResponse.json(NOT_FOUND, { status: 404 });
+      }
+      throw error;
     }
-
-    // updateMany scoped by userId keeps the ownership check atomic
-    const result = await prisma.transaction.updateMany({
-      where: { id, userId: user.id },
-      data: parsed.data,
-    });
-
-    if (result.count === 0) {
-      return NextResponse.json(NOT_FOUND, { status: 404 });
-    }
-
-    const updated = await prisma.transaction.findFirstOrThrow({
-      where: { id, userId: user.id },
-      include: { category: { select: TRANSACTION_CATEGORY_SELECT } },
-    });
 
     return NextResponse.json({
       success: true,
@@ -138,8 +136,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json(UNAUTHORIZED, { status: 401 });
     }
 
-    const { id } = await params;
-    if (!isValidId(id)) {
+    const id = await routeId(params);
+    if (!id) {
       return NextResponse.json(NOT_FOUND, { status: 404 });
     }
 

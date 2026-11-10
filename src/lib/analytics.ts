@@ -52,17 +52,25 @@ export function scopeWhere(scope: AnalyticsScope): Prisma.TransactionWhereInput 
   };
 }
 
+/**
+ * The scope as a raw SQL condition, matching scopeWhere. Bounds are passed as
+ * plain dates: a JS Date parameter would be sent as timestamptz and shifted by
+ * the DB session timezone when compared with the timezone-less "date" column.
+ */
+function scopeSql(scope: AnalyticsScope): Prisma.Sql {
+  return Prisma.sql`"userId" = ${scope.userId}
+    AND "date" >= ${toDateOnlyString(scope.range.start)}::date
+    AND "date" < (${toDateOnlyString(scope.range.end)}::date + 1)
+    ${scope.type ? Prisma.sql`AND "type" = ${scope.type}::"TransactionType"` : Prisma.empty}
+    ${scope.categoryId ? Prisma.sql`AND "categoryId" = ${scope.categoryId}` : Prisma.empty}`;
+}
+
 /** Whether any transaction in the scope has a fractional amount (sen). */
 export async function scopeHasFractionalAmount(scope: AnalyticsScope): Promise<boolean> {
   const rows = await prisma.$queryRaw<{ found: boolean }[]>`
     SELECT EXISTS (
       SELECT 1 FROM "transactions"
-      WHERE "userId" = ${scope.userId}
-        AND "date" >= ${toDateOnlyString(scope.range.start)}::date
-        AND "date" < (${toDateOnlyString(scope.range.end)}::date + 1)
-        AND "amount" <> trunc("amount")
-        ${scope.type ? Prisma.sql`AND "type" = ${scope.type}::"TransactionType"` : Prisma.empty}
-        ${scope.categoryId ? Prisma.sql`AND "categoryId" = ${scope.categoryId}` : Prisma.empty}
+      WHERE ${scopeSql(scope)} AND "amount" <> trunc("amount")
     ) AS found
   `;
   return rows[0]?.found ?? false;
@@ -76,9 +84,14 @@ export interface PeriodTotals {
 }
 
 export async function getPeriodTotals(scope: AnalyticsScope): Promise<PeriodTotals> {
+  return getTotals(scopeWhere(scope));
+}
+
+/** Income and expense totals (in cents) and counts for any transaction filter. */
+export async function getTotals(where: Prisma.TransactionWhereInput): Promise<PeriodTotals> {
   const groups = await prisma.transaction.groupBy({
     by: ["type"],
-    where: scopeWhere(scope),
+    where,
     _sum: { amount: true },
     _count: { _all: true },
   });
@@ -107,19 +120,12 @@ export async function getTimeSeries(
   scope: AnalyticsScope,
   granularity: Granularity = chooseGranularity(scope.range)
 ): Promise<SeriesPoint[]> {
-  // Bounds are passed as plain dates: a JS Date parameter would be sent as
-  // timestamptz and shifted by the DB session timezone when compared with the
-  // timezone-less "date" column.
   const rows = await prisma.$queryRaw<
     { bucket: Date; type: TransactionType; total: Prisma.Decimal }[]
   >`
     SELECT date_trunc(${granularity}, "date") AS bucket, "type", SUM("amount") AS total
     FROM "transactions"
-    WHERE "userId" = ${scope.userId}
-      AND "date" >= ${toDateOnlyString(scope.range.start)}::date
-      AND "date" < (${toDateOnlyString(scope.range.end)}::date + 1)
-      ${scope.type ? Prisma.sql`AND "type" = ${scope.type}::"TransactionType"` : Prisma.empty}
-      ${scope.categoryId ? Prisma.sql`AND "categoryId" = ${scope.categoryId}` : Prisma.empty}
+    WHERE ${scopeSql(scope)}
     GROUP BY 1, 2
   `;
 
@@ -154,19 +160,21 @@ export interface CategoryBreakdownItem {
 export async function getExpenseBreakdown(scope: AnalyticsScope): Promise<CategoryBreakdownItem[]> {
   if (scope.type === "INCOME") return [];
 
-  const groups = await prisma.transaction.groupBy({
-    by: ["categoryId"],
-    where: { ...scopeWhere(scope), type: "EXPENSE" },
-    _sum: { amount: true },
-    _count: { _all: true },
-  });
+  // Category names load alongside the sums rather than after them (one query, no N+1)
+  const [groups, categories] = await Promise.all([
+    prisma.transaction.groupBy({
+      by: ["categoryId"],
+      where: { ...scopeWhere(scope), type: "EXPENSE" },
+      _sum: { amount: true },
+      _count: { _all: true },
+    }),
+    prisma.category.findMany({
+      where: { userId: scope.userId },
+      select: { id: true, name: true, color: true },
+    }),
+  ]);
   if (groups.length === 0) return [];
 
-  // One query for all category names (no N+1)
-  const categories = await prisma.category.findMany({
-    where: { userId: scope.userId, id: { in: groups.map((g) => g.categoryId) } },
-    select: { id: true, name: true, color: true },
-  });
   const categoryById = new Map(categories.map((c) => [c.id, c]));
 
   const totalCents = groups.reduce((sum, g) => sum + decimalToCents(g._sum.amount), 0);
@@ -314,3 +322,5 @@ export async function getDashboardAnalytics(userId: string, period: ResolvedPeri
     breakdown,
   };
 }
+
+export type DashboardAnalytics = Awaited<ReturnType<typeof getDashboardAnalytics>>;

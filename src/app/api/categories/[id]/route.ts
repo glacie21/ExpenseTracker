@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
+import { UNAUTHORIZED } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isUniqueViolation, isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib/dbErrors";
@@ -9,11 +10,6 @@ import { isValidId, validateCategoryInput } from "@/lib/validations";
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
-
-const UNAUTHORIZED = {
-  success: false,
-  message: "Akses ditolak. Sesi tidak valid atau telah berakhir.",
-};
 
 const NOT_FOUND = {
   success: false,

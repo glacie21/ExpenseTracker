@@ -1,13 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
+import { UNAUTHORIZED } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib/dbErrors";
 import {
   TRANSACTION_CATEGORY_SELECT,
   buildTransactionFilter,
+  parseErrorResponse,
   parseTransactionBody,
   serializeTransaction,
 } from "@/lib/transactions";
+
+// Upper bound keeps skip a safe integer; pages past the end just come back empty
+const MAX_PAGE = 1_000_000;
+const DEFAULT_LIMIT = 10;
+const MAX_LIMIT = 100;
+
+/** A positive integer query value, clamped to 1..max; anything else becomes `fallback`. */
+function intParam(value: string | null, fallback: number, max: number): number {
+  return Math.min(max, Math.max(1, parseInt(value ?? "", 10) || fallback));
+}
 
 /**
  * GET /api/transactions
@@ -16,22 +28,16 @@ import {
  * Query: search, type (INCOME|EXPENSE), categoryId, startDate, endDate (YYYY-MM-DD),
  * month (1-12), year, sort (newest|oldest), page, limit (max 100).
  */
-const MAX_PAGE = 1_000_000;
-
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Akses ditolak. Sesi tidak valid atau telah berakhir." },
-        { status: 401 }
-      );
+      return NextResponse.json(UNAUTHORIZED, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
-    // Upper bound keeps skip a safe integer; pages past the end just come back empty
-    const page = Math.min(MAX_PAGE, Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "10", 10) || 10));
+    const page = intParam(searchParams.get("page"), 1, MAX_PAGE);
+    const limit = intParam(searchParams.get("limit"), DEFAULT_LIMIT, MAX_LIMIT);
 
     // Filter yang sama dipakai oleh ekspor CSV dan laporan; selalu dibatasi ke user login
     const filter = buildTransactionFilter(user.id, searchParams);
@@ -83,21 +89,13 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Akses ditolak. Sesi tidak valid atau telah berakhir." },
-        { status: 401 }
-      );
+      return NextResponse.json(UNAUTHORIZED, { status: 401 });
     }
 
     const body = await request.json().catch(() => null);
     const parsed = await parseTransactionBody(body, user.id);
 
-    if (!parsed.ok) {
-      return NextResponse.json(
-        { success: false, message: parsed.message, errors: parsed.errors },
-        { status: parsed.status }
-      );
-    }
+    if (!parsed.ok) return parseErrorResponse(parsed);
 
     const transaction = await prisma.transaction.create({
       data: {
