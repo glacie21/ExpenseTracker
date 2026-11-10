@@ -82,6 +82,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Asked by startFileDownload before handing the URL to the browser's download manager
+    if (searchParams.has("check")) {
+      return NextResponse.json({ success: true });
+    }
+
     const today = toDateOnlyString(new Date());
     return new Response(csvStream(transactionExportBatches(filter.where, filter.sort, MAX_EXPORT_ROWS)), {
       headers: {

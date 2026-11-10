@@ -11,7 +11,7 @@ import { TransactionModal } from "@/components/transactions/TransactionModal";
 import { TransactionImportModal } from "@/components/transactions/TransactionImportModal";
 import { Category, PaginatedTransactions, Transaction, TransactionType } from "@/types";
 import { Download, Plus, RefreshCw, Upload } from "lucide-react";
-import { downloadFile } from "@/lib/download";
+import { startFileDownload } from "@/lib/download";
 import { useExternalNavigationKey } from "@/lib/useExternalNavigationKey";
 
 const PAGE_SIZE = 10;
@@ -180,17 +180,15 @@ function TransactionsView({ writeQuery }: { writeQuery: (pathname: string, query
   const reload = () => setReloadToken((t) => t + 1);
 
   const [isExporting, setIsExporting] = useState(false);
+  const CSV_STARTED = "Unduhan CSV dimulai. Lihat progresnya di daftar unduhan browser.";
   const handleExportCsv = async () => {
     setIsExporting(true);
     try {
       // Filter aktif tanpa nomor halaman: ekspor mencakup semua hasil filter
       const params = new URLSearchParams(filterQuery);
       params.delete("page");
-      const filename = await downloadFile(
-        `/api/transactions/export?${params.toString()}`,
-        "transaksi.csv"
-      );
-      setFeedback({ type: "success", message: `File ${filename} berhasil diunduh.` });
+      await startFileDownload(`/api/transactions/export?${params.toString()}`);
+      setFeedback({ type: "success", message: CSV_STARTED });
     } catch (error) {
       setFeedback({
         type: "error",
