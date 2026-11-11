@@ -31,6 +31,7 @@ import { categoryOptionLabel, formatRupiah } from "@/lib/formatters";
 import { downloadFile, startFileDownload } from "@/lib/download";
 import { REPORT_FORMATS } from "@/lib/reportFormats";
 import { Category, PaginatedTransactions, Transaction, TransactionType } from "@/types";
+import { NEUTRAL_CATEGORY_COLOR } from "@/components/charts/chartTheme";
 
 type PeriodType = "week" | "month" | "year" | "custom";
 
@@ -509,7 +510,7 @@ function ReportsView({ writeQuery }: { writeQuery: (pathname: string, query: str
                           <span className="inline-flex items-center gap-2 text-ink">
                             <span
                               className="h-2 w-2 shrink-0 rounded-full"
-                              style={{ backgroundColor: c.color || "var(--ink-3)" }}
+                              style={{ backgroundColor: c.color || NEUTRAL_CATEGORY_COLOR }}
                               aria-hidden="true"
                             />
                             {c.name}

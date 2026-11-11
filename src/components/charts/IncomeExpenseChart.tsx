@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { BarChart3 } from "lucide-react";
 import { formatRupiah, formatRupiahCompact } from "@/lib/formatters";
 import {
@@ -46,6 +46,94 @@ export function IncomeExpenseChart({ series, granularity }: IncomeExpenseChartPr
 
   const hasData = series.some((p) => p.income > 0 || p.expense > 0);
 
+  // Dates, labels and formatted amounts per bucket, built once per data change
+  const points = useMemo(
+    () =>
+      series.map((p) => {
+        const date = parseDateOnly(p.date)!;
+        return {
+          ...p,
+          title: bucketTitle(date, granularity),
+          axis: axisLabel(date, granularity),
+          incomeText: formatRupiah(p.income),
+          expenseText: formatRupiah(p.expense),
+        };
+      }),
+    [series, granularity]
+  );
+
+  const innerHeight = HEIGHT - MARGIN.top - MARGIN.bottom;
+  const layout = useMemo(() => {
+    const ticks = niceTicks(Math.max(...points.map((p) => Math.max(p.income, p.expense))));
+    const maxTick = ticks[ticks.length - 1];
+    const innerWidth = Math.max(0, width - MARGIN.left - MARGIN.right);
+    const bucketWidth = points.length > 0 ? innerWidth / points.length : 0;
+    const y = (value: number) => MARGIN.top + innerHeight - (value / maxTick) * innerHeight;
+    return { ticks, maxTick, innerWidth, bucketWidth, y };
+  }, [points, width, innerHeight]);
+
+  // Bars, axis labels and hit targets only change with the data or the width;
+  // hovering re-renders just the highlight and the tooltip.
+  const bars = useMemo(() => {
+    const { maxTick, innerWidth, bucketWidth } = layout;
+    const barWidth = Math.max(1, Math.min(24, (bucketWidth * 0.8 - BAR_GAP) / 2));
+    const labelEvery = Math.max(1, Math.ceil(points.length / Math.max(1, innerWidth / 64)));
+    const baseline = MARGIN.top + innerHeight;
+    return points.map((point, i) => {
+      const x0 = MARGIN.left + bucketWidth * i;
+      const center = x0 + bucketWidth / 2;
+      const incomeH = (point.income / maxTick) * innerHeight;
+      const expenseH = (point.expense / maxTick) * innerHeight;
+      return (
+        <g key={point.date}>
+          {incomeH > 0 && (
+            <path
+              d={roundedTopBar(center - BAR_GAP / 2 - barWidth, baseline - incomeH, barWidth, incomeH)}
+              style={{ fill: INCOME_COLOR }}
+            />
+          )}
+          {expenseH > 0 && (
+            <path
+              d={roundedTopBar(center + BAR_GAP / 2, baseline - expenseH, barWidth, expenseH)}
+              style={{ fill: EXPENSE_COLOR }}
+            />
+          )}
+          {i % labelEvery === 0 && (
+            <text x={center} y={HEIGHT - 8} textAnchor="middle" className="fill-ink-3 text-[11px]">
+              {point.axis}
+            </text>
+          )}
+          {/* Hit target: the whole bucket column, also keyboard focusable */}
+          <rect
+            x={x0}
+            y={MARGIN.top}
+            width={bucketWidth}
+            height={innerHeight}
+            fill="transparent"
+            tabIndex={0}
+            aria-label={`${point.title}: pemasukan ${point.incomeText}, pengeluaran ${point.expenseText}`}
+            onPointerEnter={() => setActive(i)}
+            onFocus={() => setActive(i)}
+            onBlur={() => setActive(null)}
+            className="cursor-default outline-none focus-visible:stroke-accent focus-visible:stroke-2"
+          />
+        </g>
+      );
+    });
+  }, [points, layout, innerHeight]);
+
+  const tableRows = useMemo(
+    () =>
+      points.map((point) => (
+        <tr key={point.date}>
+          <td className="px-3 py-1.5">{point.title}</td>
+          <td className="num px-3 py-1.5 text-right">{point.incomeText}</td>
+          <td className="num px-3 py-1.5 text-right">{point.expenseText}</td>
+        </tr>
+      )),
+    [points]
+  );
+
   // The container only exists while there is data, so re-attach when that changes
   useEffect(() => {
     const el = containerRef.current;
@@ -81,17 +169,9 @@ export function IncomeExpenseChart({ series, granularity }: IncomeExpenseChartPr
     );
   }
 
-  const ticks = niceTicks(Math.max(...series.map((p) => Math.max(p.income, p.expense))));
-  const maxTick = ticks[ticks.length - 1];
-  const innerWidth = Math.max(0, width - MARGIN.left - MARGIN.right);
-  const innerHeight = HEIGHT - MARGIN.top - MARGIN.bottom;
-  const bucketWidth = series.length > 0 ? innerWidth / series.length : 0;
-  const barWidth = Math.max(1, Math.min(24, (bucketWidth * 0.8 - BAR_GAP) / 2));
-  const y = (value: number) => MARGIN.top + innerHeight - (value / maxTick) * innerHeight;
-  const labelEvery = Math.max(1, Math.ceil(series.length / Math.max(1, innerWidth / 64)));
+  const { ticks, bucketWidth, y } = layout;
 
-  const activePoint = active !== null ? series[active] : null;
-  const activeDate = activePoint ? parseDateOnly(activePoint.date) : null;
+  const activePoint = active !== null ? points[active] : null;
   const tooltipLeft =
     active !== null ? MARGIN.left + bucketWidth * active + bucketWidth / 2 : 0;
   const flipTooltip = tooltipLeft > width - 180;
@@ -130,63 +210,17 @@ export function IncomeExpenseChart({ series, granularity }: IncomeExpenseChartPr
               </g>
             ))}
 
-            {series.map((point, i) => {
-              const x0 = MARGIN.left + bucketWidth * i;
-              const center = x0 + bucketWidth / 2;
-              const date = parseDateOnly(point.date)!;
-              const incomeH = (point.income / maxTick) * innerHeight;
-              const expenseH = (point.expense / maxTick) * innerHeight;
-              const baseline = MARGIN.top + innerHeight;
-              return (
-                <g key={point.date}>
-                  {active === i && (
-                    <rect
-                      x={x0}
-                      y={MARGIN.top}
-                      width={bucketWidth}
-                      height={innerHeight}
-                      className="fill-sunken"
-                    />
-                  )}
-                  {incomeH > 0 && (
-                    <path
-                      d={roundedTopBar(center - BAR_GAP / 2 - barWidth, baseline - incomeH, barWidth, incomeH)}
-                      style={{ fill: INCOME_COLOR }}
-                    />
-                  )}
-                  {expenseH > 0 && (
-                    <path
-                      d={roundedTopBar(center + BAR_GAP / 2, baseline - expenseH, barWidth, expenseH)}
-                      style={{ fill: EXPENSE_COLOR }}
-                    />
-                  )}
-                  {i % labelEvery === 0 && (
-                    <text
-                      x={center}
-                      y={HEIGHT - 8}
-                      textAnchor="middle"
-                      className="fill-ink-3 text-[11px]"
-                    >
-                      {axisLabel(date, granularity)}
-                    </text>
-                  )}
-                  {/* Hit target: the whole bucket column, also keyboard focusable */}
-                  <rect
-                    x={x0}
-                    y={MARGIN.top}
-                    width={bucketWidth}
-                    height={innerHeight}
-                    fill="transparent"
-                    tabIndex={0}
-                    aria-label={`${bucketTitle(date, granularity)}: pemasukan ${formatRupiah(point.income)}, pengeluaran ${formatRupiah(point.expense)}`}
-                    onPointerEnter={() => setActive(i)}
-                    onFocus={() => setActive(i)}
-                    onBlur={() => setActive(null)}
-                    className="cursor-default outline-none focus-visible:stroke-accent focus-visible:stroke-2"
-                  />
-                </g>
-              );
-            })}
+            {active !== null && (
+              <rect
+                x={MARGIN.left + bucketWidth * active}
+                y={MARGIN.top}
+                width={bucketWidth}
+                height={innerHeight}
+                className="fill-sunken"
+              />
+            )}
+            {bars}
+
 
             <line
               x1={MARGIN.left}
@@ -199,7 +233,7 @@ export function IncomeExpenseChart({ series, granularity }: IncomeExpenseChartPr
           </svg>
         )}
 
-        {activePoint && activeDate && (
+        {activePoint && (
           <div
             role="status"
             className="pointer-events-none absolute top-2 z-10 min-w-[170px] rounded-xl border border-rule bg-surface px-3 py-2 text-xs shadow-[0_8px_20px_-10px_rgb(6_30_25/0.35)]"
@@ -210,20 +244,18 @@ export function IncomeExpenseChart({ series, granularity }: IncomeExpenseChartPr
             }
           >
             <p className="mb-1.5 font-medium text-ink-3">
-              {bucketTitle(activeDate, granularity)}
+              {activePoint.title}
             </p>
             {[
-              { label: "Pemasukan", value: activePoint.income, color: INCOME_COLOR },
-              { label: "Pengeluaran", value: activePoint.expense, color: EXPENSE_COLOR },
+              { label: "Pemasukan", text: activePoint.incomeText, color: INCOME_COLOR },
+              { label: "Pengeluaran", text: activePoint.expenseText, color: EXPENSE_COLOR },
             ].map((row) => (
               <div key={row.label} className="flex items-center justify-between gap-4 py-0.5">
                 <span className="inline-flex items-center gap-1.5 text-ink-3">
                   <span className="h-0.5 w-3 rounded" style={{ backgroundColor: row.color }} />
                   {row.label}
                 </span>
-                <span className="num font-semibold text-ink">
-                  {formatRupiah(row.value)}
-                </span>
+                <span className="num font-semibold text-ink">{row.text}</span>
               </div>
             ))}
           </div>
@@ -244,15 +276,7 @@ export function IncomeExpenseChart({ series, granularity }: IncomeExpenseChartPr
                 <th scope="col" className="px-3 py-2 text-right font-medium">Pengeluaran</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-rule-soft text-ink-2">
-              {series.map((point) => (
-                <tr key={point.date}>
-                  <td className="px-3 py-1.5">{bucketTitle(parseDateOnly(point.date)!, granularity)}</td>
-                  <td className="num px-3 py-1.5 text-right">{formatRupiah(point.income)}</td>
-                  <td className="num px-3 py-1.5 text-right">{formatRupiah(point.expense)}</td>
-                </tr>
-              ))}
-            </tbody>
+            <tbody className="divide-y divide-rule-soft text-ink-2">{tableRows}</tbody>
           </table>
         </div>
       </details>

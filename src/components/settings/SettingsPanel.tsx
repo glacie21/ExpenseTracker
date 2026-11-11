@@ -8,6 +8,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { SafeUser } from "@/types";
+import { nameError, validatePasswordChangeInput } from "@/lib/validations";
 
 type Feedback = { type: "success" | "error"; message: string } | null;
 
@@ -75,8 +76,9 @@ function ProfileSection({ user }: { user: SafeUser }) {
     e.preventDefault();
     setFeedback(null);
     setErrors({});
-    if (name.trim().length < 2) {
-      setErrors({ name: "Nama minimal 2 karakter" });
+    const problem = nameError(name.trim());
+    if (problem) {
+      setErrors({ name: problem });
       return;
     }
     setSaving(true);
@@ -134,12 +136,10 @@ function PasswordSection() {
     e.preventDefault();
     setFeedback(null);
 
-    const clientErrors: Record<string, string> = {};
-    if (!form.currentPassword) clientErrors.currentPassword = "Password saat ini wajib diisi";
-    if (form.newPassword.length < 8) clientErrors.newPassword = "Password minimal 8 karakter";
-    if (form.newPassword !== form.confirmPassword) clientErrors.confirmPassword = "Konfirmasi password tidak cocok";
+    // Same rules as the API (length, 72-byte bcrypt limit, differs from the current one)
+    const { isValid, errors: clientErrors } = validatePasswordChangeInput(form);
     setErrors(clientErrors);
-    if (Object.keys(clientErrors).length > 0) return;
+    if (!isValid) return;
 
     setSaving(true);
     const result = await sendJson("PUT", "/api/account/password", form);

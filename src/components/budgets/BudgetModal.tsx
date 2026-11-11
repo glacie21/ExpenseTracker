@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
 import { formatRupiah } from "@/lib/formatters";
-import { normalizeAmount } from "@/lib/validations";
+import { BUDGET_MAX_YEAR, BUDGET_MIN_YEAR, validateBudgetInput } from "@/lib/validations";
 import { Category } from "@/types";
 import { FIELD, FIELD_LABEL } from "@/components/ui/fieldStyles";
 import { MONTH_NAMES } from "@/lib/dates";
@@ -29,7 +29,8 @@ interface BudgetModalProps {
 /** Create/edit a monthly budget. Parent mounts it with a fresh `key` per open. */
 export function BudgetModal({ onClose, onSuccess, initialData, categories }: BudgetModalProps) {
   const isEditing = Boolean(initialData.id);
-  const expenseCategories = categories.filter((c) => c.type === "EXPENSE");
+  // The page loads expense categories only (budgets apply to spending)
+  const expenseCategories = categories;
 
   const [categoryId, setCategoryId] = useState(initialData.categoryId || expenseCategories[0]?.id || "");
   const [amount, setAmount] = useState(initialData.amount ? String(initialData.amount) : "");
@@ -44,17 +45,16 @@ export function BudgetModal({ onClose, onSuccess, initialData, categories }: Bud
     ? categoryId
     : (expenseCategories[0]?.id ?? "");
 
+  // Same rules as the API
   const validate = () => {
-    const next: Record<string, string> = {};
-    if (!effectiveCategoryId) next.categoryId = "Kategori pengeluaran wajib dipilih";
-    const num = parseFloat(amount);
-    if (!amount.trim() || isNaN(num)) next.amount = "Nominal anggaran wajib diisi";
-    else if (num <= 0) next.amount = "Nominal anggaran harus lebih besar dari Rp0";
-    else if (normalizeAmount(amount) === null) next.amount = "Maksimal 13 digit dengan 2 angka desimal";
-    const y = Number(year);
-    if (!Number.isInteger(y) || y < 2000 || y > 2100) next.year = "Tahun harus antara 2000 dan 2100";
+    const { isValid, errors: next } = validateBudgetInput({
+      categoryId: effectiveCategoryId,
+      amount: amount.trim(),
+      month,
+      year,
+    });
     setErrors(next);
-    return Object.keys(next).length === 0;
+    return isValid;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -164,8 +164,8 @@ export function BudgetModal({ onClose, onSuccess, initialData, categories }: Bud
           <Input
             label="Tahun"
             type="number"
-            min="2000"
-            max="2100"
+            min={BUDGET_MIN_YEAR}
+            max={BUDGET_MAX_YEAR}
             value={year}
             onChange={(e) => setYear(e.target.value)}
             error={errors.year}

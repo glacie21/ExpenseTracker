@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { createSessionToken, hashPassword, setSessionCookie } from "@/lib/auth";
+import { createSessionToken, hashPassword, setSessionCookie, toSafeUser, SAFE_USER_SELECT } from "@/lib/auth";
+import { DEFAULT_CATEGORIES } from "@/lib/categories";
+import { tooManyRequestsResponse, validationErrorResponse } from "@/lib/apiResponse";
 import { validateRegisterInput } from "@/lib/validations";
 import { isUniqueViolation } from "@/lib/dbErrors";
 import {
@@ -10,7 +12,6 @@ import {
   clientIp,
   hitRateLimit,
   releaseRateLimit,
-  tooManyRequestsMessage,
 } from "@/lib/rateLimit";
 
 function emailTakenResponse() {
@@ -34,26 +35,12 @@ export async function POST(request: NextRequest) {
     const limit = [checkRateLimit(ipKey, REGISTER_IP_RULE), checkRateLimit(takenKey, REGISTER_TAKEN_RULE)].find(
       (status) => status.limited
     );
-    if (limit) {
-      return NextResponse.json(
-        { success: false, message: tooManyRequestsMessage(limit.retryAfter) },
-        { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
-      );
-    }
+    if (limit) return tooManyRequestsResponse(limit.retryAfter);
 
     const body = await request.json().catch(() => null);
     const validation = validateRegisterInput(body ?? {});
 
-    if (!validation.isValid) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Data input tidak valid",
-          errors: validation.errors,
-        },
-        { status: 400 }
-      );
-    }
+    if (!validation.isValid) return validationErrorResponse(validation.errors);
 
     const email = String(body.email).trim().toLowerCase();
     const name = String(body.name).trim();
@@ -74,44 +61,29 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await hashPassword(password);
 
-    // Create user in database
+    // The user and their default categories are created together, in one write
     const user = await prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
+        categories: {
+          createMany: { data: DEFAULT_CATEGORIES.map(({ name, type, color }) => ({ name, type, color })) },
+        },
       },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        createdAt: true,
-        updatedAt: true,
-        sessionVersion: true,
-      },
+      select: { ...SAFE_USER_SELECT, sessionVersion: true },
     });
     hitRateLimit(ipKey, REGISTER_IP_RULE);
     releaseRateLimit(takenKey);
 
-    // Initialize default categories for new user
-    const { ensureUserCategories } = await import("@/lib/categories");
-    await ensureUserCategories(user.id);
-
     const token = await createSessionToken(user);
-    const safeUser = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    };
 
     // Prepare response with secure cookie
     const response = NextResponse.json(
       {
         success: true,
         message: "Pendaftaran berhasil! Mengalihkan ke dashboard...",
-        data: { user: safeUser },
+        data: { user: toSafeUser(user) },
       },
       { status: 201 }
     );

@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { UNAUTHORIZED } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { parseErrorResponse } from "@/lib/apiResponse";
 import { isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib/dbErrors";
 import {
   TRANSACTION_CATEGORY_SELECT,
   buildTransactionFilter,
-  parseErrorResponse,
   parseTransactionBody,
   serializeTransaction,
 } from "@/lib/transactions";

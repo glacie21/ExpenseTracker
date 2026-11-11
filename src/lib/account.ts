@@ -5,10 +5,9 @@ import {
   ACCOUNT_PASSWORD_RULE,
   checkRateLimit,
   hitRateLimit,
-  releaseRateLimit,
   resetRateLimit,
-  tooManyRequestsMessage,
 } from "@/lib/rateLimit";
+import { tooManyRequestsResponse } from "@/lib/apiResponse";
 
 export const UNAUTHORIZED = {
   success: false,
@@ -30,13 +29,7 @@ export async function verifyCurrentPassword(
   const key = `account:password:${userId}`;
   const limit = checkRateLimit(key, ACCOUNT_PASSWORD_RULE);
   if (limit.limited) {
-    return {
-      ok: false,
-      response: NextResponse.json(
-        { success: false, message: tooManyRequestsMessage(limit.retryAfter) },
-        { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
-      ),
-    };
+    return { ok: false, response: tooManyRequestsResponse(limit.retryAfter) };
   }
 
   // Counted before the password is compared so parallel guesses cannot all pass
@@ -48,7 +41,6 @@ export async function verifyCurrentPassword(
   }
 
   const valid = typeof password === "string" && password !== "" && (await comparePassword(password, user.password));
-  if (valid) releaseRateLimit(key);
   if (!valid) {
     return {
       ok: false,

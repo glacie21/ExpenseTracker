@@ -39,10 +39,17 @@ export function Modal({
     return () => previouslyFocused?.focus?.();
   }, [isOpen]);
 
+  // Callers pass a new onClose on most renders; reading it through a ref keeps
+  // the listener (and the body scroll lock below) from being reset each time
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen) {
-        onClose();
+        onCloseRef.current();
         return;
       }
       // Wrap Tab and Shift+Tab so focus never reaches the page behind the backdrop
@@ -73,7 +80,7 @@ export function Modal({
       document.body.style.overflow = "unset";
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

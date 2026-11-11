@@ -63,14 +63,3 @@ export function CardContent({
   );
 }
 
-export function CardFooter({
-  className = "",
-  children,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div className={`flex items-center px-5 pb-5 sm:px-6 ${className}`} {...props}>
-      {children}
-    </div>
-  );
-}

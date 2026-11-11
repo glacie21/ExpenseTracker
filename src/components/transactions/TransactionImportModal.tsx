@@ -253,7 +253,7 @@ export function TransactionImportModal({
                 <span className="font-semibold text-accent">Kategori baru terdeteksi: </span>
                 {previewData.newCategories.map((c, i) => (
                   <span key={i} className="inline-block mr-1.5">
-                    <Badge variant={c.type === "INCOME" ? "success" : "neutral"} size="sm">
+                    <Badge variant={c.type === "INCOME" ? "success" : "neutral"}>
                       {c.name} ({c.type})
                     </Badge>
                   </span>
@@ -295,7 +295,7 @@ export function TransactionImportModal({
                           {row.title}
                         </td>
                         <td className="py-2 px-3">
-                          <Badge variant={row.type === "INCOME" ? "success" : "danger"} size="sm">
+                          <Badge variant={row.type === "INCOME" ? "success" : "danger"}>
                             {row.type === "INCOME" ? "Pemasukan" : "Pengeluaran"}
                           </Badge>
                         </td>

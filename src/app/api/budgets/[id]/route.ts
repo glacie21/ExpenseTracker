@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { UNAUTHORIZED } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { DUPLICATE_BUDGET_MESSAGE, parseBudgetBody } from "@/lib/budgets";
-import { isUniqueViolation } from "@/lib/dbErrors";
+import { duplicateBudgetResponse, parseBudgetBody, serializeBudget } from "@/lib/budgets";
+import { parseErrorResponse } from "@/lib/apiResponse";
+import { isRecordNotFound, isUniqueViolation } from "@/lib/dbErrors";
 import { isValidId } from "@/lib/validations";
 
 interface RouteParams {
@@ -31,45 +32,28 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json(NOT_FOUND, { status: 404 });
     }
 
-    const existing = await prisma.budget.findFirst({
-      where: { id, userId: user.id },
-      select: { id: true },
-    });
+    // Ownership and body checks run together; "not found" still wins over a bad body
+    const body = await request.json().catch(() => null);
+    const [existing, parsed] = await Promise.all([
+      prisma.budget.findFirst({ where: { id, userId: user.id }, select: { id: true } }),
+      parseBudgetBody(body, user.id),
+    ]);
     if (!existing) {
       return NextResponse.json(NOT_FOUND, { status: 404 });
     }
+    if (!parsed.ok) return parseErrorResponse(parsed);
 
-    const body = await request.json().catch(() => null);
-    const parsed = await parseBudgetBody(body, user.id);
-    if (!parsed.ok) {
-      return NextResponse.json(
-        { success: false, message: parsed.message, errors: parsed.errors },
-        { status: parsed.status }
-      );
-    }
-
-    // Scoped by userId so the ownership check is part of the write
-    const result = await prisma.budget.updateMany({
-      where: { id, userId: user.id },
-      data: parsed.data,
-    });
-    if (result.count === 0) {
-      return NextResponse.json(NOT_FOUND, { status: 404 });
-    }
-
-    const budget = await prisma.budget.findFirstOrThrow({ where: { id, userId: user.id } });
+    // Scoped by userId so the ownership check is part of the write; returns the updated row
+    const budget = await prisma.budget.update({ where: { id, userId: user.id }, data: parsed.data });
     return NextResponse.json({
       success: true,
       message: "Anggaran berhasil diperbarui.",
-      data: { budget: { ...budget, amount: budget.amount.toNumber() } },
+      data: { budget: serializeBudget(budget) },
     });
   } catch (error) {
-    if (isUniqueViolation(error)) {
-      return NextResponse.json(
-        { success: false, message: DUPLICATE_BUDGET_MESSAGE, errors: { categoryId: "Anggaran sudah ada" } },
-        { status: 409 }
-      );
-    }
+    if (isUniqueViolation(error)) return duplicateBudgetResponse();
+    // Deleted between the check and the update
+    if (isRecordNotFound(error)) return NextResponse.json(NOT_FOUND, { status: 404 });
     console.error("PUT /api/budgets/[id] error:", error);
     return NextResponse.json(
       { success: false, message: "Gagal memperbarui anggaran." },

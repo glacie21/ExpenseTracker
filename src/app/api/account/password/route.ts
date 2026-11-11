@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSessionToken, getCurrentSession, hashPassword, setSessionCookie } from "@/lib/auth";
 import { UNAUTHORIZED, verifyCurrentPassword } from "@/lib/account";
+import { validationErrorResponse } from "@/lib/apiResponse";
 import { prisma } from "@/lib/prisma";
 import { validatePasswordChangeInput } from "@/lib/validations";
 
@@ -17,12 +18,7 @@ export async function PUT(request: NextRequest) {
 
     const body = await request.json().catch(() => null);
     const validation = validatePasswordChangeInput(body ?? {});
-    if (!validation.isValid) {
-      return NextResponse.json(
-        { success: false, message: "Data input tidak valid", errors: validation.errors },
-        { status: 400 }
-      );
-    }
+    if (!validation.isValid) return validationErrorResponse(validation.errors);
 
     const check = await verifyCurrentPassword(session.user.id, body.currentPassword, "currentPassword");
     if (!check.ok) return check.response;

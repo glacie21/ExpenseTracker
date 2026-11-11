@@ -1,7 +1,7 @@
 /**
  * Utility formatters for Expense Tracker
  */
-import { todayLocalISO } from "@/lib/dates";
+import { toDateOnlyString, todayLocalISO } from "@/lib/dates";
 
 const rupiahFormatter = new Intl.NumberFormat("id-ID", {
   style: "currency",
@@ -61,20 +61,17 @@ export function formatRupiahSigned(amount: number): string {
  * Format a transaction date (stored as UTC midnight) to a readable Indonesian string.
  * Example: 2026-10-08 -> "08 Okt 2026"
  */
+const dayFormatter = new Intl.DateTimeFormat("id-ID", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
 export function formatDate(date: string | Date | null | undefined): string {
   if (!date) return "-";
-  try {
-    const d = typeof date === "string" ? new Date(date) : date;
-    if (isNaN(d.getTime())) return "-";
-    return new Intl.DateTimeFormat("id-ID", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      timeZone: "UTC",
-    }).format(d);
-  } catch {
-    return "-";
-  }
+  const d = typeof date === "string" ? new Date(date) : date;
+  return isNaN(d.getTime()) ? "-" : dayFormatter.format(d);
 }
 
 /**
@@ -85,7 +82,7 @@ export function formatDateForInput(date: string | Date | null | undefined): stri
   if (!date) return todayLocalISO();
   const d = typeof date === "string" ? new Date(date) : date;
   if (isNaN(d.getTime())) return todayLocalISO();
-  return d.toISOString().split("T")[0];
+  return toDateOnlyString(d);
 }
 
 /** Option text in a category select; the type is spelled out only when both types are listed. */

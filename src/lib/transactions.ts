@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import type { ParseFailure } from "@/lib/apiResponse";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { MAX_DATE_YEAR, MIN_DATE_YEAR, endOfDayUTC, monthRangeUTC, parseDateOnly, yearRange } from "@/lib/dates";
@@ -22,16 +22,7 @@ interface TransactionWriteData {
   date: Date;
 }
 
-type ParseFailure = { ok: false; status: number; message: string; errors?: Record<string, string> };
 type ParseResult = { ok: true; data: TransactionWriteData } | ParseFailure;
-
-/** The response for a body that parseTransactionBody rejected. */
-export function parseErrorResponse(failure: ParseFailure) {
-  return NextResponse.json(
-    { success: false, message: failure.message, errors: failure.errors },
-    { status: failure.status }
-  );
-}
 
 /**
  * Validate a create/update request body and check that the category belongs

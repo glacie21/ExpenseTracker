@@ -139,7 +139,7 @@ export function startOfWeekUTC(date: Date): Date {
 }
 
 export function startOfMonthUTC(date: Date): Date {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+  return addMonthsUTC(date, 0);
 }
 
 export function endOfMonthUTC(date: Date): Date {
@@ -157,15 +157,17 @@ export function toDateOnlyString(date: Date): string {
 }
 
 /** Today's calendar day in `timeZone` (e.g. "Asia/Jakarta"), as UTC midnight. */
+const dayFormatters = new Map<string, Intl.DateTimeFormat>();
+
 export function todayInTimeZone(timeZone: string, now: Date = new Date()): Date {
   let formatted: string;
   try {
-    formatted = new Intl.DateTimeFormat("en-CA", {
-      timeZone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(now);
+    let formatter = dayFormatters.get(timeZone);
+    if (!formatter) {
+      formatter = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" });
+      dayFormatters.set(timeZone, formatter);
+    }
+    formatted = formatter.format(now);
   } catch {
     formatted = now.toISOString(); // unknown timezone: fall back to UTC
   }
@@ -362,7 +364,7 @@ export const MONTH_NAMES = [
   "Juli", "Agustus", "September", "Oktober", "November", "Desember",
 ];
 
-const MONTHS_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+const MONTHS_ID = MONTH_NAMES.map((name) => name.slice(0, 3)); // Jan, Feb, ..., Agu, ..., Des
 
 /** Short Indonesian label, e.g. "8 Okt 2026" (or "8 Okt" without year). */
 export function formatDayLabel(date: Date, withYear = true): string {

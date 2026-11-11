@@ -3,19 +3,10 @@ import { AlertOctagon, AlertTriangle, Check } from "lucide-react";
 import { Amount } from "@/components/ui/Amount";
 import { RowActions } from "@/components/ui/RowActions";
 import { BudgetStatus, formatPercent } from "@/lib/finance";
+import type { BudgetWithProgress } from "@/lib/budgets";
+import { NEUTRAL_CATEGORY_COLOR } from "@/components/charts/chartTheme";
 
-export interface BudgetView {
-  id: string;
-  categoryId: string;
-  category: { id: string; name: string; color: string | null };
-  month: number;
-  year: number;
-  amount: number;
-  spent: number;
-  remaining: number;
-  percent: number;
-  status: BudgetStatus;
-}
+export type BudgetView = BudgetWithProgress;
 
 // Status always pairs color with an icon and a text label
 export const BUDGET_STATUS: Record<
@@ -114,7 +105,7 @@ export function BudgetLedger({ budgets, totals, periodLabel, onEdit, onDelete }:
                 <span className="inline-flex items-center gap-2 text-ink">
                   <span
                     className="h-2 w-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: budget.category.color || "var(--ink-3)" }}
+                    style={{ backgroundColor: budget.category.color || NEUTRAL_CATEGORY_COLOR }}
                     aria-hidden="true"
                   />
                   {budget.category.name}

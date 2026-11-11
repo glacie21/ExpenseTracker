@@ -1,4 +1,4 @@
-import { latestTransactionDate, parseDateOnly } from "@/lib/dates";
+import { MAX_DATE_YEAR, latestTransactionDate, parseDateOnly } from "@/lib/dates";
 
 export interface ValidationResult {
   isValid: boolean;
@@ -39,12 +39,16 @@ export const PASSWORD_MIN_LENGTH = 8;
 // bcrypt ignores everything after 72 bytes, so longer passwords would give a false sense of security
 const PASSWORD_MAX_BYTES = 72;
 
-/** Error message for a new password, or null when it is acceptable. */
 /** JSON bodies are untyped: anything that is not a string counts as empty. */
 function asString(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
+function toResult(errors: Record<string, string>): ValidationResult {
+  return { isValid: Object.keys(errors).length === 0, errors };
+}
+
+/** Error message for a new password, or null when it is acceptable. */
 export function passwordError(password: string): string | null {
   if (!password) return "Password wajib diisi";
   if (password.length < PASSWORD_MIN_LENGTH) {
@@ -95,10 +99,7 @@ export function validateRegisterInput(data: {
     errors.confirmPassword = "Konfirmasi password tidak cocok dengan password";
   }
 
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors,
-  };
+  return toResult(errors);
 }
 
 export function validatePasswordChangeInput(data: {
@@ -107,9 +108,9 @@ export function validatePasswordChangeInput(data: {
   confirmPassword?: unknown;
 }): ValidationResult {
   const errors: Record<string, string> = {};
-  const currentPassword = typeof data.currentPassword === "string" ? data.currentPassword : "";
-  const newPassword = typeof data.newPassword === "string" ? data.newPassword : "";
-  const confirmPassword = typeof data.confirmPassword === "string" ? data.confirmPassword : "";
+  const currentPassword = asString(data.currentPassword);
+  const newPassword = asString(data.newPassword);
+  const confirmPassword = asString(data.confirmPassword);
 
   if (!currentPassword) errors.currentPassword = "Password saat ini wajib diisi";
 
@@ -126,10 +127,7 @@ export function validatePasswordChangeInput(data: {
     errors.confirmPassword = "Konfirmasi password tidak cocok dengan password baru";
   }
 
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors,
-  };
+  return toResult(errors);
 }
 
 export function validateLoginInput(data: {
@@ -151,10 +149,7 @@ export function validateLoginInput(data: {
     errors.password = "Password wajib diisi";
   }
 
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors,
-  };
+  return toResult(errors);
 }
 
 export function validateTransactionInput(data: {
@@ -227,10 +222,7 @@ export function validateTransactionInput(data: {
     }
   }
 
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors,
-  };
+  return toResult(errors);
 }
 
 export function validateCategoryInput(data: {
@@ -260,14 +252,25 @@ export function validateCategoryInput(data: {
     }
   }
 
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors,
-  };
+  return toResult(errors);
 }
 
 export const BUDGET_MIN_YEAR = 2000;
-export const BUDGET_MAX_YEAR = 2100;
+export const BUDGET_MAX_YEAR = MAX_DATE_YEAR;
+
+/** Month (1-12) and year rules of a budget; empty when both are valid. */
+export function budgetPeriodErrors(month: unknown, year: unknown): Record<string, string> {
+  const errors: Record<string, string> = {};
+  const m = Number(month);
+  if (!Number.isInteger(m) || m < 1 || m > 12) {
+    errors.month = "Bulan harus antara 1 dan 12";
+  }
+  const y = Number(year);
+  if (!Number.isInteger(y) || y < BUDGET_MIN_YEAR || y > BUDGET_MAX_YEAR) {
+    errors.year = `Tahun harus antara ${BUDGET_MIN_YEAR} dan ${BUDGET_MAX_YEAR}`;
+  }
+  return errors;
+}
 
 export function validateBudgetInput(data: {
   categoryId?: unknown;
@@ -295,18 +298,7 @@ export function validateBudgetInput(data: {
     }
   }
 
-  const month = Number(data.month);
-  if (!Number.isInteger(month) || month < 1 || month > 12) {
-    errors.month = "Bulan harus antara 1 dan 12";
-  }
+  Object.assign(errors, budgetPeriodErrors(data.month, data.year));
 
-  const year = Number(data.year);
-  if (!Number.isInteger(year) || year < BUDGET_MIN_YEAR || year > BUDGET_MAX_YEAR) {
-    errors.year = `Tahun harus antara ${BUDGET_MIN_YEAR} dan ${BUDGET_MAX_YEAR}`;
-  }
-
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors,
-  };
+  return toResult(errors);
 }
