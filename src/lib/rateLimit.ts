@@ -85,15 +85,15 @@ const MINUTE = 60_000;
  * Failed logins for one email address from one client IP. Keyed per IP so a
  * stranger cannot lock the owner out by guessing wrong on purpose.
  */
-export const LOGIN_EMAIL_IP_RULE: RateLimitRule = { limit: 5, windowMs: 15 * MINUTE };
+const LOGIN_EMAIL_IP_RULE: RateLimitRule = { limit: 5, windowMs: 15 * MINUTE };
 /**
  * Failed logins for one email address from any IP (guessing spread over many
  * IPs). Also the only per-email limit when the client IP is unknown, so it
  * falls back to the strict 5 there; see loginRules().
  */
-export const LOGIN_EMAIL_RULE: RateLimitRule = { limit: 20, windowMs: 15 * MINUTE };
+const LOGIN_EMAIL_RULE: RateLimitRule = { limit: 20, windowMs: 15 * MINUTE };
 /** Failed logins from one client IP across all emails (credential stuffing). */
-export const LOGIN_IP_RULE: RateLimitRule = { limit: 50, windowMs: 15 * MINUTE };
+const LOGIN_IP_RULE: RateLimitRule = { limit: 50, windowMs: 15 * MINUTE };
 /** New accounts from one client IP. */
 export const REGISTER_IP_RULE: RateLimitRule = { limit: 50, windowMs: 60 * MINUTE };
 /**

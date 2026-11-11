@@ -1,12 +1,10 @@
 import React from "react";
 
-export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   helperText?: string;
-  leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
-  containerClassName?: string;
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
@@ -16,9 +14,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
       label,
       error,
       helperText,
-      leftIcon,
       rightIcon,
-      containerClassName = "",
       id,
       ...props
     },
@@ -29,26 +25,19 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const messageId = `${inputId}-message`;
 
     return (
-      <div className={`flex flex-col gap-1.5 ${containerClassName}`}>
+      <div className="flex flex-col gap-1.5">
         {label && (
           <label htmlFor={inputId} className="text-sm font-medium text-ink-2">
             {label}
           </label>
         )}
         <div className="relative flex items-center">
-          {leftIcon && (
-            <div className="absolute left-3 flex items-center pointer-events-none text-ink-3">
-              {leftIcon}
-            </div>
-          )}
           <input
             id={inputId}
             ref={ref}
             aria-invalid={error ? true : undefined}
             aria-describedby={error || helperText ? messageId : undefined}
-            className={`h-10 w-full rounded-lg border bg-surface px-3 text-sm text-ink placeholder:text-ink-3 transition-colors focus:outline-none focus:border-accent focus:ring-3 focus:ring-accent/15 ${
-              leftIcon ? "pl-9" : ""
-            } ${rightIcon ? "pr-10" : ""} ${
+            className={`h-10 w-full rounded-lg border bg-surface px-3 text-sm text-ink placeholder:text-ink-3 transition-colors focus:outline-none focus:border-accent focus:ring-3 focus:ring-accent/15 ${rightIcon ? "pr-10" : ""} ${
               error ? "border-neg" : "border-rule hover:border-ink-3"
             } ${className}`}
             {...props}

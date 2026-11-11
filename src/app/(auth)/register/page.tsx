@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
 import { AuthFrame } from "@/components/layout/AuthFrame";
 import { RevealButton } from "@/components/ui/RevealButton";
+import { PASSWORD_MIN_LENGTH, validateRegisterInput } from "@/lib/validations";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -29,19 +30,9 @@ export default function RegisterPage() {
     setErrorMessage(null);
     setFieldErrors({});
 
-    // Client-side validation
-    const errors: Record<string, string> = {};
-    if (!name.trim()) errors.name = "Nama lengkap wajib diisi";
-    if (!email.trim()) errors.email = "Email wajib diisi";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = "Format email tidak valid";
-
-    if (!password) errors.password = "Password wajib diisi";
-    else if (password.length < 8) errors.password = "Password minimal 8 karakter";
-
-    if (!confirmPassword) errors.confirmPassword = "Konfirmasi password wajib diisi";
-    else if (password !== confirmPassword) errors.confirmPassword = "Konfirmasi password tidak cocok";
-
-    if (Object.keys(errors).length > 0) {
+    // Same rules as the API
+    const { isValid, errors } = validateRegisterInput({ name, email, password, confirmPassword });
+    if (!isValid) {
       setFieldErrors(errors);
       return;
     }
@@ -133,7 +124,7 @@ export default function RegisterPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           error={fieldErrors.password}
-          helperText="Minimal 8 karakter."
+          helperText={`Minimal ${PASSWORD_MIN_LENGTH} karakter.`}
           rightIcon={<RevealButton shown={showPassword} onToggle={() => setShowPassword(!showPassword)} />}
           autoComplete="new-password"
           required

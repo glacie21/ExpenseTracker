@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { clearSessionCookie, getCurrentUser } from "@/lib/auth";
+import { clearSessionCookie, getCurrentUser, SAFE_USER_SELECT } from "@/lib/auth";
 import { UNAUTHORIZED, verifyCurrentPassword } from "@/lib/account";
+import { validationErrorResponse } from "@/lib/apiResponse";
 import { isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib/dbErrors";
 import { prisma } from "@/lib/prisma";
 import { nameError } from "@/lib/validations";
@@ -19,17 +20,12 @@ export async function PUT(request: NextRequest) {
     const body = await request.json().catch(() => null);
     const name = typeof body?.name === "string" ? body.name.trim() : "";
     const problem = nameError(name);
-    if (problem) {
-      return NextResponse.json(
-        { success: false, message: "Data input tidak valid", errors: { name: problem } },
-        { status: 400 }
-      );
-    }
+    if (problem) return validationErrorResponse({ name: problem });
 
     const user = await prisma.user.update({
       where: { id: currentUser.id },
       data: { name },
-      select: { id: true, name: true, email: true, createdAt: true, updatedAt: true },
+      select: SAFE_USER_SELECT,
     });
 
     return NextResponse.json({

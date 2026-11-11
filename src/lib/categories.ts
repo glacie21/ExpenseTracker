@@ -35,28 +35,6 @@ export const DEFAULT_CATEGORIES: DefaultCategoryItem[] = [
   { name: FALLBACK_CATEGORY_NAME.EXPENSE, type: "EXPENSE", color: "#75716a" },
 ];
 
-/**
- * Ensure default categories exist for a given user.
- * Safe and idempotent: will not create duplicates.
- */
-export async function ensureUserCategories(userId: string): Promise<void> {
-  const existingCount = await prisma.category.count({
-    where: { userId },
-  });
-
-  if (existingCount === 0) {
-    // Bulk create default categories for this user
-    await prisma.category.createMany({
-      data: DEFAULT_CATEGORIES.map((cat) => ({
-        userId,
-        name: cat.name,
-        type: cat.type,
-        color: cat.color,
-      })),
-      skipDuplicates: true,
-    });
-  }
-}
 
 /**
  * Another category of this user and type whose name matches case-insensitively

@@ -9,6 +9,7 @@ import { Alert } from "@/components/ui/Alert";
 import { AuthFrame } from "@/components/layout/AuthFrame";
 import { RevealButton } from "@/components/ui/RevealButton";
 import { safeRedirectPath } from "@/lib/jwt";
+import { validateLoginInput } from "@/lib/validations";
 
 const LINK_STYLE = "font-medium text-accent underline-offset-4 hover:underline";
 
@@ -39,12 +40,9 @@ function LoginForm() {
     setErrorMessage(null);
     setFieldErrors({});
 
-    // Client-side quick validation
-    const errors: Record<string, string> = {};
-    if (!email.trim()) errors.email = "Email wajib diisi";
-    if (!password) errors.password = "Password wajib diisi";
-
-    if (Object.keys(errors).length > 0) {
+    // Same rules as the API
+    const { isValid, errors } = validateLoginInput({ email, password });
+    if (!isValid) {
       setFieldErrors(errors);
       return;
     }

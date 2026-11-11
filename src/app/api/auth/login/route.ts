@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { burnPasswordCheck, comparePassword, createSessionToken, setSessionCookie } from "@/lib/auth";
+import { burnPasswordCheck, comparePassword, createSessionToken, setSessionCookie, toSafeUser } from "@/lib/auth";
+import { tooManyRequestsResponse, validationErrorResponse } from "@/lib/apiResponse";
 import { validateLoginInput } from "@/lib/validations";
 import {
   checkRateLimit,
@@ -9,7 +10,6 @@ import {
   loginRules,
   releaseRateLimit,
   resetRateLimit,
-  tooManyRequestsMessage,
 } from "@/lib/rateLimit";
 
 const INVALID_CREDENTIALS = {
@@ -22,16 +22,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => null);
     const validation = validateLoginInput(body ?? {});
 
-    if (!validation.isValid) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Data input tidak valid",
-          errors: validation.errors,
-        },
-        { status: 400 }
-      );
-    }
+    if (!validation.isValid) return validationErrorResponse(validation.errors);
 
     const email = String(body.email).trim().toLowerCase();
     const password = body.password;
@@ -42,12 +33,7 @@ export async function POST(request: NextRequest) {
     const blocked = rules
       .map(({ key, rule }) => checkRateLimit(key, rule))
       .find((status) => status.limited);
-    if (blocked) {
-      return NextResponse.json(
-        { success: false, message: tooManyRequestsMessage(blocked.retryAfter) },
-        { status: 429, headers: { "Retry-After": String(blocked.retryAfter) } }
-      );
-    }
+    if (blocked) return tooManyRequestsResponse(blocked.retryAfter);
 
     // Count the attempt before the slow password check, so a burst of parallel
     // requests cannot all slip past the check above; a valid login gives it back
@@ -75,18 +61,10 @@ export async function POST(request: NextRequest) {
 
     const token = await createSessionToken(user, rememberMe);
 
-    const safeUser = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    };
-
     const response = NextResponse.json({
       success: true,
       message: "Login berhasil! Selamat datang kembali.",
-      data: { user: safeUser },
+      data: { user: toSafeUser(user) },
     });
 
     setSessionCookie(response, token, rememberMe);
