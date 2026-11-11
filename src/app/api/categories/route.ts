@@ -3,7 +3,8 @@ import { UNAUTHORIZED } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isUniqueViolation, isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib/dbErrors";
-import { DEFAULT_CATEGORY_COLOR, duplicateCategoryResponse } from "@/lib/categories";
+import { DEFAULT_CATEGORY_COLOR, duplicateCategoryResponse, findCategoryNameConflict } from "@/lib/categories";
+import { parseErrorResponse } from "@/lib/apiResponse";
 import { validateCategoryInput } from "@/lib/validations";
 import { TransactionType } from "@/types";
 
@@ -22,24 +23,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const typeParam = searchParams.get("type");
 
-    const whereClause: {
-      userId: string;
-      type?: TransactionType;
-    } = {
-      userId: user.id,
-    };
-
-    if (typeParam === "INCOME" || typeParam === "EXPENSE") {
-      whereClause.type = typeParam;
-    }
-
     const categories = await prisma.category.findMany({
-      where: whereClause,
-      include: {
-        _count: {
-          select: { transactions: true },
-        },
+      where: {
+        userId: user.id,
+        ...(typeParam === "INCOME" || typeParam === "EXPENSE" ? { type: typeParam } : {}),
       },
+      // Usage counts cost a count per category; only the categories page asks for them
+      ...(searchParams.has("withCounts") ? { include: { _count: { select: { transactions: true } } } } : {}),
       orderBy: [{ type: "asc" }, { name: "asc" }],
     });
 
@@ -71,30 +61,14 @@ export async function POST(request: NextRequest) {
     const validation = validateCategoryInput(body ?? {});
 
     if (!validation.isValid) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Data kategori tidak valid",
-          errors: validation.errors,
-        },
-        { status: 400 }
-      );
+      return parseErrorResponse({ ok: false, status: 400, message: "Data kategori tidak valid", errors: validation.errors });
     }
 
     const name = body.name.trim();
     const type = body.type as TransactionType;
     const color = (typeof body.color === "string" && body.color.trim()) || DEFAULT_CATEGORY_COLOR;
 
-    // Cek duplikasi kategori untuk pengguna ini (tidak peka huruf besar/kecil)
-    const existing = await prisma.category.findFirst({
-      where: {
-        userId: user.id,
-        type,
-        name: { equals: name, mode: "insensitive" },
-      },
-    });
-
-    if (existing) return duplicateCategoryResponse(name, type);
+    if (await findCategoryNameConflict(user.id, type, name)) return duplicateCategoryResponse(name, type);
 
     const category = await prisma.category.create({
       data: {

@@ -9,6 +9,7 @@ import { Category, TransactionType } from "@/types";
 import { Check } from "lucide-react";
 import { FIELD_LABEL } from "@/components/ui/fieldStyles";
 import { TypeToggle } from "@/components/ui/TypeToggle";
+import { CATEGORY_PALETTE, DEFAULT_COLOR_BY_TYPE } from "@/lib/categoryColors";
 
 export interface CategoryModalProps {
   isOpen: boolean;
@@ -18,23 +19,8 @@ export interface CategoryModalProps {
   defaultType?: TransactionType;
 }
 
-// Muted inks that stay readable as small dots on both the light and dark paper
-const PRESET_COLORS = [
-  { value: "#2b67a8", name: "Biru" },
-  { value: "#5f8fb8", name: "Biru muda" },
-  { value: "#3d8a8a", name: "Hijau laut" },
-  { value: "#4f7d3a", name: "Hijau" },
-  { value: "#8a9a2b", name: "Zaitun" },
-  { value: "#b8892b", name: "Kuning tanah" },
-  { value: "#c4532b", name: "Jingga" },
-  { value: "#a8324a", name: "Merah tua" },
-  { value: "#8a4f9e", name: "Ungu" },
-  { value: "#5b5fa8", name: "Nila" },
-  { value: "#7a6a55", name: "Cokelat" },
-  { value: "#75716a", name: "Abu-abu" },
-];
-
-const DEFAULT_COLOR = { INCOME: "#2b67a8", EXPENSE: "#c4532b" } as const;
+const PRESET_COLORS = CATEGORY_PALETTE;
+const DEFAULT_COLOR = DEFAULT_COLOR_BY_TYPE;
 
 export function CategoryModal({
   isOpen,
@@ -91,7 +77,6 @@ export function CategoryModal({
           setErrors(json.errors);
         }
         setApiError(json.message || "Gagal menyimpan kategori.");
-        setIsSubmitting(false);
         return;
       }
 

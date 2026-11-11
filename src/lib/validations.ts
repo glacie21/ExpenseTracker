@@ -269,6 +269,20 @@ export function validateCategoryInput(data: {
 export const BUDGET_MIN_YEAR = 2000;
 export const BUDGET_MAX_YEAR = 2100;
 
+/** Month (1-12) and year rules of a budget; empty when both are valid. */
+export function budgetPeriodErrors(month: unknown, year: unknown): Record<string, string> {
+  const errors: Record<string, string> = {};
+  const m = Number(month);
+  if (!Number.isInteger(m) || m < 1 || m > 12) {
+    errors.month = "Bulan harus antara 1 dan 12";
+  }
+  const y = Number(year);
+  if (!Number.isInteger(y) || y < BUDGET_MIN_YEAR || y > BUDGET_MAX_YEAR) {
+    errors.year = `Tahun harus antara ${BUDGET_MIN_YEAR} dan ${BUDGET_MAX_YEAR}`;
+  }
+  return errors;
+}
+
 export function validateBudgetInput(data: {
   categoryId?: unknown;
   amount?: unknown;
@@ -295,15 +309,7 @@ export function validateBudgetInput(data: {
     }
   }
 
-  const month = Number(data.month);
-  if (!Number.isInteger(month) || month < 1 || month > 12) {
-    errors.month = "Bulan harus antara 1 dan 12";
-  }
-
-  const year = Number(data.year);
-  if (!Number.isInteger(year) || year < BUDGET_MIN_YEAR || year > BUDGET_MAX_YEAR) {
-    errors.year = `Tahun harus antara ${BUDGET_MIN_YEAR} dan ${BUDGET_MAX_YEAR}`;
-  }
+  Object.assign(errors, budgetPeriodErrors(data.month, data.year));
 
   return {
     isValid: Object.keys(errors).length === 0,

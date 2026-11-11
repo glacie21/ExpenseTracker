@@ -11,6 +11,7 @@ import { Plus } from "lucide-react";
 import { RowActions } from "@/components/ui/RowActions";
 import { EmptyBlock, ErrorState } from "@/components/ui/States";
 import { tabClass } from "@/components/ui/fieldStyles";
+import { NEUTRAL_CATEGORY_COLOR } from "@/components/charts/chartTheme";
 
 const TYPE_HEADING: Record<TransactionType, string> = {
   INCOME: "Pemasukan",
@@ -49,7 +50,7 @@ export default function CategoriesPage() {
   // isLoading diturunkan dari token sehingga respons lama diabaikan
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/api/categories", { signal: controller.signal })
+    fetch("/api/categories?withCounts=1", { signal: controller.signal })
       .then(async (res) => ({ res, json: await res.json() }))
       .then(({ res, json }) => {
         if (res.ok && json.success && json.data?.categories) {
@@ -163,7 +164,7 @@ export default function CategoriesPage() {
       <li key={cat.id} className="flex items-center gap-3 border-b border-rule-soft py-3 pr-4 pl-5 last:border-0 sm:pl-6">
         <span
           className="h-2.5 w-2.5 shrink-0 rounded-full"
-          style={{ backgroundColor: cat.color || "var(--ink-3)" }}
+          style={{ backgroundColor: cat.color || NEUTRAL_CATEGORY_COLOR }}
           aria-hidden="true"
         />
         <span className="min-w-0 flex-1 truncate text-ink">{cat.name}</span>

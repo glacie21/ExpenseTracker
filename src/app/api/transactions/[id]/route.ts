@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { UNAUTHORIZED } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
-import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib/dbErrors";
+import { parseErrorResponse } from "@/lib/apiResponse";
+import { isRecordNotFound, isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib/dbErrors";
 import { isValidId } from "@/lib/validations";
 import {
   TRANSACTION_CATEGORY_SELECT,
-  parseErrorResponse,
   parseTransactionBody,
   serializeTransaction,
 } from "@/lib/transactions";
@@ -104,7 +103,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       });
     } catch (error) {
       // Deleted between the check and the update
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      if (isRecordNotFound(error)) {
         return NextResponse.json(NOT_FOUND, { status: 404 });
       }
       throw error;

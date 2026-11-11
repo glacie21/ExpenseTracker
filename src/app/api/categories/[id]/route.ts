@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
 import { UNAUTHORIZED } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { isUniqueViolation, isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib/dbErrors";
-import { duplicateCategoryResponse } from "@/lib/categories";
+import {
+  isForeignKeyViolation,
+  isRecordNotFound,
+  isUniqueViolation,
+  isUnsupportedCharacterError,
+  unsupportedCharacterResponse,
+} from "@/lib/dbErrors";
+import { duplicateCategoryResponse, findCategoryNameConflict } from "@/lib/categories";
+import { parseErrorResponse } from "@/lib/apiResponse";
 import { isValidId, validateCategoryInput } from "@/lib/validations";
 
 interface RouteParams {
@@ -35,6 +41,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // Pastikan kategori ada dan dimiliki oleh user yang sedang login
     const category = await prisma.category.findFirst({
       where: { id, userId: user.id },
+      select: { id: true, type: true, color: true },
     });
 
     if (!category) {
@@ -49,30 +56,15 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     });
 
     if (!validation.isValid) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Data kategori tidak valid",
-          errors: validation.errors,
-        },
-        { status: 400 }
-      );
+      return parseErrorResponse({ ok: false, status: 400, message: "Data kategori tidak valid", errors: validation.errors });
     }
 
     const newName = body.name.trim();
     const newColor = (typeof body.color === "string" && body.color.trim()) || category.color;
 
-    // Cek bentrok nama (tidak peka huruf besar/kecil) dengan kategori lain
-    const conflict = await prisma.category.findFirst({
-      where: {
-        userId: user.id,
-        type: category.type,
-        name: { equals: newName, mode: "insensitive" },
-        NOT: { id: category.id },
-      },
-    });
-
-    if (conflict) return duplicateCategoryResponse(newName, category.type);
+    if (await findCategoryNameConflict(user.id, category.type, newName, category.id)) {
+      return duplicateCategoryResponse(newName, category.type);
+    }
 
     const updated = await prisma.category.update({
       where: { id: category.id },
@@ -115,54 +107,35 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json(NOT_FOUND, { status: 404 });
     }
 
-    const category = await prisma.category.findFirst({
-      where: { id, userId: user.id },
-      include: {
-        _count: {
-          select: { transactions: true, budgets: true },
-        },
-      },
-    });
-
-    if (!category) {
-      return NextResponse.json(NOT_FOUND, { status: 404 });
-    }
-
-    const inUseResponse = (message: string) =>
-      NextResponse.json({ success: false, message }, { status: 400 });
-
-    // Cek apakah kategori masih dipakai oleh transaksi
-    if (category._count.transactions > 0) {
-      return inUseResponse(
-        `Kategori "${category.name}" tidak dapat dihapus karena masih digunakan oleh ${category._count.transactions} transaksi. Silakan pindahkan transaksi tersebut ke kategori lain terlebih dahulu.`
-      );
-    }
-
-    // Cek apakah kategori masih memiliki anggaran
-    if (category._count.budgets > 0) {
-      return inUseResponse(
-        `Kategori "${category.name}" tidak dapat dihapus karena masih memiliki ${category._count.budgets} anggaran. Hapus anggaran tersebut di halaman Budgets terlebih dahulu.`
-      );
-    }
-
+    // Delete first: the foreign keys (onDelete: Restrict) refuse a category that
+    // transactions or budgets still use, and only then are the usage counts needed.
     try {
-      await prisma.category.delete({
-        where: { id: category.id },
+      const deleted = await prisma.category.delete({
+        where: { id, userId: user.id },
+        select: { name: true },
+      });
+      return NextResponse.json({
+        success: true,
+        message: `Kategori "${deleted.name}" berhasil dihapus.`,
       });
     } catch (error) {
-      // Transaksi/anggaran ditambahkan di antara pengecekan dan penghapusan (FK Restrict)
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
-        return inUseResponse(
-          `Kategori "${category.name}" tidak dapat dihapus karena masih digunakan. Muat ulang halaman dan coba lagi.`
-        );
-      }
-      throw error;
+      if (isRecordNotFound(error)) return NextResponse.json(NOT_FOUND, { status: 404 });
+      if (!isForeignKeyViolation(error)) throw error;
     }
 
-    return NextResponse.json({
-      success: true,
-      message: `Kategori "${category.name}" berhasil dihapus.`,
+    const category = await prisma.category.findFirst({
+      where: { id, userId: user.id },
+      select: { name: true, _count: { select: { transactions: true, budgets: true } } },
     });
+    if (!category) return NextResponse.json(NOT_FOUND, { status: 404 });
+
+    let message = `Kategori "${category.name}" tidak dapat dihapus karena masih digunakan. Muat ulang halaman dan coba lagi.`;
+    if (category._count.transactions > 0) {
+      message = `Kategori "${category.name}" tidak dapat dihapus karena masih digunakan oleh ${category._count.transactions} transaksi. Silakan pindahkan transaksi tersebut ke kategori lain terlebih dahulu.`;
+    } else if (category._count.budgets > 0) {
+      message = `Kategori "${category.name}" tidak dapat dihapus karena masih memiliki ${category._count.budgets} anggaran. Hapus anggaran tersebut di halaman Budgets terlebih dahulu.`;
+    }
+    return NextResponse.json({ success: false, message }, { status: 400 });
   } catch (error) {
     console.error("DELETE /api/categories/[id] error:", error);
     return NextResponse.json(

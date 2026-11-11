@@ -1,50 +1,38 @@
 "use client";
 
 import React, { Suspense, useEffect, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { BudgetLedger, BudgetView, BUDGET_STATUS } from "@/components/budgets/BudgetLedger";
 import { BudgetModal, BudgetFormData } from "@/components/budgets/BudgetModal";
-import { formatPercent } from "@/lib/finance";
+import { BUDGET_WARNING_PERCENT, formatPercent } from "@/lib/finance";
+import { budgetPeriodErrors } from "@/lib/validations";
+import type { BudgetsResult } from "@/lib/budgets";
 import { MONTH_NAMES, todayLocalISO } from "@/lib/dates";
 import { useExternalNavigationKey } from "@/lib/useExternalNavigationKey";
 import { EmptyBlock, ErrorState } from "@/components/ui/States";
 import { Category } from "@/types";
-
-interface BudgetsData {
-  budgets: BudgetView[];
-  totals: {
-    amount: number;
-    spent: number;
-    remaining: number;
-    percent: number;
-    warning: number;
-    reached: number;
-    over: number;
-  };
-}
 
 function parseMonthParam(value: string | null): { month: number; year: number } {
   const match = /^(\d{4})-(\d{2})$/.exec(value ?? "");
   if (match) {
     const year = Number(match[1]);
     const month = Number(match[2]);
-    if (month >= 1 && month <= 12 && year >= 2000 && year <= 2100) return { month, year };
+    if (Object.keys(budgetPeriodErrors(month, year)).length === 0) return { month, year };
   }
   const today = todayLocalISO();
   return { year: Number(today.slice(0, 4)), month: Number(today.slice(5, 7)) };
 }
 
 function BudgetsView({ writeQuery }: { writeQuery: (pathname: string, query: string) => void }) {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [{ month, year }, setPeriod] = useState(() => parseMonthParam(searchParams.get("month")));
   const [reloadToken, setReloadToken] = useState(0);
-  const [result, setResult] = useState<{ key: string; data: BudgetsData | null; error: string | null } | null>(null);
+  const [result, setResult] = useState<{ key: string; data: BudgetsResult | null; error: string | null } | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [modal, setModal] = useState<BudgetFormData | null>(null);
@@ -109,7 +97,6 @@ function BudgetsView({ writeQuery }: { writeQuery: (pathname: string, query: str
         setFeedback({ type: "success", message: `Anggaran ${toDelete.budget.category.name} berhasil dihapus.` });
         setToDelete({ budget: null, isDeleting: false });
         reload();
-        router.refresh();
       } else {
         setFeedback({ type: "error", message: json.message || "Gagal menghapus anggaran." });
         setToDelete((prev) => ({ ...prev, isDeleting: false }));
@@ -199,7 +186,7 @@ function BudgetsView({ writeQuery }: { writeQuery: (pathname: string, query: str
 
               <p className="text-xs text-ink-3">
                 Terpakai dihitung dari pengeluaran pada kategori yang sama di bulan ini. Peringatan muncul
-                mulai 80% dari batas.
+                mulai {BUDGET_WARNING_PERCENT}% dari batas.
               </p>
             </>
           )}

@@ -3,13 +3,14 @@ import { UNAUTHORIZED } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
-  DUPLICATE_BUDGET_MESSAGE,
-  currentMonthYear,
+  duplicateBudgetResponse,
   getBudgetsWithProgress,
   parseBudgetBody,
+  parseBudgetPeriod,
+  serializeBudget,
 } from "@/lib/budgets";
+import { parseErrorResponse } from "@/lib/apiResponse";
 import { isUniqueViolation } from "@/lib/dbErrors";
-import { BUDGET_MAX_YEAR, BUDGET_MIN_YEAR } from "@/lib/validations";
 
 /**
  * GET /api/budgets?month=1-12&year=YYYY (default: bulan ini)
@@ -23,25 +24,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(UNAUTHORIZED, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const fallback = currentMonthYear();
-    const month = Number(searchParams.get("month") || fallback.month);
-    const year = Number(searchParams.get("year") || fallback.year);
-    if (
-      !Number.isInteger(month) ||
-      month < 1 ||
-      month > 12 ||
-      !Number.isInteger(year) ||
-      year < BUDGET_MIN_YEAR ||
-      year > BUDGET_MAX_YEAR
-    ) {
-      return NextResponse.json(
-        { success: false, message: "Bulan atau tahun tidak valid." },
-        { status: 400 }
-      );
+    const period = parseBudgetPeriod(new URL(request.url).searchParams);
+    if (!period.ok) {
+      return NextResponse.json({ success: false, message: period.message }, { status: 400 });
     }
 
-    const data = await getBudgetsWithProgress(user.id, year, month);
+    const data = await getBudgetsWithProgress(user.id, period.year, period.month);
     return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error("GET /api/budgets error:", error);
@@ -64,12 +52,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => null);
     const parsed = await parseBudgetBody(body, user.id);
-    if (!parsed.ok) {
-      return NextResponse.json(
-        { success: false, message: parsed.message, errors: parsed.errors },
-        { status: parsed.status }
-      );
-    }
+    if (!parsed.ok) return parseErrorResponse(parsed);
 
     const budget = await prisma.budget.create({
       data: { ...parsed.data, userId: user.id },
@@ -79,17 +62,12 @@ export async function POST(request: NextRequest) {
       {
         success: true,
         message: "Anggaran berhasil dibuat.",
-        data: { budget: { ...budget, amount: budget.amount.toNumber() } },
+        data: { budget: serializeBudget(budget) },
       },
       { status: 201 }
     );
   } catch (error) {
-    if (isUniqueViolation(error)) {
-      return NextResponse.json(
-        { success: false, message: DUPLICATE_BUDGET_MESSAGE, errors: { categoryId: "Anggaran sudah ada" } },
-        { status: 409 }
-      );
-    }
+    if (isUniqueViolation(error)) return duplicateBudgetResponse();
     console.error("POST /api/budgets error:", error);
     return NextResponse.json(
       { success: false, message: "Gagal membuat anggaran." },
