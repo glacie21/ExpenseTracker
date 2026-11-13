@@ -10,7 +10,7 @@ import {
   unsupportedCharacterResponse,
 } from "@/lib/dbErrors";
 import { duplicateCategoryResponse, findCategoryNameConflict } from "@/lib/categories";
-import { parseErrorResponse } from "@/lib/apiResponse";
+import { validationErrorResponse } from "@/lib/apiResponse";
 import { isValidId, validateCategoryInput } from "@/lib/validations";
 
 interface RouteParams {
@@ -56,7 +56,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     });
 
     if (!validation.isValid) {
-      return parseErrorResponse({ ok: false, status: 400, message: "Data kategori tidak valid", errors: validation.errors });
+      return validationErrorResponse(validation.errors, "Data kategori tidak valid");
     }
 
     const newName = body.name.trim();

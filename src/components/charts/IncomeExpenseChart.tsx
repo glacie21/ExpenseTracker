@@ -210,7 +210,7 @@ export function IncomeExpenseChart({ series, granularity }: IncomeExpenseChartPr
               </g>
             ))}
 
-            {active !== null && (
+            {active !== null && activePoint && (
               <rect
                 x={MARGIN.left + bucketWidth * active}
                 y={MARGIN.top}

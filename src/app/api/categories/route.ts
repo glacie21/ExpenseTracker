@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isUniqueViolation, isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib/dbErrors";
 import { DEFAULT_CATEGORY_COLOR, duplicateCategoryResponse, findCategoryNameConflict } from "@/lib/categories";
-import { parseErrorResponse } from "@/lib/apiResponse";
+import { validationErrorResponse } from "@/lib/apiResponse";
 import { validateCategoryInput } from "@/lib/validations";
 import { TransactionType } from "@/types";
 
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     const validation = validateCategoryInput(body ?? {});
 
     if (!validation.isValid) {
-      return parseErrorResponse({ ok: false, status: 400, message: "Data kategori tidak valid", errors: validation.errors });
+      return validationErrorResponse(validation.errors, "Data kategori tidak valid");
     }
 
     const name = body.name.trim();

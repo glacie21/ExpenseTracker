@@ -156,9 +156,9 @@ export function toDateOnlyString(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-/** Today's calendar day in `timeZone` (e.g. "Asia/Jakarta"), as UTC midnight. */
 const dayFormatters = new Map<string, Intl.DateTimeFormat>();
 
+/** Today's calendar day in `timeZone` (e.g. "Asia/Jakarta"), as UTC midnight. */
 export function todayInTimeZone(timeZone: string, now: Date = new Date()): Date {
   let formatted: string;
   try {

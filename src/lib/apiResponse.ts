@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { tooManyRequestsMessage } from "@/lib/rateLimit";
 
 /** 400 with per-field messages from a validate*Input helper. */
-export function validationErrorResponse(errors: Record<string, string>) {
-  return NextResponse.json({ success: false, message: "Data input tidak valid", errors }, { status: 400 });
+export function validationErrorResponse(errors: Record<string, string>, message = "Data input tidak valid") {
+  return NextResponse.json({ success: false, message, errors }, { status: 400 });
 }
 
 /** 429 after a rate limit; the limit check and hit stay at each call site. */
