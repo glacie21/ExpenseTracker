@@ -57,10 +57,6 @@ export function formatRupiahSigned(amount: number): string {
   return formatRupiah(amount);
 }
 
-/**
- * Format a transaction date (stored as UTC midnight) to a readable Indonesian string.
- * Example: 2026-10-08 -> "08 Okt 2026"
- */
 const dayFormatter = new Intl.DateTimeFormat("id-ID", {
   day: "2-digit",
   month: "short",
@@ -68,6 +64,10 @@ const dayFormatter = new Intl.DateTimeFormat("id-ID", {
   timeZone: "UTC",
 });
 
+/**
+ * Format a transaction date (stored as UTC midnight) to a readable Indonesian string.
+ * Example: 2026-10-08 -> "08 Okt 2026"
+ */
 export function formatDate(date: string | Date | null | undefined): string {
   if (!date) return "-";
   const d = typeof date === "string" ? new Date(date) : date;

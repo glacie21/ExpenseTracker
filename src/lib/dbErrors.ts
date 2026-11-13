@@ -9,11 +9,17 @@ export function isUniqueViolation(error: unknown): boolean {
 /**
  * A foreign key rejected the write, e.g. deleting a category that transactions
  * still use. Prisma reports P2003 for some cases, but an ON DELETE RESTRICT
- * refusal (PostgreSQL 23001) arrives as an unknown error carrying the code.
+ * refusal (PostgreSQL 23001) can arrive under another code, or as an unknown
+ * error, carrying the database code in its message. Only Prisma errors are
+ * sniffed, so an unrelated failure is never mistaken for "still in use".
  */
 export function isForeignKeyViolation(error: unknown): boolean {
-  if (error instanceof Prisma.PrismaClientKnownRequestError) return error.code === "P2003";
-  return error instanceof Error && /\b(23001|23503)\b/.test(error.message);
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") return true;
+  return (
+    (error instanceof Prisma.PrismaClientKnownRequestError ||
+      error instanceof Prisma.PrismaClientUnknownRequestError) &&
+    /\b(23001|23503)\b/.test(error.message)
+  );
 }
 
 /** No row matched a scoped update or delete (P2025). */

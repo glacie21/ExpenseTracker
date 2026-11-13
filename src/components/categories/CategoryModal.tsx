@@ -10,6 +10,7 @@ import { Check } from "lucide-react";
 import { FIELD_LABEL } from "@/components/ui/fieldStyles";
 import { TypeToggle } from "@/components/ui/TypeToggle";
 import { CATEGORY_PALETTE, DEFAULT_COLOR_BY_TYPE } from "@/lib/categoryColors";
+import { validateCategoryInput } from "@/lib/validations";
 
 export interface CategoryModalProps {
   isOpen: boolean;
@@ -18,9 +19,6 @@ export interface CategoryModalProps {
   initialData?: Category | null;
   defaultType?: TransactionType;
 }
-
-const PRESET_COLORS = CATEGORY_PALETTE;
-const DEFAULT_COLOR = DEFAULT_COLOR_BY_TYPE;
 
 export function CategoryModal({
   isOpen,
@@ -35,7 +33,7 @@ export function CategoryModal({
   const [name, setName] = useState(initialData?.name ?? "");
   const [type, setType] = useState<TransactionType>(initialData?.type ?? defaultType);
   const [color, setColor] = useState(
-    initialData?.color || DEFAULT_COLOR[defaultType]
+    initialData?.color || DEFAULT_COLOR_BY_TYPE[defaultType]
   );
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -46,8 +44,10 @@ export function CategoryModal({
     e.preventDefault();
     if (isSubmitting) return;
 
-    if (!name.trim()) {
-      setErrors({ name: "Nama kategori wajib diisi" });
+    // Same rules as the API
+    const validation = validateCategoryInput({ name, type, color });
+    if (!validation.isValid) {
+      setErrors(validation.errors);
       return;
     }
 
@@ -110,7 +110,7 @@ export function CategoryModal({
             value={type}
             onChange={(t) => {
               setType(t);
-              setColor(DEFAULT_COLOR[t]);
+              setColor(DEFAULT_COLOR_BY_TYPE[t]);
             }}
             legend="Tipe kategori"
           />
@@ -133,7 +133,7 @@ export function CategoryModal({
         <fieldset>
           <legend className={FIELD_LABEL}>Warna penanda</legend>
           <div className="flex flex-wrap items-center gap-2">
-            {PRESET_COLORS.map((c) => {
+            {CATEGORY_PALETTE.map((c) => {
               const selected = color.toLowerCase() === c.value;
               return (
                 <button

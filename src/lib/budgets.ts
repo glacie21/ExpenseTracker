@@ -32,8 +32,8 @@ export interface BudgetWithProgress {
  * One aggregate query for all budgets (no N+1).
  */
 export async function getBudgetsWithProgress(userId: string, year: number, month: number) {
-  // Spending of every expense category in the month, read alongside the budgets
-  // rather than after them; categories without a budget are simply not used.
+  // Spending of the budgeted categories, read alongside the budgets rather than
+  // after them; the relation filter keeps unbudgeted categories out of the sum.
   const [budgets, spending] = await Promise.all([
     prisma.budget.findMany({
       where: { userId, year, month },
@@ -42,7 +42,12 @@ export async function getBudgetsWithProgress(userId: string, year: number, month
     }),
     prisma.transaction.groupBy({
       by: ["categoryId"],
-      where: { userId, type: "EXPENSE", date: monthRangeUTC(year, month) },
+      where: {
+        userId,
+        type: "EXPENSE",
+        date: monthRangeUTC(year, month),
+        category: { budgets: { some: { userId, year, month } } },
+      },
       _sum: { amount: true },
     }),
   ]);

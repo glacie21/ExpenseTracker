@@ -23,16 +23,15 @@ interface BudgetModalProps {
   onClose: () => void;
   onSuccess: (message: string) => void;
   initialData: BudgetFormData;
+  /** Expense categories only; budgets apply to spending. */
   categories: Category[];
 }
 
 /** Create/edit a monthly budget. Parent mounts it with a fresh `key` per open. */
 export function BudgetModal({ onClose, onSuccess, initialData, categories }: BudgetModalProps) {
   const isEditing = Boolean(initialData.id);
-  // The page loads expense categories only (budgets apply to spending)
-  const expenseCategories = categories;
 
-  const [categoryId, setCategoryId] = useState(initialData.categoryId || expenseCategories[0]?.id || "");
+  const [categoryId, setCategoryId] = useState(initialData.categoryId || categories[0]?.id || "");
   const [amount, setAmount] = useState(initialData.amount ? String(initialData.amount) : "");
   const [month, setMonth] = useState(initialData.month);
   const [year, setYear] = useState(String(initialData.year));
@@ -41,9 +40,9 @@ export function BudgetModal({ onClose, onSuccess, initialData, categories }: Bud
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Category list may finish loading after the modal opened
-  const effectiveCategoryId = expenseCategories.some((c) => c.id === categoryId)
+  const effectiveCategoryId = categories.some((c) => c.id === categoryId)
     ? categoryId
-    : (expenseCategories[0]?.id ?? "");
+    : (categories[0]?.id ?? "");
 
   // Same rules as the API
   const validate = () => {
@@ -115,8 +114,8 @@ export function BudgetModal({ onClose, onSuccess, initialData, categories }: Bud
             className={FIELD}
             aria-invalid={Boolean(errors.categoryId)}
           >
-            {expenseCategories.length === 0 && <option value="">Belum ada kategori pengeluaran</option>}
-            {expenseCategories.map((c) => (
+            {categories.length === 0 && <option value="">Belum ada kategori pengeluaran</option>}
+            {categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>
