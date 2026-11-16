@@ -11,6 +11,7 @@ import {
   parseDateOnly,
 } from "@/lib/dates";
 import { EXPENSE_COLOR, INCOME_COLOR, niceTicks, roundedTopBar } from "./chartTheme";
+import { ChartEmpty } from "@/components/ui/States";
 
 export interface IncomeExpensePoint {
   date: string;
@@ -159,13 +160,11 @@ export function IncomeExpenseChart({ series, granularity }: IncomeExpenseChartPr
 
   if (!hasData) {
     return (
-      <div className="flex h-[260px] flex-col items-center justify-center rounded-2xl border border-dashed border-rule text-center">
-        <BarChart3 className="mb-2 h-8 w-8 text-ink-3" />
-        <p className="text-sm font-medium text-ink-2">
-          Belum ada transaksi pada periode ini
-        </p>
-        <p className="mt-1 text-xs text-ink-3">Grafik akan muncul setelah transaksi dicatat.</p>
-      </div>
+      <ChartEmpty
+        icon={BarChart3}
+        title="Belum ada transaksi pada periode ini"
+        hint="Grafik akan muncul setelah transaksi dicatat."
+      />
     );
   }
 

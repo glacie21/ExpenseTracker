@@ -35,6 +35,21 @@ export function normalizeAmount(value: unknown): string | null {
   return raw;
 }
 
+/**
+ * Money amount rule shared by transactions and budgets: required, strictly
+ * positive (a sign or zero is refused), at most 13 digits and 2 decimals.
+ * Only the wording of the required/positive messages differs per form.
+ */
+function amountError(value: unknown, messages: { required: string; positive: string }): string | null {
+  if (value === undefined || value === null || value === "") return messages.required;
+  if (typeof value === "number" && value <= 0) return messages.positive;
+  if (typeof value === "string" && value.trim().startsWith("-")) return messages.positive;
+  const normalized = normalizeAmount(value);
+  if (normalized === null) return "Nominal harus berupa angka valid (maksimal 2 angka desimal)";
+  if (!/[1-9]/.test(normalized)) return messages.positive;
+  return null;
+}
+
 export const PASSWORD_MIN_LENGTH = 8;
 // bcrypt ignores everything after 72 bytes, so longer passwords would give a false sense of security
 const PASSWORD_MAX_BYTES = 72;
@@ -177,21 +192,11 @@ export function validateTransactionInput(data: {
     errors.title = "Nama transaksi maksimal 100 karakter";
   }
 
-  // Amount validation (strictly positive, non-zero, max 2 decimals)
-  if (data.amount === undefined || data.amount === null || data.amount === "") {
-    errors.amount = "Nominal transaksi wajib diisi";
-  } else if (typeof data.amount === "number" && data.amount <= 0) {
-    errors.amount = "Nominal harus lebih besar dari 0";
-  } else if (typeof data.amount === "string" && data.amount.trim().startsWith("-")) {
-    errors.amount = "Nominal harus lebih besar dari 0";
-  } else {
-    const normalized = normalizeAmount(data.amount);
-    if (normalized === null) {
-      errors.amount = "Nominal harus berupa angka valid (maksimal 2 angka desimal)";
-    } else if (!/[1-9]/.test(normalized)) {
-      errors.amount = "Nominal harus lebih besar dari 0";
-    }
-  }
+  const amountProblem = amountError(data.amount, {
+    required: "Nominal transaksi wajib diisi",
+    positive: "Nominal harus lebih besar dari 0",
+  });
+  if (amountProblem) errors.amount = amountProblem;
 
   // Category validation
   const categoryId = typeof data.categoryId === "string" ? data.categoryId.trim() : "";
@@ -284,19 +289,11 @@ export function validateBudgetInput(data: {
     errors.categoryId = "Kategori pengeluaran wajib dipilih";
   }
 
-  if (data.amount === undefined || data.amount === null || data.amount === "") {
-    errors.amount = "Nominal anggaran wajib diisi";
-  } else {
-    const normalized = normalizeAmount(data.amount);
-    if (normalized === null) {
-      errors.amount =
-        typeof data.amount === "number" && data.amount <= 0
-          ? "Nominal anggaran harus lebih besar dari 0"
-          : "Nominal harus berupa angka valid (maksimal 2 angka desimal)";
-    } else if (!/[1-9]/.test(normalized)) {
-      errors.amount = "Nominal anggaran harus lebih besar dari 0";
-    }
-  }
+  const amountProblem = amountError(data.amount, {
+    required: "Nominal anggaran wajib diisi",
+    positive: "Nominal anggaran harus lebih besar dari 0",
+  });
+  if (amountProblem) errors.amount = amountProblem;
 
   Object.assign(errors, budgetPeriodErrors(data.month, data.year));
 

@@ -4,7 +4,7 @@ import { Amount } from "@/components/ui/Amount";
 import { RowActions } from "@/components/ui/RowActions";
 import { BudgetStatus, formatPercent } from "@/lib/finance";
 import type { BudgetWithProgress } from "@/lib/budgets";
-import { NEUTRAL_CATEGORY_COLOR } from "@/components/charts/chartTheme";
+import { CategoryDot } from "@/components/ui/CategoryDot";
 
 export type BudgetView = BudgetWithProgress;
 
@@ -103,11 +103,7 @@ export function BudgetLedger({ budgets, totals, periodLabel, onEdit, onDelete }:
             <tr key={budget.id} className="border-b border-rule-soft">
               <th scope="row" className="py-3.5 pr-3 pl-5 text-left font-normal sm:pl-6">
                 <span className="inline-flex items-center gap-2 text-ink">
-                  <span
-                    className="h-2 w-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: budget.category.color || NEUTRAL_CATEGORY_COLOR }}
-                    aria-hidden="true"
-                  />
+                  <CategoryDot color={budget.category.color} />
                   {budget.category.name}
                 </span>
                 {/* Below md the spent/limit figures and the bar sit under the name */}

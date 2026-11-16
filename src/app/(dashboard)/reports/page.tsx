@@ -31,7 +31,7 @@ import { categoryOptionLabel, formatRupiah } from "@/lib/formatters";
 import { downloadFile, startFileDownload } from "@/lib/download";
 import { REPORT_FORMATS } from "@/lib/reportFormats";
 import { Category, PaginatedTransactions, Transaction, TransactionType } from "@/types";
-import { NEUTRAL_CATEGORY_COLOR } from "@/components/charts/chartTheme";
+import { CategoryDot } from "@/components/ui/CategoryDot";
 
 type PeriodType = "week" | "month" | "year" | "custom";
 
@@ -508,11 +508,7 @@ function ReportsView({ writeQuery }: { writeQuery: (pathname: string, query: str
                       <tr key={c.categoryId} className="border-b border-rule-soft last:border-0">
                         <th scope="row" className="py-3 pr-3 pl-5 text-left font-normal sm:pl-6">
                           <span className="inline-flex items-center gap-2 text-ink">
-                            <span
-                              className="h-2 w-2 shrink-0 rounded-full"
-                              style={{ backgroundColor: c.color || NEUTRAL_CATEGORY_COLOR }}
-                              aria-hidden="true"
-                            />
+                            <CategoryDot color={c.color} />
                             {c.name}
                           </span>
                           <span className="num block text-xs text-ink-3 sm:hidden">

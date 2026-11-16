@@ -5,6 +5,7 @@ import { PieChart } from "lucide-react";
 import { formatRupiah } from "@/lib/formatters";
 import { formatPercent } from "@/lib/finance";
 import { NEUTRAL_CATEGORY_COLOR } from "./chartTheme";
+import { ChartEmpty } from "@/components/ui/States";
 
 export interface BreakdownItem {
   categoryId: string;
@@ -31,15 +32,12 @@ export function ExpenseBreakdown({ items, maxItems = 8 }: ExpenseBreakdownProps)
 
   if (items.length === 0) {
     return (
-      <div className="flex h-[200px] flex-col items-center justify-center rounded-2xl border border-dashed border-rule text-center">
-        <PieChart className="mb-2 h-8 w-8 text-ink-3" />
-        <p className="text-sm font-medium text-ink-2">
-          Belum ada pengeluaran pada periode ini
-        </p>
-        <p className="mt-1 text-xs text-ink-3">
-          Distribusi per kategori akan tampil setelah pengeluaran dicatat.
-        </p>
-      </div>
+      <ChartEmpty
+        icon={PieChart}
+        className="h-[200px]"
+        title="Belum ada pengeluaran pada periode ini"
+        hint="Distribusi per kategori akan tampil setelah pengeluaran dicatat."
+      />
     );
   }
 

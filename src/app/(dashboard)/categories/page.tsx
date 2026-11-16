@@ -11,7 +11,7 @@ import { Plus } from "lucide-react";
 import { RowActions } from "@/components/ui/RowActions";
 import { EmptyBlock, ErrorState } from "@/components/ui/States";
 import { tabClass } from "@/components/ui/fieldStyles";
-import { NEUTRAL_CATEGORY_COLOR } from "@/components/charts/chartTheme";
+import { CategoryDot } from "@/components/ui/CategoryDot";
 
 const TYPE_HEADING: Record<TransactionType, string> = {
   INCOME: "Pemasukan",
@@ -162,11 +162,7 @@ export default function CategoriesPage() {
     const txCount = cat._count?.transactions || 0;
     return (
       <li key={cat.id} className="flex items-center gap-3 border-b border-rule-soft py-3 pr-4 pl-5 last:border-0 sm:pl-6">
-        <span
-          className="h-2.5 w-2.5 shrink-0 rounded-full"
-          style={{ backgroundColor: cat.color || NEUTRAL_CATEGORY_COLOR }}
-          aria-hidden="true"
-        />
+        <CategoryDot color={cat.color} size="md" />
         <span className="min-w-0 flex-1 truncate text-ink">{cat.name}</span>
         {txCount > 0 ? (
           <Link
