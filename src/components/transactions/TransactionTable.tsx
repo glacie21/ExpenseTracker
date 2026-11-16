@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
 import { RowActions } from "@/components/ui/RowActions";
 import { EmptyBlock, ErrorState } from "@/components/ui/States";
+import { CategoryDot } from "@/components/ui/CategoryDot";
 
 export interface TransactionTableProps {
   transactions: Transaction[];
@@ -31,13 +32,7 @@ export interface TransactionTableProps {
 function CategoryLabel({ tx }: { tx: Transaction }) {
   return (
     <span className="inline-flex items-center gap-1.5 text-xs text-ink-3">
-      {tx.category?.color && (
-        <span
-          className="h-2 w-2 shrink-0 rounded-full"
-          style={{ backgroundColor: tx.category.color }}
-          aria-hidden="true"
-        />
-      )}
+      {tx.category?.color && <CategoryDot color={tx.category.color} />}
       {tx.category?.name ?? "Tanpa kategori"}
     </span>
   );

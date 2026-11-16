@@ -26,6 +26,28 @@ export function ErrorState({
   );
 }
 
+/** Dashed placeholder where a chart would be, before there is data for it. */
+export function ChartEmpty({
+  icon: Icon,
+  title,
+  hint,
+  className = "h-[260px]",
+}: {
+  icon: React.ElementType;
+  title: string;
+  hint: string;
+  /** Height of the box, matching the chart it stands in for. */
+  className?: string;
+}) {
+  return (
+    <div className={`flex flex-col items-center justify-center rounded-2xl border border-dashed border-rule text-center ${className}`}>
+      <Icon className="mb-2 h-8 w-8 text-ink-3" />
+      <p className="text-sm font-medium text-ink-2">{title}</p>
+      <p className="mt-1 text-xs text-ink-3">{hint}</p>
+    </div>
+  );
+}
+
 /** Dashed placeholder for a list that has nothing in it yet. */
 export function EmptyBlock({
   title,

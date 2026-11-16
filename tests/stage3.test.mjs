@@ -508,6 +508,9 @@ describe("budgets", () => {
     for (const override of [{ amount: 0 }, { amount: "-5" }, { month: 13 }, { year: 1999 }]) {
       assert.equal((await alice.client.post("/api/budgets", { ...base, ...override })).status, 400);
     }
+    // A sign is refused with the same message as zero, as for transactions
+    const negative = await alice.client.post("/api/budgets", { ...base, amount: "-5" });
+    assert.equal(negative.json.errors.amount, "Nominal anggaran harus lebih besar dari 0");
     const income = await alice.client.post("/api/budgets", { ...base, categoryId: alice.cat("Gaji").id });
     assert.equal(income.status, 400);
 
