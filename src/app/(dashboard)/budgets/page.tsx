@@ -6,11 +6,11 @@ import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { BudgetLedger, BudgetView, BUDGET_STATUS } from "@/components/budgets/BudgetLedger";
+import { BudgetLedger, BUDGET_STATUS } from "@/components/budgets/BudgetLedger";
 import { BudgetModal, BudgetFormData } from "@/components/budgets/BudgetModal";
 import { BUDGET_WARNING_PERCENT, formatPercent } from "@/lib/finance";
 import { budgetPeriodErrors } from "@/lib/validations";
-import type { BudgetsResult } from "@/lib/budgets";
+import type { BudgetWithProgress, BudgetsResult } from "@/lib/budgets";
 import { MONTH_NAMES, todayLocalISO } from "@/lib/dates";
 import { useExternalNavigationKey } from "@/lib/useExternalNavigationKey";
 import { EmptyBlock, ErrorState } from "@/components/ui/States";
@@ -36,7 +36,7 @@ function BudgetsView({ writeQuery }: { writeQuery: (pathname: string, query: str
   const [categories, setCategories] = useState<Category[]>([]);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [modal, setModal] = useState<BudgetFormData | null>(null);
-  const [toDelete, setToDelete] = useState<{ budget: BudgetView | null; isDeleting: boolean }>({
+  const [toDelete, setToDelete] = useState<{ budget: BudgetWithProgress | null; isDeleting: boolean }>({
     budget: null,
     isDeleting: false,
   });

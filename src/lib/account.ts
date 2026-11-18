@@ -7,12 +7,7 @@ import {
   hitRateLimit,
   resetRateLimit,
 } from "@/lib/rateLimit";
-import { tooManyRequestsResponse } from "@/lib/apiResponse";
-
-export const UNAUTHORIZED = {
-  success: false,
-  message: "Akses ditolak. Sesi tidak valid atau telah berakhir.",
-};
+import { tooManyRequestsResponse, unauthorizedResponse, validationErrorResponse } from "@/lib/apiResponse";
 
 type PasswordCheck = { ok: true } | { ok: false; response: NextResponse };
 
@@ -37,21 +32,14 @@ export async function verifyCurrentPassword(
 
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { password: true } });
   if (!user) {
-    return { ok: false, response: NextResponse.json(UNAUTHORIZED, { status: 401 }) };
+    return { ok: false, response: unauthorizedResponse() };
   }
 
   const valid = typeof password === "string" && password !== "" && (await comparePassword(password, user.password));
   if (!valid) {
     return {
       ok: false,
-      response: NextResponse.json(
-        {
-          success: false,
-          message: "Password saat ini salah.",
-          errors: { [field]: "Password saat ini salah" },
-        },
-        { status: 400 }
-      ),
+      response: validationErrorResponse({ [field]: "Password saat ini salah" }, "Password saat ini salah."),
     };
   }
 

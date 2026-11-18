@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSessionToken, getCurrentSession, hashPassword, setSessionCookie } from "@/lib/auth";
-import { UNAUTHORIZED, verifyCurrentPassword } from "@/lib/account";
-import { validationErrorResponse } from "@/lib/apiResponse";
+import { verifyCurrentPassword } from "@/lib/account";
+import { validationErrorResponse, unauthorizedResponse } from "@/lib/apiResponse";
 import { prisma } from "@/lib/prisma";
 import { validatePasswordChangeInput } from "@/lib/validations";
 
@@ -13,7 +13,7 @@ export async function PUT(request: NextRequest) {
   try {
     const session = await getCurrentSession();
     if (!session) {
-      return NextResponse.json(UNAUTHORIZED, { status: 401 });
+      return unauthorizedResponse();
     }
 
     const body = await request.json().catch(() => null);

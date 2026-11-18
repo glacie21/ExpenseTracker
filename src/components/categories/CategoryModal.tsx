@@ -168,7 +168,6 @@ export function CategoryModal({
             type="submit"
             variant="primary"
             isLoading={isSubmitting}
-            disabled={isSubmitting}
           >
             {isEditing ? "Simpan perubahan" : "Simpan"}
           </Button>

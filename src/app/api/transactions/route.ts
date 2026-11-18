@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { UNAUTHORIZED } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { parseErrorResponse } from "@/lib/apiResponse";
+import { parseErrorResponse, unauthorizedResponse, badRequestResponse } from "@/lib/apiResponse";
 import { isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib/dbErrors";
-import {
-  TRANSACTION_CATEGORY_SELECT,
-  buildTransactionFilter,
-  parseTransactionBody,
-  serializeTransaction,
-} from "@/lib/transactions";
+import { TRANSACTION_CATEGORY_SELECT, buildTransactionFilter, parseTransactionBody } from "@/lib/transactions";
+import { serializeAmount } from "@/lib/money";
 
 // Upper bound keeps skip a safe integer; pages past the end just come back empty
 const MAX_PAGE = 1_000_000;
@@ -32,7 +27,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(UNAUTHORIZED, { status: 401 });
+      return unauthorizedResponse();
     }
 
     const { searchParams } = new URL(request.url);
@@ -42,7 +37,7 @@ export async function GET(request: NextRequest) {
     // Filter yang sama dipakai oleh ekspor CSV dan laporan; selalu dibatasi ke user login
     const filter = buildTransactionFilter(user.id, searchParams);
     if (!filter.ok) {
-      return NextResponse.json({ success: false, message: filter.message }, { status: 400 });
+      return badRequestResponse(filter.message);
     }
     const { where, sort } = filter;
 
@@ -62,7 +57,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        transactions: transactions.map(serializeTransaction),
+        transactions: transactions.map(serializeAmount),
         pagination: {
           page,
           limit,
@@ -89,7 +84,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(UNAUTHORIZED, { status: 401 });
+      return unauthorizedResponse();
     }
 
     const body = await request.json().catch(() => null);
@@ -109,7 +104,7 @@ export async function POST(request: NextRequest) {
       {
         success: true,
         message: "Transaksi berhasil dicatat.",
-        data: { transaction: serializeTransaction(transaction) },
+        data: { transaction: serializeAmount(transaction) },
       },
       { status: 201 }
     );

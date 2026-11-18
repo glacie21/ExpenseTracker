@@ -89,11 +89,11 @@ export async function parseTransactionBody(body: unknown, userId: string): Promi
 }
 
 type FilterResult =
-  | { ok: true; where: Prisma.TransactionWhereInput; sort: "asc" | "desc" }
+  | { ok: true; where: Prisma.TransactionWhereInput; sort: SortDirection }
   | { ok: false; message: string };
 
 /**
- * Build the Prisma filter for listing, reporting and exporting transactions
+ * Build the Prisma filter for listing and exporting (CSV) transactions
  * from query params. Always scoped to `userId` (taken from the session).
  *
  * Params: search, type (INCOME|EXPENSE|ALL), categoryId, startDate, endDate
@@ -202,13 +202,4 @@ export async function* transactionExportBatches(
     remaining -= batch.length;
     last = batch[batch.length - 1];
   }
-}
-
-/**
- * Convert Prisma Decimal amount to a JSON-safe number for the client.
- */
-export function serializeTransaction<T extends { amount: Prisma.Decimal }>(
-  transaction: T
-): Omit<T, "amount"> & { amount: number } {
-  return { ...transaction, amount: transaction.amount.toNumber() };
 }

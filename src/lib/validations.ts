@@ -17,6 +17,12 @@ export function isValidId(id: unknown): id is string {
   return typeof id === "string" && ID_REGEX.test(id);
 }
 
+/** The `[id]` segment of a route, or null when it cannot be a record id. */
+export async function routeId(params: Promise<{ id: string }>): Promise<string | null> {
+  const { id } = await params;
+  return isValidId(id) ? id : null;
+}
+
 /**
  * Normalise an amount to an exact decimal string ("50000", "12.5") without
  * going through floating-point arithmetic. Returns null if invalid.

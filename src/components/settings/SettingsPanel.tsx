@@ -8,7 +8,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { SafeUser } from "@/types";
-import { nameError, validatePasswordChangeInput } from "@/lib/validations";
+import { PASSWORD_MIN_LENGTH, nameError, validatePasswordChangeInput } from "@/lib/validations";
 
 type Feedback = { type: "success" | "error"; message: string } | null;
 
@@ -173,7 +173,7 @@ function PasswordSection() {
             value={form.newPassword}
             onChange={update("newPassword")}
             error={errors.newPassword}
-            placeholder="Minimal 8 karakter"
+            placeholder={`Minimal ${PASSWORD_MIN_LENGTH} karakter`}
             autoComplete="new-password"
             required
           />

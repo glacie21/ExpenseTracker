@@ -2,7 +2,8 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { cleanCsvField, parseCsv } from "@/lib/csv";
 import { parseDateOnly } from "@/lib/dates";
-import { DEFAULT_CATEGORY_COLOR, FALLBACK_CATEGORY_NAME } from "@/lib/categories";
+import { FALLBACK_CATEGORY_NAME } from "@/lib/categories";
+import { DEFAULT_CATEGORY_COLOR } from "@/lib/categoryColors";
 import { normalizeAmount, validateCategoryInput, validateTransactionInput } from "@/lib/validations";
 import { TransactionType } from "@/types";
 import {

@@ -3,15 +3,20 @@
 import React, { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown, Download, FileSpreadsheet, FileText, FileType, Table2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import type { ReportFormatId } from "@/lib/reportFormats";
+import { REPORT_FORMATS, type ReportFormatId } from "@/lib/reportFormats";
 
 /** The report file formats plus raw CSV, which comes from the transactions export. */
 export type ExportFormat = ReportFormatId | "csv";
 
+/** "Excel (.xlsx)" from the shared format list. */
+function fileLabel(id: ReportFormatId): string {
+  return `${REPORT_FORMATS[id].label} (.${REPORT_FORMATS[id].extension})`;
+}
+
 const OPTIONS: { value: ExportFormat; label: string; hint: string; icon: React.ElementType }[] = [
-  { value: "pdf", label: "PDF", hint: "Siap dicetak atau dibagikan", icon: FileText },
-  { value: "xlsx", label: "Excel (.xlsx)", hint: "Ringkasan, kategori, dan transaksi per sheet", icon: FileSpreadsheet },
-  { value: "docx", label: "Word (.docx)", hint: "Dokumen yang masih bisa Anda edit", icon: FileType },
+  { value: "pdf", label: REPORT_FORMATS.pdf.label, hint: "Siap dicetak atau dibagikan", icon: FileText },
+  { value: "xlsx", label: fileLabel("xlsx"), hint: "Ringkasan, kategori, dan transaksi per sheet", icon: FileSpreadsheet },
+  { value: "docx", label: fileLabel("docx"), hint: "Dokumen yang masih bisa Anda edit", icon: FileType },
   { value: "csv", label: "CSV", hint: "Data transaksi mentah untuk aplikasi lain", icon: Table2 },
 ];
 
@@ -72,7 +77,7 @@ export function ExportMenu({ onSelect, exporting, disabled = false }: ExportMenu
         variant="primary"
         onClick={() => setOpen((v) => !v)}
         isLoading={exporting !== null}
-        disabled={disabled || exporting !== null}
+        disabled={disabled}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}

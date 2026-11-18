@@ -9,11 +9,9 @@ import { PaginatedTransactions } from "@/types";
 export function Pagination({
   pagination,
   onPageChange,
-  noun = "transaksi",
 }: {
   pagination: PaginatedTransactions["pagination"];
   onPageChange: (page: number) => void;
-  noun?: string;
 }) {
   const { page, limit, total, totalPages } = pagination;
   const firstRow = total === 0 ? 0 : (page - 1) * limit + 1;
@@ -25,7 +23,7 @@ export function Pagination({
         <span className="num text-sm text-ink">
           {firstRow}–{lastRow}
         </span>{" "}
-        dari <span className="num text-sm text-ink">{total}</span> {noun}
+        dari <span className="num text-sm text-ink">{total}</span> transaksi
       </p>
 
       {totalPages > 1 && (

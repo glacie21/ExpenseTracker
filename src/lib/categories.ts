@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { TransactionType } from "@/types";
+import { DEFAULT_CATEGORY_COLOR } from "@/lib/categoryColors";
 
 export interface DefaultCategoryItem {
   name: string;
   type: TransactionType;
   color: string;
 }
-
-export { DEFAULT_CATEGORY_COLOR } from "@/lib/categoryColors";
 
 /** Catch-all default category per type, e.g. for imported rows without a category. */
 export const FALLBACK_CATEGORY_NAME: Record<TransactionType, string> = {
@@ -22,7 +21,7 @@ export const DEFAULT_CATEGORIES: DefaultCategoryItem[] = [
   { name: "Pekerjaan lepas", type: "INCOME", color: "#3d8a8a" },
   { name: "Usaha", type: "INCOME", color: "#5b5fa8" },
   { name: "Investasi", type: "INCOME", color: "#4f7d3a" },
-  { name: FALLBACK_CATEGORY_NAME.INCOME, type: "INCOME", color: "#75716a" },
+  { name: FALLBACK_CATEGORY_NAME.INCOME, type: "INCOME", color: DEFAULT_CATEGORY_COLOR },
 
   // Expense categories
   { name: "Makan & minum", type: "EXPENSE", color: "#c4532b" },
@@ -32,9 +31,8 @@ export const DEFAULT_CATEGORIES: DefaultCategoryItem[] = [
   { name: "Hiburan", type: "EXPENSE", color: "#b8892b" },
   { name: "Kesehatan", type: "EXPENSE", color: "#8a9a2b" },
   { name: "Pendidikan", type: "EXPENSE", color: "#7a6a55" },
-  { name: FALLBACK_CATEGORY_NAME.EXPENSE, type: "EXPENSE", color: "#75716a" },
+  { name: FALLBACK_CATEGORY_NAME.EXPENSE, type: "EXPENSE", color: DEFAULT_CATEGORY_COLOR },
 ];
-
 
 /**
  * Another category of this user and type whose name matches case-insensitively

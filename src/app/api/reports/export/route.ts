@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { REPORT_FORMATS, isReportFormat, reportFileResponse } from "@/lib/reportFiles";
+import { reportFileResponse } from "@/lib/reportFiles";
+import { REPORT_FORMATS, isReportFormat } from "@/lib/reportFormats";
 
 /**
  * GET /api/reports/export?format=pdf|xlsx|docx — parameter lain sama dengan

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { UNAUTHORIZED } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
 import { CSV_BOM } from "@/lib/csv";
 import { isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib/dbErrors";
@@ -8,6 +7,7 @@ import {
   parseTransactionsCsv,
 } from "@/lib/transactionsImport";
 import { TRANSACTION_CSV_HEADERS } from "@/lib/transactionsImportUtils";
+import { unauthorizedResponse, badRequestResponse } from "@/lib/apiResponse";
 
 /**
  * GET /api/transactions/import
@@ -39,15 +39,12 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(UNAUTHORIZED, { status: 401 });
+      return unauthorizedResponse();
     }
 
     const body = await request.json().catch(() => null);
     if (!body || typeof body.csvContent !== "string") {
-      return NextResponse.json(
-        { success: false, message: "Konten file CSV tidak ditemukan atau tidak valid." },
-        { status: 400 }
-      );
+      return badRequestResponse("Konten file CSV tidak ditemukan atau tidak valid.");
     }
 
     const dryRun = body.dryRun === true;
@@ -55,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     const parseResult = await parseTransactionsCsv(body.csvContent, user.id);
     if (parseResult.error !== undefined) {
-      return NextResponse.json({ success: false, message: parseResult.error }, { status: 400 });
+      return badRequestResponse(parseResult.error);
     }
 
     const { data: previewData, validRows } = parseResult;
@@ -69,7 +66,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Mode eksekusi impor
     if (validRows.length === 0) {
       return NextResponse.json(
         {

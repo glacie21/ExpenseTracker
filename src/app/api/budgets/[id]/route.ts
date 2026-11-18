@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { UNAUTHORIZED } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { duplicateBudgetResponse, parseBudgetBody, serializeBudget } from "@/lib/budgets";
-import { parseErrorResponse } from "@/lib/apiResponse";
+import { duplicateBudgetResponse, parseBudgetBody } from "@/lib/budgets";
+import { parseErrorResponse, unauthorizedResponse } from "@/lib/apiResponse";
 import { isRecordNotFound, isUniqueViolation } from "@/lib/dbErrors";
-import { isValidId } from "@/lib/validations";
+import { routeId } from "@/lib/validations";
+import { serializeAmount } from "@/lib/money";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -24,11 +24,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(UNAUTHORIZED, { status: 401 });
+      return unauthorizedResponse();
     }
 
-    const { id } = await params;
-    if (!isValidId(id)) {
+    const id = await routeId(params);
+    if (!id) {
       return NextResponse.json(NOT_FOUND, { status: 404 });
     }
 
@@ -48,7 +48,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({
       success: true,
       message: "Anggaran berhasil diperbarui.",
-      data: { budget: serializeBudget(budget) },
+      data: { budget: serializeAmount(budget) },
     });
   } catch (error) {
     if (isUniqueViolation(error)) return duplicateBudgetResponse();
@@ -69,11 +69,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(UNAUTHORIZED, { status: 401 });
+      return unauthorizedResponse();
     }
 
-    const { id } = await params;
-    if (!isValidId(id)) {
+    const id = await routeId(params);
+    if (!id) {
       return NextResponse.json(NOT_FOUND, { status: 404 });
     }
 

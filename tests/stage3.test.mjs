@@ -411,6 +411,8 @@ describe("Excel and Word reports", () => {
     summary.eachRow((row) => values.set(row.getCell(1).value, row.getCell(2).value));
     assert.equal(values.get("Jumlah transaksi"), ROWS);
     assert.equal(values.get("Total pengeluaran"), 1000 * ROWS + 0.5);
+    // No income: no savings rate, as in the PDF and Word versions
+    assert.equal(values.get("Tingkat tabungan"), "-");
   });
 
   test("check=1 answers before a download starts, without building a file", async () => {

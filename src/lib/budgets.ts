@@ -157,11 +157,6 @@ export function duplicateBudgetResponse() {
   );
 }
 
-/** A budget row as JSON (Decimal amount as a number). */
-export function serializeBudget<T extends { amount: Prisma.Decimal }>(budget: T): Omit<T, "amount"> & { amount: number } {
-  return { ...budget, amount: budget.amount.toNumber() };
-}
-
 /**
  * Month and year from `?month=&year=`, defaulting to the current month.
  * Same rules as a budget body.

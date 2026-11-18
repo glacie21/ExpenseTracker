@@ -3,13 +3,15 @@
 import React, { useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
 
+const MAX_WIDTH = { sm: "max-w-sm", md: "max-w-md", xl: "max-w-xl" };
+
 export interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
   description?: string;
   children: React.ReactNode;
-  maxWidth?: "sm" | "md" | "lg" | "xl";
+  maxWidth?: keyof typeof MAX_WIDTH;
   /** Id of a heading inside `children` that names the dialog, when `title` is not used. */
   labelledBy?: string;
   describedBy?: string;
@@ -84,12 +86,6 @@ export function Modal({
 
   if (!isOpen) return null;
 
-  const maxWidthStyles = {
-    sm: "max-w-sm",
-    md: "max-w-md",
-    lg: "max-w-lg",
-    xl: "max-w-xl",
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
@@ -104,7 +100,7 @@ export function Modal({
         aria-labelledby={title ? titleId : labelledBy}
         aria-describedby={describedBy}
         tabIndex={-1}
-        className={`relative z-10 w-full outline-none ${maxWidthStyles[maxWidth]} rounded-2xl bg-surface p-6 shadow-[0_24px_48px_-16px_rgb(6_30_25/0.35)]`}
+        className={`relative z-10 w-full outline-none ${MAX_WIDTH[maxWidth]} rounded-2xl bg-surface p-6 shadow-[0_24px_48px_-16px_rgb(6_30_25/0.35)]`}
       >
         <div className="flex items-start justify-between gap-4 pb-4 border-b border-rule-soft">
           <div>

@@ -1,20 +1,15 @@
 import { NextResponse } from "next/server";
-import { UNAUTHORIZED } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
 import { ReportParams, parseReportParams } from "@/lib/reports";
-import { loadReportExport, loadReportStream } from "@/lib/reportExport";
+import { ReportUser, loadReportExport, loadReportStream } from "@/lib/reportExport";
 import { REPORT_FORMATS, ReportFormatId } from "@/lib/reportFormats";
-
-export { REPORT_FORMATS, isReportFormat } from "@/lib/reportFormats";
-export type { ReportFormatId } from "@/lib/reportFormats";
+import { unauthorizedResponse, badRequestResponse } from "@/lib/apiResponse";
 
 interface ReportFile {
   body: BodyInit;
   start: string;
   end: string;
 }
-
-type ReportUser = { id: string; name: string };
 
 /**
  * Loads each format's data and builds its file. The document libraries are
@@ -53,12 +48,12 @@ export async function reportFileResponse(search: URLSearchParams, formatId: Repo
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(UNAUTHORIZED, { status: 401 });
+      return unauthorizedResponse();
     }
 
     const parsed = parseReportParams(search);
     if (!parsed.ok) {
-      return NextResponse.json({ success: false, message: parsed.message }, { status: 400 });
+      return badRequestResponse(parsed.message);
     }
 
     // Asked by startFileDownload before handing the URL to the browser's download manager

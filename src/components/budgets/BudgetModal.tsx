@@ -94,7 +94,6 @@ export function BudgetModal({ onClose, onSuccess, initialData, categories }: Bud
       onClose={isSubmitting ? () => {} : onClose}
       title={isEditing ? "Ubah anggaran" : "Buat anggaran"}
       description="Batas pengeluaran satu kategori untuk satu bulan."
-      maxWidth="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         {apiError && (
@@ -176,7 +175,7 @@ export function BudgetModal({ onClose, onSuccess, initialData, categories }: Bud
           <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
             Batal
           </Button>
-          <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
+          <Button type="submit" variant="primary" isLoading={isSubmitting}>
             {isEditing ? "Simpan perubahan" : "Simpan"}
           </Button>
         </div>

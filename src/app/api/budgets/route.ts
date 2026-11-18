@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { UNAUTHORIZED } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import {
-  duplicateBudgetResponse,
-  getBudgetsWithProgress,
-  parseBudgetBody,
-  parseBudgetPeriod,
-  serializeBudget,
-} from "@/lib/budgets";
-import { parseErrorResponse } from "@/lib/apiResponse";
+import { duplicateBudgetResponse, getBudgetsWithProgress, parseBudgetBody, parseBudgetPeriod } from "@/lib/budgets";
+import { parseErrorResponse, unauthorizedResponse, badRequestResponse } from "@/lib/apiResponse";
 import { isUniqueViolation } from "@/lib/dbErrors";
+import { serializeAmount } from "@/lib/money";
 
 /**
  * GET /api/budgets?month=1-12&year=YYYY (default: bulan ini)
@@ -21,12 +15,12 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(UNAUTHORIZED, { status: 401 });
+      return unauthorizedResponse();
     }
 
     const period = parseBudgetPeriod(new URL(request.url).searchParams);
     if (!period.ok) {
-      return NextResponse.json({ success: false, message: period.message }, { status: 400 });
+      return badRequestResponse(period.message);
     }
 
     const data = await getBudgetsWithProgress(user.id, period.year, period.month);
@@ -47,7 +41,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(UNAUTHORIZED, { status: 401 });
+      return unauthorizedResponse();
     }
 
     const body = await request.json().catch(() => null);
@@ -62,7 +56,7 @@ export async function POST(request: NextRequest) {
       {
         success: true,
         message: "Anggaran berhasil dibuat.",
-        data: { budget: serializeBudget(budget) },
+        data: { budget: serializeAmount(budget) },
       },
       { status: 201 }
     );

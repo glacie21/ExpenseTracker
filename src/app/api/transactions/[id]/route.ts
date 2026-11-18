@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { UNAUTHORIZED } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { parseErrorResponse } from "@/lib/apiResponse";
+import { parseErrorResponse, unauthorizedResponse } from "@/lib/apiResponse";
 import { isRecordNotFound, isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib/dbErrors";
-import { isValidId } from "@/lib/validations";
-import {
-  TRANSACTION_CATEGORY_SELECT,
-  parseTransactionBody,
-  serializeTransaction,
-} from "@/lib/transactions";
+import { routeId } from "@/lib/validations";
+import { TRANSACTION_CATEGORY_SELECT, parseTransactionBody } from "@/lib/transactions";
+import { serializeAmount } from "@/lib/money";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -21,12 +17,6 @@ const NOT_FOUND = {
   message: "Transaksi tidak ditemukan atau Anda tidak memiliki akses.",
 };
 
-/** The id from the URL, or null when it cannot be a transaction id. */
-async function routeId(params: RouteParams["params"]): Promise<string | null> {
-  const { id } = await params;
-  return isValidId(id) ? id : null;
-}
-
 /**
  * GET /api/transactions/[id]
  * Mengambil detail transaksi spesifik milik pengguna yang sedang login.
@@ -35,7 +25,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(UNAUTHORIZED, { status: 401 });
+      return unauthorizedResponse();
     }
 
     const id = await routeId(params);
@@ -54,7 +44,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({
       success: true,
-      data: { transaction: serializeTransaction(transaction) },
+      data: { transaction: serializeAmount(transaction) },
     });
   } catch (error) {
     console.error("GET /api/transactions/[id] error:", error);
@@ -73,7 +63,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(UNAUTHORIZED, { status: 401 });
+      return unauthorizedResponse();
     }
 
     const id = await routeId(params);
@@ -93,28 +83,21 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
     if (!parsed.ok) return parseErrorResponse(parsed);
 
-    let updated;
-    try {
-      // Scoped by userId, so the ownership check stays atomic with the write
-      updated = await prisma.transaction.update({
-        where: { id, userId: user.id },
-        data: parsed.data,
-        include: { category: { select: TRANSACTION_CATEGORY_SELECT } },
-      });
-    } catch (error) {
-      // Deleted between the check and the update
-      if (isRecordNotFound(error)) {
-        return NextResponse.json(NOT_FOUND, { status: 404 });
-      }
-      throw error;
-    }
+    // Scoped by userId, so the ownership check stays atomic with the write
+    const updated = await prisma.transaction.update({
+      where: { id, userId: user.id },
+      data: parsed.data,
+      include: { category: { select: TRANSACTION_CATEGORY_SELECT } },
+    });
 
     return NextResponse.json({
       success: true,
       message: "Transaksi berhasil diperbarui.",
-      data: { transaction: serializeTransaction(updated) },
+      data: { transaction: serializeAmount(updated) },
     });
   } catch (error) {
+    // Deleted between the ownership check and the update
+    if (isRecordNotFound(error)) return NextResponse.json(NOT_FOUND, { status: 404 });
     if (isUnsupportedCharacterError(error)) return unsupportedCharacterResponse();
     console.error("PUT /api/transactions/[id] error:", error);
     return NextResponse.json(
@@ -132,7 +115,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(UNAUTHORIZED, { status: 401 });
+      return unauthorizedResponse();
     }
 
     const id = await routeId(params);

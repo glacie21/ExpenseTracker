@@ -30,10 +30,11 @@ import { formatPercent } from "@/lib/finance";
 import { categoryOptionLabel, formatRupiah } from "@/lib/formatters";
 import { downloadFile, startFileDownload } from "@/lib/download";
 import { REPORT_FORMATS } from "@/lib/reportFormats";
-import { Category, PaginatedTransactions, Transaction, TransactionType } from "@/types";
+import { Category, PaginatedTransactions, TransactionType } from "@/types";
 import { CategoryDot } from "@/components/ui/CategoryDot";
+import type { CategoryIncrease, ReportPeriodType } from "@/lib/reports";
 
-type PeriodType = "week" | "month" | "year" | "custom";
+type PeriodType = ReportPeriodType;
 
 const PERIOD_TABS: { value: PeriodType; label: string }[] = [
   { value: "week", label: "Mingguan" },
@@ -57,15 +58,7 @@ interface ReportData {
   };
   topExpenseCategory: BreakdownItem | null;
   breakdown: BreakdownItem[];
-  categoryIncreases: {
-    categoryId: string;
-    name: string;
-    color: string | null;
-    current: number;
-    previous: number;
-    difference: number;
-    percent: number | null;
-  }[];
+  categoryIncreases: CategoryIncrease[];
 }
 
 function computeRange(periodType: PeriodType, anchor: string, start: string, end: string): DateRange | null {
@@ -132,7 +125,7 @@ function ReportsView({ writeQuery }: { writeQuery: (pathname: string, query: str
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [exporting, setExporting] = useState<ExportFormat | null>(null);
 
-  // Range + query shared by summary, table, CSV and PDF so they always agree
+  // Range + query shared by the summary, the table and every download so they always agree
   const { range, reportQuery } = useMemo(() => {
     const resolved = computeRange(periodType, anchor, customStart, customEnd);
     if (!resolved) return { range: null, reportQuery: null };
@@ -251,7 +244,7 @@ function ReportsView({ writeQuery }: { writeQuery: (pathname: string, query: str
         await startFileDownload(url);
         setFeedback({
           type: "success",
-          message: `Unduhan ${format === "csv" ? "CSV" : "Excel"} dimulai. Lihat progresnya di daftar unduhan browser.`,
+          message: `Unduhan ${format === "csv" ? "CSV" : REPORT_FORMATS.xlsx.label} dimulai. Lihat progresnya di daftar unduhan browser.`,
         });
         return;
       }
@@ -272,8 +265,6 @@ function ReportsView({ writeQuery }: { writeQuery: (pathname: string, query: str
   };
 
   const filteredCategories = type === "ALL" ? categories : categories.filter((c) => c.type === type);
-  const inputClass = FIELD_SM;
-  const labelClass = FILTER_LABEL;
   const currentYear = new Date().getFullYear();
 
   return (
@@ -318,29 +309,29 @@ function ReportsView({ writeQuery }: { writeQuery: (pathname: string, query: str
           {periodType === "custom" ? (
             <>
               <div>
-                <label htmlFor="report-start" className={labelClass}>Dari tanggal</label>
+                <label htmlFor="report-start" className={FILTER_LABEL}>Dari tanggal</label>
                 <input
                   id="report-start"
                   type="date"
                   value={customStart}
                   onChange={(e) => changeFilter(setCustomStart)(e.target.value)}
-                  className={inputClass}
+                  className={FIELD_SM}
                 />
               </div>
               <div>
-                <label htmlFor="report-end" className={labelClass}>Sampai tanggal</label>
+                <label htmlFor="report-end" className={FILTER_LABEL}>Sampai tanggal</label>
                 <input
                   id="report-end"
                   type="date"
                   value={customEnd}
                   onChange={(e) => changeFilter(setCustomEnd)(e.target.value)}
-                  className={inputClass}
+                  className={FIELD_SM}
                 />
               </div>
             </>
           ) : (
             <div className="sm:col-span-2">
-              <label htmlFor="report-anchor" className={labelClass}>
+              <label htmlFor="report-anchor" className={FILTER_LABEL}>
                 {periodType === "week" ? "Minggu (pilih tanggal mana saja)" : periodType === "month" ? "Bulan" : "Tahun"}
               </label>
               <div className="flex items-center gap-2">
@@ -359,7 +350,7 @@ function ReportsView({ writeQuery }: { writeQuery: (pathname: string, query: str
                     type="date"
                     value={anchor}
                     onChange={(e) => e.target.value && changeFilter(setAnchor)(e.target.value)}
-                    className={inputClass}
+                    className={FIELD_SM}
                   />
                 )}
                 {periodType === "month" && (
@@ -368,7 +359,7 @@ function ReportsView({ writeQuery }: { writeQuery: (pathname: string, query: str
                     type="month"
                     value={anchor.slice(0, 7)}
                     onChange={(e) => e.target.value && changeFilter(setAnchor)(`${e.target.value}-01`)}
-                    className={inputClass}
+                    className={FIELD_SM}
                   />
                 )}
                 {periodType === "year" && (
@@ -376,7 +367,7 @@ function ReportsView({ writeQuery }: { writeQuery: (pathname: string, query: str
                     id="report-anchor"
                     value={anchor.slice(0, 4)}
                     onChange={(e) => changeFilter(setAnchor)(`${e.target.value}-01-01`)}
-                    className={inputClass}
+                    className={FIELD_SM}
                   >
                     {Array.from(
                       new Set([...Array.from({ length: 8 }, (_, i) => String(currentYear + 1 - i)), anchor.slice(0, 4)])
@@ -401,7 +392,7 @@ function ReportsView({ writeQuery }: { writeQuery: (pathname: string, query: str
           )}
 
           <div>
-            <label htmlFor="report-type" className={labelClass}>Tipe transaksi</label>
+            <label htmlFor="report-type" className={FILTER_LABEL}>Tipe transaksi</label>
             <select
               id="report-type"
               value={type}
@@ -409,7 +400,7 @@ function ReportsView({ writeQuery }: { writeQuery: (pathname: string, query: str
                 changeFilter(setType)(e.target.value as "ALL" | TransactionType);
                 setCategoryId("");
               }}
-              className={inputClass}
+              className={FIELD_SM}
             >
               <option value="ALL">Semua</option>
               <option value="INCOME">Pemasukan</option>
@@ -417,12 +408,12 @@ function ReportsView({ writeQuery }: { writeQuery: (pathname: string, query: str
             </select>
           </div>
           <div>
-            <label htmlFor="report-category" className={labelClass}>Kategori</label>
+            <label htmlFor="report-category" className={FILTER_LABEL}>Kategori</label>
             <select
               id="report-category"
               value={categoryId}
               onChange={(e) => changeFilter(setCategoryId)(e.target.value)}
-              className={inputClass}
+              className={FIELD_SM}
             >
               <option value="">Semua kategori</option>
               {filteredCategories.map((c) => (
@@ -537,16 +528,16 @@ function ReportsView({ writeQuery }: { writeQuery: (pathname: string, query: str
         </div>
       )}
 
-      {/* Transaction Summary */}
+      {/* Transaction list */}
       {range && (
         <Card>
           <CardHeader>
             <CardTitle>Rincian transaksi</CardTitle>
-            <CardDescription>Sesuai periode dan filter di atas. CSV dan PDF memuat daftar yang sama.</CardDescription>
+            <CardDescription>Sesuai periode dan filter di atas. Semua format unduhan memuat daftar yang sama.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             <ReportTransactionsTable
-              transactions={(table?.data?.transactions ?? []) as Transaction[]}
+              transactions={table?.data?.transactions ?? []}
               pagination={table?.data?.pagination ?? { page: 1, limit: PAGE_SIZE, total: 0, totalPages: 1 }}
               isLoading={tableLoading}
               error={table?.error}

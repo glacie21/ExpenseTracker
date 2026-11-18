@@ -9,23 +9,17 @@ interface UserProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   onLogout: () => void;
-  user: SafeUser | null;
+  user: SafeUser;
 }
+
+const JOIN_DATE = new Intl.DateTimeFormat("id-ID", { year: "numeric", month: "long", day: "numeric" });
 
 const ROW =
   "flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-ink transition-colors hover:bg-sunken";
 
 /** Profile summary plus the account links that have no slot in the phone tab bar. */
 export function UserProfileModal({ isOpen, onClose, onLogout, user }: UserProfileModalProps) {
-  if (!user) return null;
-
-  const joinDate = user.createdAt
-    ? new Date(user.createdAt).toLocaleDateString("id-ID", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-    : "Baru saja";
+  const joinDate = JOIN_DATE.format(new Date(user.createdAt));
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Akun" maxWidth="sm">

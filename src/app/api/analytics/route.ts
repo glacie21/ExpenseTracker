@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { UNAUTHORIZED } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
 import { getDashboardAnalytics, resolvePeriodFromParams } from "@/lib/analytics";
+import { unauthorizedResponse, badRequestResponse } from "@/lib/apiResponse";
 
 /**
  * GET /api/analytics?period=<preset>&start=YYYY-MM-DD&end=YYYY-MM-DD
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(UNAUTHORIZED, { status: 401 });
+      return unauthorizedResponse();
     }
 
     const { searchParams } = new URL(request.url);
@@ -22,10 +22,7 @@ export async function GET(request: NextRequest) {
       end: searchParams.get("end"),
     });
     if (!valid) {
-      return NextResponse.json(
-        { success: false, message: "Periode tidak valid." },
-        { status: 400 }
-      );
+      return badRequestResponse("Periode tidak valid.");
     }
 
     const analytics = await getDashboardAnalytics(user.id, period);

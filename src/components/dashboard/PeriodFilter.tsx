@@ -12,8 +12,6 @@ interface PeriodFilterProps {
   start: string;
   end: string;
   label: string;
-  /** Rendered at the right end of the period row (e.g. quick actions). */
-  actions?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -24,7 +22,7 @@ const DATE_INPUT =
  * Date-range filter for the dashboard. It sits above everything it scopes;
  * while the new period loads, the current content stays in place (dimmed).
  */
-export function PeriodFilter({ preset, start, end, label, actions, children }: PeriodFilterProps) {
+export function PeriodFilter({ preset, start, end, label, children }: PeriodFilterProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
@@ -101,7 +99,6 @@ export function PeriodFilter({ preset, start, end, label, actions, children }: P
               );
             })}
           </div>
-          {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
         </div>
 
         {showCustom && (

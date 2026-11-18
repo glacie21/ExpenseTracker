@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getTotals, toSummaryStats } from "@/lib/analytics";
-import { TRANSACTION_CATEGORY_SELECT, serializeTransaction } from "@/lib/transactions";
+import { TRANSACTION_CATEGORY_SELECT } from "@/lib/transactions";
+import { serializeAmount } from "@/lib/money";
 
 export const RECENT_TRANSACTIONS_LIMIT = 5;
 
@@ -34,7 +35,7 @@ export async function getDashboardSummary(userId: string) {
       expenseCount: stats.expenseCount,
       totalCount: stats.transactionCount,
     },
-    recentTransactions: recentTransactions.map(serializeTransaction),
+    recentTransactions: recentTransactions.map(serializeAmount),
   };
 }
 

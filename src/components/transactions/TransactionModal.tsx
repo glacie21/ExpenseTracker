@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
 import { Category, Transaction, TransactionType } from "@/types";
 import { formatRupiah, formatDateForInput } from "@/lib/formatters";
-import { normalizeAmount } from "@/lib/validations";
+import { validateTransactionInput } from "@/lib/validations";
 import { latestTransactionDate, toDateOnlyString } from "@/lib/dates";
 import { FIELD, FIELD_LABEL } from "@/components/ui/fieldStyles";
 import { TypeToggle } from "@/components/ui/TypeToggle";
@@ -57,35 +57,21 @@ export function TransactionModal({
     setErrors((prev) => ({ ...prev, categoryId: "" }));
   };
 
+  // Same rules as the API, plus the category/type match that needs the category list
   const validate = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (!title.trim()) {
-      newErrors.title = "Nama transaksi wajib diisi";
-    } else if (title.trim().length < 2) {
-      newErrors.title = "Nama transaksi minimal 2 karakter";
-    }
-
-    const num = parseFloat(amount);
-    if (!amount.trim() || isNaN(num)) {
-      newErrors.amount = "Nominal transaksi wajib diisi dengan angka valid";
-    } else if (num <= 0) {
-      newErrors.amount = "Nominal harus lebih besar dari Rp0";
-    } else if (normalizeAmount(amount) === null) {
-      newErrors.amount = "Nominal maksimal 13 digit dengan 2 angka desimal";
-    }
-
-    if (!categoryId) {
-      newErrors.categoryId = "Kategori wajib dipilih";
-    } else {
+    const { errors: newErrors } = validateTransactionInput({
+      type,
+      title,
+      amount: amount.trim(),
+      categoryId,
+      date,
+      description: description.trim() || undefined,
+    });
+    if (!newErrors.categoryId) {
       const selectedCat = categories.find((c) => c.id === categoryId);
       if (!selectedCat || selectedCat.type !== type) {
         newErrors.categoryId = "Kategori tidak sesuai dengan tipe transaksi";
       }
-    }
-
-    if (!date) {
-      newErrors.date = "Tanggal transaksi wajib diisi";
     }
 
     setErrors(newErrors);
@@ -130,7 +116,6 @@ export function TransactionModal({
           setErrors(json.errors);
         }
         setApiError(json.message || "Gagal menyimpan transaksi.");
-        setIsSubmitting(false);
         return;
       }
 
@@ -149,7 +134,6 @@ export function TransactionModal({
       isOpen={isOpen}
       onClose={isSubmitting ? () => {} : onClose}
       title={isEditing ? "Ubah transaksi" : "Catat transaksi"}
-      maxWidth="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {apiError && (
@@ -284,7 +268,6 @@ export function TransactionModal({
             type="submit"
             variant="primary"
             isLoading={isSubmitting}
-            disabled={isSubmitting}
           >
             {isEditing ? "Simpan perubahan" : "Simpan"}
           </Button>

@@ -5,14 +5,13 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { AlertTriangle } from "lucide-react";
 
-export interface ConfirmDialogProps {
+interface ConfirmDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
   title: string;
   message: string;
   confirmLabel?: string;
-  cancelLabel?: string;
   isLoading?: boolean;
   variant?: "danger" | "warning";
 }
@@ -24,7 +23,6 @@ export function ConfirmDialog({
   title,
   message,
   confirmLabel = "Ya, Hapus",
-  cancelLabel = "Batal",
   isLoading = false,
   variant = "danger",
 }: ConfirmDialogProps) {
@@ -60,7 +58,7 @@ export function ConfirmDialog({
             onClick={onClose}
             disabled={isLoading}
           >
-            {cancelLabel}
+            Batal
           </Button>
           <Button
             variant={variant === "danger" ? "danger" : "primary"}
