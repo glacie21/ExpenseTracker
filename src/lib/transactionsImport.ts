@@ -2,7 +2,8 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { cleanCsvField, parseCsv } from "@/lib/csv";
 import { parseDateOnly } from "@/lib/dates";
-import { DEFAULT_CATEGORY_COLOR, FALLBACK_CATEGORY_NAME } from "@/lib/categories";
+import { FALLBACK_CATEGORY_NAME } from "@/lib/categories";
+import { DEFAULT_CATEGORY_COLOR } from "@/lib/categoryColors";
 import { normalizeAmount, validateCategoryInput, validateTransactionInput } from "@/lib/validations";
 import { TransactionType } from "@/types";
 import {
@@ -32,7 +33,7 @@ async function loadCategoryMap(db: CategoryClient, userId: string): Promise<Map<
   return new Map(categories.map((c) => [categoryKey(c.type, c.name.trim()), c.id]));
 }
 
-export type ParseImportResult =
+type ParseImportResult =
   | { error: string }
   | { error?: undefined; data: ImportPreviewData; validRows: ParsedImportRow[] };
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { UNAUTHORIZED } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
 import { getReport, parseReportParams } from "@/lib/reports";
+import { unauthorizedResponse, badRequestResponse } from "@/lib/apiResponse";
 
 /**
  * GET /api/reports?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&periodType=week|month|year|custom
@@ -13,12 +13,12 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(UNAUTHORIZED, { status: 401 });
+      return unauthorizedResponse();
     }
 
     const parsed = parseReportParams(new URL(request.url).searchParams);
     if (!parsed.ok) {
-      return NextResponse.json({ success: false, message: parsed.message }, { status: 400 });
+      return badRequestResponse(parsed.message);
     }
 
     const report = await getReport(user.id, parsed.params);

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { clearSessionCookie, getCurrentUser } from "@/lib/auth";
-import { UNAUTHORIZED } from "@/lib/account";
 import { prisma } from "@/lib/prisma";
+import { unauthorizedResponse } from "@/lib/apiResponse";
 
 /**
  * DELETE /api/account/sessions
@@ -12,7 +12,7 @@ export async function DELETE() {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(UNAUTHORIZED, { status: 401 });
+      return unauthorizedResponse();
     }
 
     await prisma.user.update({

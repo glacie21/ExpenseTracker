@@ -31,7 +31,7 @@ export interface ImportPreviewData {
   errorSamples: { row: number; errors: string[] }[];
 }
 
-export interface HeaderIndices {
+interface HeaderIndices {
   dateCol: number;
   titleCol: number;
   typeCol: number;

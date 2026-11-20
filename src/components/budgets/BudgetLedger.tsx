@@ -6,7 +6,6 @@ import { BudgetStatus, formatPercent } from "@/lib/finance";
 import type { BudgetWithProgress } from "@/lib/budgets";
 import { CategoryDot } from "@/components/ui/CategoryDot";
 
-export type BudgetView = BudgetWithProgress;
 
 // Status always pairs color with an icon and a text label
 export const BUDGET_STATUS: Record<
@@ -19,7 +18,7 @@ export const BUDGET_STATUS: Record<
   over: { label: "Terlampaui", icon: AlertOctagon, text: "text-neg", bar: "bg-neg" },
 };
 
-function UsageBar({ budget }: { budget: BudgetView }) {
+function UsageBar({ budget }: { budget: BudgetWithProgress }) {
   const status = BUDGET_STATUS[budget.status];
   // Above 100% the budget mark moves left so the overflow stays visible
   const scale = Math.max(100, budget.percent);
@@ -47,7 +46,7 @@ function UsageBar({ budget }: { budget: BudgetView }) {
   );
 }
 
-function StatusLabel({ budget }: { budget: BudgetView }) {
+function StatusLabel({ budget }: { budget: BudgetWithProgress }) {
   const status = BUDGET_STATUS[budget.status];
   const Icon = status.icon;
   return (
@@ -60,11 +59,11 @@ function StatusLabel({ budget }: { budget: BudgetView }) {
 }
 
 interface BudgetLedgerProps {
-  budgets: BudgetView[];
+  budgets: BudgetWithProgress[];
   totals: { amount: number; spent: number; remaining: number; percent: number };
   periodLabel: string;
-  onEdit: (budget: BudgetView) => void;
-  onDelete: (budget: BudgetView) => void;
+  onEdit: (budget: BudgetWithProgress) => void;
+  onDelete: (budget: BudgetWithProgress) => void;
 }
 
 /**

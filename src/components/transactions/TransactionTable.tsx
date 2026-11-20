@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Transaction } from "@/types";
+import { PaginatedTransactions, Transaction } from "@/types";
 import { formatDate } from "@/lib/formatters";
 import { Amount } from "@/components/ui/Amount";
 import { Button } from "@/components/ui/Button";
@@ -17,12 +17,7 @@ export interface TransactionTableProps {
   onRetry?: () => void;
   onEdit: (tx: Transaction) => void;
   onDelete: (tx: Transaction) => void;
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+  pagination: PaginatedTransactions["pagination"];
   onPageChange: (page: number) => void;
   onAddNew: () => void;
   /** True when a search or filter is narrowing the list. */

@@ -2,6 +2,9 @@ import React from "react";
 import { Wordmark } from "@/components/layout/Wordmark";
 import { Guilloche } from "@/components/ui/Guilloche";
 
+/** Text link style used under the login and register forms. */
+export const AUTH_LINK = "font-medium text-accent underline-offset-4 hover:underline";
+
 interface AuthFrameProps {
   title: string;
   subtitle: string;

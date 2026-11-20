@@ -87,11 +87,12 @@ async function writeWorkbook(input: ReportStreamData, output: PassThrough, isCan
 
   summary.addRow([]);
   styleHeader(summary.addRow(["Ringkasan", "Nilai"]));
-  const totals: [string, number, string][] = [
+  // Without income there is no meaningful savings rate (PDF and Word print "-" too)
+  const totals: [string, number | string, string][] = [
     ["Total pemasukan", s.totalIncome, RUPIAH],
     ["Total pengeluaran", s.totalExpense, RUPIAH],
     ["Saldo bersih", s.netBalance, RUPIAH],
-    ["Tingkat tabungan", s.savingsRate / 100, PERCENT],
+    ["Tingkat tabungan", s.totalIncome > 0 ? s.savingsRate / 100 : "-", PERCENT],
     ["Jumlah transaksi", s.transactionCount, "0"],
   ];
   for (const [label, value, numFmt] of totals) {

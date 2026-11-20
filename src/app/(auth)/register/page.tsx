@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
-import { AuthFrame } from "@/components/layout/AuthFrame";
+import { AUTH_LINK, AuthFrame } from "@/components/layout/AuthFrame";
 import { RevealButton } from "@/components/ui/RevealButton";
 import { PASSWORD_MIN_LENGTH, validateRegisterInput } from "@/lib/validations";
 
@@ -77,7 +77,7 @@ export default function RegisterPage() {
           Sudah punya akun?{" "}
           <Link
             href="/login"
-            className="font-medium text-accent underline-offset-4 hover:underline"
+            className={AUTH_LINK}
           >
             Masuk
           </Link>

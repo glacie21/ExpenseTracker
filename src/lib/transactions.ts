@@ -1,10 +1,11 @@
 import type { ParseFailure } from "@/lib/apiResponse";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { MAX_DATE_YEAR, MIN_DATE_YEAR, endOfDayUTC, monthRangeUTC, parseDateOnly, yearRange } from "@/lib/dates";
+import { MAX_DATE_YEAR, MIN_DATE_YEAR, endOfDayUTC, monthRangeUTC, parseDateOnly, rangeFilter, yearRange } from "@/lib/dates";
 import { isValidId, normalizeAmount, validateTransactionInput } from "@/lib/validations";
 import { SortDirection, transactionOrder, transactionsAfter } from "@/lib/transactionKeyset";
 import { TransactionType } from "@/types";
+import { CATEGORY_NOT_FOUND } from "@/lib/categories";
 
 export const TRANSACTION_CATEGORY_SELECT = {
   id: true,
@@ -34,7 +35,7 @@ export async function parseTransactionBody(body: unknown, userId: string): Promi
   }
   const input = body as Record<string, unknown>;
 
-  const validation = validateTransactionInput(input as Parameters<typeof validateTransactionInput>[0]);
+  const validation = validateTransactionInput(input);
   if (!validation.isValid) {
     return {
       ok: false,
@@ -58,12 +59,7 @@ export async function parseTransactionBody(body: unknown, userId: string): Promi
   });
 
   if (!category) {
-    return {
-      ok: false,
-      status: 400,
-      message: "Kategori tidak ditemukan atau Anda tidak memiliki akses ke kategori ini.",
-      errors: { categoryId: "Kategori tidak valid" },
-    };
+    return CATEGORY_NOT_FOUND;
   }
 
   if (category.type !== type) {
@@ -89,11 +85,11 @@ export async function parseTransactionBody(body: unknown, userId: string): Promi
 }
 
 type FilterResult =
-  | { ok: true; where: Prisma.TransactionWhereInput; sort: "asc" | "desc" }
+  | { ok: true; where: Prisma.TransactionWhereInput; sort: SortDirection }
   | { ok: false; message: string };
 
 /**
- * Build the Prisma filter for listing, reporting and exporting transactions
+ * Build the Prisma filter for listing and exporting (CSV) transactions
  * from query params. Always scoped to `userId` (taken from the session).
  *
  * Params: search, type (INCOME|EXPENSE|ALL), categoryId, startDate, endDate
@@ -154,8 +150,7 @@ export function buildTransactionFilter(userId: string, params: URLSearchParams):
       }
       dateFilters.push({ date: monthRangeUTC(year, month) });
     } else {
-      const range = yearRange(new Date(Date.UTC(year, 0, 1)));
-      dateFilters.push({ date: { gte: range.start, lte: endOfDayUTC(range.end) } });
+      dateFilters.push({ date: rangeFilter(yearRange(new Date(Date.UTC(year, 0, 1)))) });
     }
   }
 
@@ -202,13 +197,4 @@ export async function* transactionExportBatches(
     remaining -= batch.length;
     last = batch[batch.length - 1];
   }
-}
-
-/**
- * Convert Prisma Decimal amount to a JSON-safe number for the client.
- */
-export function serializeTransaction<T extends { amount: Prisma.Decimal }>(
-  transaction: T
-): Omit<T, "amount"> & { amount: number } {
-  return { ...transaction, amount: transaction.amount.toNumber() };
 }

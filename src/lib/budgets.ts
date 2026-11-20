@@ -7,8 +7,9 @@ import { BudgetStatus, budgetUsage, centsToAmount } from "@/lib/finance";
 import { decimalToCents } from "@/lib/money";
 import { budgetPeriodErrors, normalizeAmount, validateBudgetInput } from "@/lib/validations";
 import type { ParseFailure } from "@/lib/apiResponse";
+import { CATEGORY_NOT_FOUND } from "@/lib/categories";
 
-export function currentMonthYear(): { month: number; year: number } {
+function currentMonthYear(): { month: number; year: number } {
   const today = todayInTimeZone(APP_TIMEZONE);
   return { month: today.getUTCMonth() + 1, year: today.getUTCFullYear() };
 }
@@ -116,12 +117,7 @@ export async function parseBudgetBody(body: unknown, userId: string): Promise<Pa
   const categoryId = input.categoryId as string;
   const category = await prisma.category.findFirst({ where: { id: categoryId, userId }, select: { type: true } });
   if (!category) {
-    return {
-      ok: false,
-      status: 400,
-      message: "Kategori tidak ditemukan atau Anda tidak memiliki akses ke kategori ini.",
-      errors: { categoryId: "Kategori tidak valid" },
-    };
+    return CATEGORY_NOT_FOUND;
   }
   if (category.type !== "EXPENSE") {
     return {
@@ -155,11 +151,6 @@ export function duplicateBudgetResponse() {
     },
     { status: 409 }
   );
-}
-
-/** A budget row as JSON (Decimal amount as a number). */
-export function serializeBudget<T extends { amount: Prisma.Decimal }>(budget: T): Omit<T, "amount"> & { amount: number } {
-  return { ...budget, amount: budget.amount.toNumber() };
 }
 
 /**

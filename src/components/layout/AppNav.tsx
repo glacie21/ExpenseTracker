@@ -57,9 +57,14 @@ export const NAVIGATION = [
 
 const ADD_HREF = addTransactionHref("EXPENSE");
 
+/** Whether `pathname` is the section at `href` or a page inside it. */
+export function isNavActive(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 function useIsActive() {
   const pathname = usePathname();
-  return (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  return (href: string) => isNavActive(pathname, href);
 }
 
 /** Sticky top bar: section links on desktop, wordmark and profile everywhere. */

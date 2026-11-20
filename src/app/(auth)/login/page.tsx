@@ -6,12 +6,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
-import { AuthFrame } from "@/components/layout/AuthFrame";
+import { AUTH_LINK, AuthFrame } from "@/components/layout/AuthFrame";
 import { RevealButton } from "@/components/ui/RevealButton";
 import { safeRedirectPath } from "@/lib/jwt";
 import { validateLoginInput } from "@/lib/validations";
 
-const LINK_STYLE = "font-medium text-accent underline-offset-4 hover:underline";
 
 function LoginForm() {
   const router = useRouter();
@@ -132,7 +131,7 @@ function LoginForm() {
 
       <p className="mt-6 text-sm text-ink-3">
         Sekadar mencoba?{" "}
-        <button type="button" onClick={handleFillDemo} className={LINK_STYLE}>
+        <button type="button" onClick={handleFillDemo} className={AUTH_LINK}>
           Isi dengan akun demo
         </button>
       </p>
@@ -148,7 +147,7 @@ export default function LoginPage() {
       footer={
         <>
           Belum punya akun?{" "}
-          <Link href="/register" className={LINK_STYLE}>
+          <Link href="/register" className={AUTH_LINK}>
             Daftar
           </Link>
         </>

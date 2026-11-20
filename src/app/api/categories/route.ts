@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { UNAUTHORIZED } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isUniqueViolation, isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib/dbErrors";
-import { DEFAULT_CATEGORY_COLOR, duplicateCategoryResponse, findCategoryNameConflict } from "@/lib/categories";
-import { validationErrorResponse } from "@/lib/apiResponse";
+import { duplicateCategoryResponse, findCategoryNameConflict } from "@/lib/categories";
+import { DEFAULT_CATEGORY_COLOR } from "@/lib/categoryColors";
+import { validationErrorResponse, unauthorizedResponse } from "@/lib/apiResponse";
 import { validateCategoryInput } from "@/lib/validations";
 import { TransactionType } from "@/types";
 
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(UNAUTHORIZED, { status: 401 });
+      return unauthorizedResponse();
     }
 
     const { searchParams } = new URL(request.url);
@@ -54,10 +54,10 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(UNAUTHORIZED, { status: 401 });
+      return unauthorizedResponse();
     }
 
-    const body = await request.json().catch(() => ({}));
+    const body = await request.json().catch(() => null);
     const validation = validateCategoryInput(body ?? {});
 
     if (!validation.isValid) {

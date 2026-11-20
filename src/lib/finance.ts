@@ -51,7 +51,7 @@ export const BUDGET_WARNING_PERCENT = 80;
 
 export type BudgetStatus = "ok" | "warning" | "reached" | "over";
 
-export interface BudgetUsage {
+interface BudgetUsage {
   budget: number;
   spent: number;
   /** Negative when over budget. */
@@ -82,17 +82,9 @@ export function budgetUsage(budgetCents: number, spentCents: number): BudgetUsag
 }
 
 /** Format a percentage for display, e.g. 12.345 -> "12,3%". */
-export function formatPercent(value: number, fractionDigits = 1): string {
-  return `${percentFormatter(fractionDigits).format(value)}%`;
+export function formatPercent(value: number): string {
+  return `${percentFormatter.format(value)}%`;
 }
 
 // Intl.NumberFormat is costly to construct; reports format a percentage per row
-const percentFormatters = new Map<number, Intl.NumberFormat>();
-function percentFormatter(fractionDigits: number): Intl.NumberFormat {
-  let formatter = percentFormatters.get(fractionDigits);
-  if (!formatter) {
-    formatter = new Intl.NumberFormat("id-ID", { minimumFractionDigits: 0, maximumFractionDigits: fractionDigits });
-    percentFormatters.set(fractionDigits, formatter);
-  }
-  return formatter;
-}
+const percentFormatter = new Intl.NumberFormat("id-ID", { minimumFractionDigits: 0, maximumFractionDigits: 1 });

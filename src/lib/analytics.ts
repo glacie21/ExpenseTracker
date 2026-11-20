@@ -10,7 +10,6 @@ import {
   bucketStarts,
   chooseGranularity,
   comparisonRanges,
-  endOfDayUTC,
   formatComparisonLabel,
   formatRangeLabel,
   isPeriodPreset,
@@ -18,6 +17,7 @@ import {
   resolvePeriod,
   toDateOnlyString,
   todayInTimeZone,
+  rangeFilter,
 } from "@/lib/dates";
 import {
   PeriodChange,
@@ -46,7 +46,7 @@ export interface AnalyticsScope {
 export function scopeWhere(scope: AnalyticsScope): Prisma.TransactionWhereInput {
   return {
     userId: scope.userId,
-    date: { gte: scope.range.start, lte: endOfDayUTC(scope.range.end) },
+    date: rangeFilter(scope.range),
     ...(scope.type ? { type: scope.type } : {}),
     ...(scope.categoryId ? { categoryId: scope.categoryId } : {}),
   };
@@ -76,7 +76,7 @@ export async function scopeHasFractionalAmount(scope: AnalyticsScope): Promise<b
   return rows[0]?.found ?? false;
 }
 
-export interface PeriodTotals {
+interface PeriodTotals {
   incomeCents: number;
   expenseCents: number;
   incomeCount: number;
@@ -105,7 +105,7 @@ export async function getTotals(where: Prisma.TransactionWhereInput): Promise<Pe
   };
 }
 
-export interface SeriesPoint {
+interface SeriesPoint {
   /** Bucket start, YYYY-MM-DD */
   date: string;
   income: number;
@@ -116,9 +116,9 @@ export interface SeriesPoint {
  * Income and expense per day/week/month bucket. Empty buckets are filled
  * with zero so the chart's time axis is continuous.
  */
-export async function getTimeSeries(
+async function getTimeSeries(
   scope: AnalyticsScope,
-  granularity: Granularity = chooseGranularity(scope.range)
+  granularity: Granularity
 ): Promise<SeriesPoint[]> {
   const rows = await prisma.$queryRaw<
     { bucket: Date; type: TransactionType; total: Prisma.Decimal }[]
@@ -160,7 +160,7 @@ export interface CategoryBreakdownItem {
 export async function getExpenseBreakdown(scope: AnalyticsScope): Promise<CategoryBreakdownItem[]> {
   if (scope.type === "INCOME") return [];
 
-  // Category names load alongside the sums rather than after them (one query, no N+1)
+  // The user's categories load in parallel with the sums, not after them (no N+1)
   const [groups, categories] = await Promise.all([
     prisma.transaction.groupBy({
       by: ["categoryId"],
@@ -196,7 +196,7 @@ export async function getExpenseBreakdown(scope: AnalyticsScope): Promise<Catego
     .sort((a, b) => b.totalCents - a.totalCents || a.name.localeCompare(b.name));
 }
 
-export interface SummaryStats {
+interface SummaryStats {
   totalIncome: number;
   totalExpense: number;
   netBalance: number;
@@ -227,9 +227,9 @@ function changeInRupiah(change: PeriodChange) {
   };
 }
 
-export type RupiahChange = ReturnType<typeof changeInRupiah>;
+type RupiahChange = ReturnType<typeof changeInRupiah>;
 
-export interface Trends {
+interface Trends {
   income: RupiahChange;
   expense: RupiahChange;
   netBalance: RupiahChange;
@@ -248,7 +248,7 @@ export function computeTrends(current: PeriodTotals, previous: PeriodTotals): Tr
   };
 }
 
-export interface ResolvedPeriod {
+interface ResolvedPeriod {
   preset: PeriodPreset;
   range: DateRange;
   /** What the trends compare; cut at today while the period is still running. */
@@ -304,12 +304,13 @@ export function resolvePeriodFromParams(params: {
 export async function getDashboardAnalytics(userId: string, period: ResolvedPeriod) {
   const current: AnalyticsScope = { userId, range: period.range };
   const { comparison } = period;
+  const granularity = chooseGranularity(period.range);
   const [totals, comparedTotals, previousTotals, series, breakdown] = await Promise.all([
     getPeriodTotals(current),
     // Only a running period needs its own to-date totals for the trends
     comparison.partial ? getPeriodTotals({ userId, range: comparison.current }) : null,
     getPeriodTotals({ userId, range: comparison.previous }),
-    getTimeSeries(current),
+    getTimeSeries(current, granularity),
     getExpenseBreakdown(current),
   ]);
 
@@ -317,7 +318,7 @@ export async function getDashboardAnalytics(userId: string, period: ResolvedPeri
     summary: toSummaryStats(totals),
     trends: computeTrends(comparedTotals ?? totals, previousTotals),
     hasPreviousData: previousTotals.incomeCount + previousTotals.expenseCount > 0,
-    granularity: chooseGranularity(period.range),
+    granularity,
     series,
     breakdown,
   };

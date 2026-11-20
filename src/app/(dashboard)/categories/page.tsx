@@ -79,13 +79,12 @@ export default function CategoriesPage() {
   const loadError = result?.error ?? null;
   const fetchCategories = () => setReloadToken((t) => t + 1);
 
-  const filteredCategories =
-    activeTab === "ALL"
-      ? categories
-      : categories.filter((c) => c.type === activeTab);
-
-  const incomeCategories = categories.filter((c) => c.type === "INCOME");
-  const expenseCategories = categories.filter((c) => c.type === "EXPENSE");
+  const byType: Record<TransactionType, Category[]> = {
+    INCOME: categories.filter((c) => c.type === "INCOME"),
+    EXPENSE: categories.filter((c) => c.type === "EXPENSE"),
+  };
+  const incomeCategories = byType.INCOME;
+  const expenseCategories = byType.EXPENSE;
 
   const handleOpenAddModal = (type: TransactionType = "EXPENSE") => {
     setEditingCategory(null);
@@ -156,7 +155,7 @@ export default function CategoriesPage() {
   ];
   const groups = (["INCOME", "EXPENSE"] as const)
     .filter((t) => activeTab === "ALL" || activeTab === t)
-    .map((t) => ({ type: t, items: filteredCategories.filter((c) => c.type === t) }));
+    .map((t) => ({ type: t, items: byType[t] }));
 
   const renderRow = (cat: Category) => {
     const txCount = cat._count?.transactions || 0;
@@ -216,7 +215,7 @@ export default function CategoriesPage() {
         <ErrorState title="Kategori gagal dimuat" message={loadError} onRetry={fetchCategories} />
       ) : isLoading ? (
         <div className="h-64 animate-pulse rounded-2xl border border-rule bg-surface" aria-busy="true" />
-      ) : filteredCategories.length === 0 ? (
+      ) : groups.every((g) => g.items.length === 0) ? (
         <EmptyBlock
           title="Belum ada kategori"
           action={

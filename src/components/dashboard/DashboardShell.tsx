@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { BottomNav, NAVIGATION, TopBar } from "@/components/layout/AppNav";
+import { BottomNav, NAVIGATION, TopBar, isNavActive } from "@/components/layout/AppNav";
 import { UserProfileModal } from "@/components/dashboard/UserProfileModal";
 import { SafeUser } from "@/types";
 
@@ -17,7 +17,7 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
   const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   // Any other path falls back to the first section, Ringkasan
-  const page = NAVIGATION.find((p) => pathname.startsWith(p.href)) ?? NAVIGATION[0];
+  const page = NAVIGATION.find((p) => isNavActive(pathname, p.href)) ?? NAVIGATION[0];
 
   const handleLogout = async () => {
     try {

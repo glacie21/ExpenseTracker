@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { UNAUTHORIZED } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
@@ -10,8 +9,8 @@ import {
   unsupportedCharacterResponse,
 } from "@/lib/dbErrors";
 import { duplicateCategoryResponse, findCategoryNameConflict } from "@/lib/categories";
-import { validationErrorResponse } from "@/lib/apiResponse";
-import { isValidId, validateCategoryInput } from "@/lib/validations";
+import { validationErrorResponse, unauthorizedResponse } from "@/lib/apiResponse";
+import { routeId, validateCategoryInput } from "@/lib/validations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -30,11 +29,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(UNAUTHORIZED, { status: 401 });
+      return unauthorizedResponse();
     }
 
-    const { id } = await params;
-    if (!isValidId(id)) {
+    const id = await routeId(params);
+    if (!id) {
       return NextResponse.json(NOT_FOUND, { status: 404 });
     }
 
@@ -48,7 +47,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json(NOT_FOUND, { status: 404 });
     }
 
-    const body = await request.json().catch(() => ({}));
+    const body = await request.json().catch(() => null);
     const validation = validateCategoryInput({
       name: body?.name,
       type: category.type, // Tipe tidak boleh diubah untuk integritas transaksi
@@ -66,8 +65,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return duplicateCategoryResponse(newName, category.type);
     }
 
+    // Scoped by userId like the other updates; a category deleted meanwhile is a 404
     const updated = await prisma.category.update({
-      where: { id: category.id },
+      where: { id: category.id, userId: user.id },
       data: {
         name: newName,
         color: newColor,
@@ -80,6 +80,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       data: { category: updated },
     });
   } catch (error) {
+    if (isRecordNotFound(error)) return NextResponse.json(NOT_FOUND, { status: 404 });
     if (isUnsupportedCharacterError(error)) return unsupportedCharacterResponse();
     if (isUniqueViolation(error)) return duplicateCategoryResponse();
     console.error("PUT /api/categories/[id] error:", error);
@@ -99,11 +100,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(UNAUTHORIZED, { status: 401 });
+      return unauthorizedResponse();
     }
 
-    const { id } = await params;
-    if (!isValidId(id)) {
+    const id = await routeId(params);
+    if (!id) {
       return NextResponse.json(NOT_FOUND, { status: 404 });
     }
 

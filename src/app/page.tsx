@@ -4,6 +4,7 @@ import { buttonStyles } from "@/components/ui/Button";
 import { Guilloche } from "@/components/ui/Guilloche";
 import { LedgerRow } from "@/components/ui/LedgerRow";
 import { NoteFigure } from "@/components/ui/NoteFigure";
+import { BUDGET_WARNING_PERCENT } from "@/lib/finance";
 
 // Illustrative month on the landing page (not user data)
 const SAMPLE_ENTRIES = [
@@ -23,7 +24,7 @@ const STEPS = [
   },
   {
     title: "Batasi",
-    body: "Pasang anggaran bulanan per kategori. Anda diberi tahu saat pengeluaran mendekati 80%, habis, atau sudah lewat batas.",
+    body: `Pasang anggaran bulanan per kategori. Anda diberi tahu saat pengeluaran mendekati ${BUDGET_WARNING_PERCENT}%, habis, atau sudah lewat batas.`,
   },
   {
     title: "Tinjau",

@@ -1,6 +1,6 @@
 import { MAX_DATE_YEAR, latestTransactionDate, parseDateOnly } from "@/lib/dates";
 
-export interface ValidationResult {
+interface ValidationResult {
   isValid: boolean;
   errors: Record<string, string>;
 }
@@ -15,6 +15,12 @@ const ID_REGEX = /^[A-Za-z0-9_-]{1,64}$/;
 
 export function isValidId(id: unknown): id is string {
   return typeof id === "string" && ID_REGEX.test(id);
+}
+
+/** The `[id]` segment of a route, or null when it cannot be a record id. */
+export async function routeId(params: Promise<{ id: string }>): Promise<string | null> {
+  const { id } = await params;
+  return isValidId(id) ? id : null;
 }
 
 /**
@@ -64,7 +70,7 @@ function toResult(errors: Record<string, string>): ValidationResult {
 }
 
 /** Error message for a new password, or null when it is acceptable. */
-export function passwordError(password: string): string | null {
+function passwordError(password: string): string | null {
   if (!password) return "Password wajib diisi";
   if (password.length < PASSWORD_MIN_LENGTH) {
     return `Password minimal terdiri dari ${PASSWORD_MIN_LENGTH} karakter`;
@@ -168,12 +174,12 @@ export function validateLoginInput(data: {
 }
 
 export function validateTransactionInput(data: {
-  type?: string;
-  title?: string;
-  amount?: number | string;
-  categoryId?: string;
-  date?: string | Date;
-  description?: string;
+  type?: unknown;
+  title?: unknown;
+  amount?: unknown;
+  categoryId?: unknown;
+  date?: unknown;
+  description?: unknown;
 }): ValidationResult {
   const errors: Record<string, string> = {};
 
@@ -231,9 +237,9 @@ export function validateTransactionInput(data: {
 }
 
 export function validateCategoryInput(data: {
-  name?: string;
-  type?: string;
-  color?: string;
+  name?: unknown;
+  type?: unknown;
+  color?: unknown;
 }): ValidationResult {
   const errors: Record<string, string> = {};
 

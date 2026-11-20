@@ -24,7 +24,7 @@ const EMPTY_PAGINATION: PaginatedTransactions["pagination"] = {
   totalPages: 1,
 };
 
-function parseType(value: string | null): "ALL" | TransactionType | null {
+function parseType(value: string | null): TransactionType | null {
   return value === "INCOME" || value === "EXPENSE" ? value : null;
 }
 
@@ -67,11 +67,9 @@ function TransactionsView({ writeQuery }: { writeQuery: (pathname: string, query
 
   // Quick action dari dashboard: /transactions?add=INCOME|EXPENSE langsung membuka form
   const addType = parseType(searchParams.get("add"));
-  const [isModalOpen, setIsModalOpen] = useState(addType === "INCOME" || addType === "EXPENSE");
+  const [isModalOpen, setIsModalOpen] = useState(addType !== null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [modalDefaultType, setModalDefaultType] = useState<TransactionType>(
-    addType === "INCOME" ? "INCOME" : "EXPENSE"
-  );
+  const [modalDefaultType, setModalDefaultType] = useState<TransactionType>(addType ?? "EXPENSE");
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{
     isOpen: boolean;

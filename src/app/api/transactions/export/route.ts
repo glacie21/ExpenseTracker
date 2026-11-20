@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { UNAUTHORIZED } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isUnsupportedCharacterError, unsupportedCharacterResponse } from "@/lib/dbErrors";
@@ -7,6 +6,7 @@ import { ExportedTransaction, buildTransactionFilter, transactionExportBatches }
 import { CSV_BOM, CsvColumn, csvHeader, csvRows } from "@/lib/csv";
 import { toDateOnlyString } from "@/lib/dates";
 import { TRANSACTION_CSV_HEADERS } from "@/lib/transactionsImportUtils";
+import { unauthorizedResponse, badRequestResponse } from "@/lib/apiResponse";
 
 const MAX_EXPORT_ROWS = 100_000;
 
@@ -56,13 +56,13 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json(UNAUTHORIZED, { status: 401 });
+      return unauthorizedResponse();
     }
 
     const { searchParams } = new URL(request.url);
     const filter = buildTransactionFilter(user.id, searchParams);
     if (!filter.ok) {
-      return NextResponse.json({ success: false, message: filter.message }, { status: 400 });
+      return badRequestResponse(filter.message);
     }
 
     const total = await prisma.transaction.count({ where: filter.where });

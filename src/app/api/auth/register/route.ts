@@ -51,14 +51,10 @@ export async function POST(request: NextRequest) {
     // burst of parallel requests cannot all get an answer.
     hitRateLimit(takenKey, REGISTER_TAKEN_RULE);
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
+    const existingUser = await prisma.user.findUnique({ where: { email }, select: { id: true } });
 
     if (existingUser) return emailTakenResponse();
 
-    // Hash password
     const hashedPassword = await hashPassword(password);
 
     // The user and their default categories are created together, in one write
@@ -78,7 +74,6 @@ export async function POST(request: NextRequest) {
 
     const token = await createSessionToken(user);
 
-    // Prepare response with secure cookie
     const response = NextResponse.json(
       {
         success: true,

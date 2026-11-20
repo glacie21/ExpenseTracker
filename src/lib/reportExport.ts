@@ -7,7 +7,7 @@ import { Report, ReportParams, ReportSummary, getReport, getReportSummary } from
 import { transactionOrder } from "@/lib/transactionKeyset";
 import { ExportedTransaction, TRANSACTION_EXPORT_SELECT, transactionExportBatches } from "@/lib/transactions";
 
-export interface ReportTransactionRow {
+interface ReportTransactionRow {
   date: Date;
   title: string;
   category: string;
@@ -16,7 +16,13 @@ export interface ReportTransactionRow {
   description: string | null;
 }
 
-interface ReportUser {
+const GENERATED_AT_FORMAT = new Intl.DateTimeFormat("id-ID", {
+  dateStyle: "long",
+  timeStyle: "short",
+  timeZone: APP_TIMEZONE,
+});
+
+export interface ReportUser {
   id: string;
   name: string;
 }
@@ -54,11 +60,7 @@ function toRow(r: ExportedTransaction): ReportTransactionRow {
 }
 
 function header<R extends ReportSummary>(user: ReportUser, report: R): ReportHeader<R> {
-  const generatedAt = new Intl.DateTimeFormat("id-ID", {
-    dateStyle: "long",
-    timeStyle: "short",
-    timeZone: APP_TIMEZONE,
-  }).format(new Date());
+  const generatedAt = GENERATED_AT_FORMAT.format(new Date());
 
   return {
     report,
