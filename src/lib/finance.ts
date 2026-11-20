@@ -51,7 +51,7 @@ export const BUDGET_WARNING_PERCENT = 80;
 
 export type BudgetStatus = "ok" | "warning" | "reached" | "over";
 
-export interface BudgetUsage {
+interface BudgetUsage {
   budget: number;
   spent: number;
   /** Negative when over budget. */

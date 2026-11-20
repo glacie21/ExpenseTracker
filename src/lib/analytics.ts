@@ -10,7 +10,6 @@ import {
   bucketStarts,
   chooseGranularity,
   comparisonRanges,
-  endOfDayUTC,
   formatComparisonLabel,
   formatRangeLabel,
   isPeriodPreset,
@@ -18,6 +17,7 @@ import {
   resolvePeriod,
   toDateOnlyString,
   todayInTimeZone,
+  rangeFilter,
 } from "@/lib/dates";
 import {
   PeriodChange,
@@ -46,7 +46,7 @@ export interface AnalyticsScope {
 export function scopeWhere(scope: AnalyticsScope): Prisma.TransactionWhereInput {
   return {
     userId: scope.userId,
-    date: { gte: scope.range.start, lte: endOfDayUTC(scope.range.end) },
+    date: rangeFilter(scope.range),
     ...(scope.type ? { type: scope.type } : {}),
     ...(scope.categoryId ? { categoryId: scope.categoryId } : {}),
   };
@@ -76,7 +76,7 @@ export async function scopeHasFractionalAmount(scope: AnalyticsScope): Promise<b
   return rows[0]?.found ?? false;
 }
 
-export interface PeriodTotals {
+interface PeriodTotals {
   incomeCents: number;
   expenseCents: number;
   incomeCount: number;
@@ -105,7 +105,7 @@ export async function getTotals(where: Prisma.TransactionWhereInput): Promise<Pe
   };
 }
 
-export interface SeriesPoint {
+interface SeriesPoint {
   /** Bucket start, YYYY-MM-DD */
   date: string;
   income: number;
@@ -116,7 +116,7 @@ export interface SeriesPoint {
  * Income and expense per day/week/month bucket. Empty buckets are filled
  * with zero so the chart's time axis is continuous.
  */
-export async function getTimeSeries(
+async function getTimeSeries(
   scope: AnalyticsScope,
   granularity: Granularity
 ): Promise<SeriesPoint[]> {
@@ -196,7 +196,7 @@ export async function getExpenseBreakdown(scope: AnalyticsScope): Promise<Catego
     .sort((a, b) => b.totalCents - a.totalCents || a.name.localeCompare(b.name));
 }
 
-export interface SummaryStats {
+interface SummaryStats {
   totalIncome: number;
   totalExpense: number;
   netBalance: number;
@@ -227,9 +227,9 @@ function changeInRupiah(change: PeriodChange) {
   };
 }
 
-export type RupiahChange = ReturnType<typeof changeInRupiah>;
+type RupiahChange = ReturnType<typeof changeInRupiah>;
 
-export interface Trends {
+interface Trends {
   income: RupiahChange;
   expense: RupiahChange;
   netBalance: RupiahChange;
@@ -248,7 +248,7 @@ export function computeTrends(current: PeriodTotals, previous: PeriodTotals): Tr
   };
 }
 
-export interface ResolvedPeriod {
+interface ResolvedPeriod {
   preset: PeriodPreset;
   range: DateRange;
   /** What the trends compare; cut at today while the period is still running. */

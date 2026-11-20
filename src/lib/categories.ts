@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { TransactionType } from "@/types";
 import { DEFAULT_CATEGORY_COLOR } from "@/lib/categoryColors";
 
-export interface DefaultCategoryItem {
+interface DefaultCategoryItem {
   name: string;
   type: TransactionType;
   color: string;
@@ -33,6 +33,14 @@ export const DEFAULT_CATEGORIES: DefaultCategoryItem[] = [
   { name: "Pendidikan", type: "EXPENSE", color: "#7a6a55" },
   { name: FALLBACK_CATEGORY_NAME.EXPENSE, type: "EXPENSE", color: DEFAULT_CATEGORY_COLOR },
 ];
+
+/** Body refers to a category that does not exist or belongs to someone else. */
+export const CATEGORY_NOT_FOUND = {
+  ok: false,
+  status: 400,
+  message: "Kategori tidak ditemukan atau Anda tidak memiliki akses ke kategori ini.",
+  errors: { categoryId: "Kategori tidak valid" },
+} as const;
 
 /**
  * Another category of this user and type whose name matches case-insensitively

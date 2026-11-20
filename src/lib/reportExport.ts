@@ -7,7 +7,7 @@ import { Report, ReportParams, ReportSummary, getReport, getReportSummary } from
 import { transactionOrder } from "@/lib/transactionKeyset";
 import { ExportedTransaction, TRANSACTION_EXPORT_SELECT, transactionExportBatches } from "@/lib/transactions";
 
-export interface ReportTransactionRow {
+interface ReportTransactionRow {
   date: Date;
   title: string;
   category: string;

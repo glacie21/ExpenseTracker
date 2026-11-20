@@ -53,7 +53,7 @@ export function parseDateOnly(value: unknown): Date | null {
 }
 
 /** How far ahead a transaction may be dated: a planned bill yes, a mistyped year no. */
-export const MAX_FUTURE_DAYS = 366;
+const MAX_FUTURE_DAYS = 366;
 
 /** The latest day a transaction may have, counted from today (UTC). */
 export function latestTransactionDate(now: Date = new Date()): Date {
@@ -71,9 +71,12 @@ export function endOfDayUTC(date: Date): Date {
  * UTC range covering a whole month (month is 1-12).
  */
 export function monthRangeUTC(year: number, month: number): { gte: Date; lte: Date } {
-  const start = new Date(Date.UTC(year, month - 1, 1));
-  const nextMonth = new Date(Date.UTC(year, month, 1));
-  return { gte: start, lte: new Date(nextMonth.getTime() - 1) };
+  return rangeFilter(monthRange(new Date(Date.UTC(year, month - 1, 1))));
+}
+
+/** Prisma date filter for a whole DateRange, through the last millisecond of its end day. */
+export function rangeFilter(range: DateRange): { gte: Date; lte: Date } {
+  return { gte: range.start, lte: endOfDayUTC(range.end) };
 }
 
 /**
@@ -95,7 +98,7 @@ export function todayLocalISO(): string {
 // ---------------------------------------------------------------------------
 
 /** Longest custom range accepted (protects chart buckets and queries). */
-export const MAX_RANGE_DAYS = 366 * 5;
+const MAX_RANGE_DAYS = 366 * 5;
 
 export interface DateRange {
   start: Date;
@@ -133,21 +136,21 @@ export function addMonthsUTC(date: Date, months: number): Date {
 }
 
 /** Monday of the ISO week containing `date`. */
-export function startOfWeekUTC(date: Date): Date {
+function startOfWeekUTC(date: Date): Date {
   const dayOfWeek = (date.getUTCDay() + 6) % 7; // Monday = 0
   return addDaysUTC(date, -dayOfWeek);
 }
 
-export function startOfMonthUTC(date: Date): Date {
+function startOfMonthUTC(date: Date): Date {
   return addMonthsUTC(date, 0);
 }
 
-export function endOfMonthUTC(date: Date): Date {
+function endOfMonthUTC(date: Date): Date {
   return addDaysUTC(addMonthsUTC(date, 1), -1);
 }
 
 /** Number of calendar days in an inclusive range. */
-export function rangeLengthDays(range: DateRange): number {
+function rangeLengthDays(range: DateRange): number {
   return Math.round((range.end.getTime() - range.start.getTime()) / DAY_MS) + 1;
 }
 
@@ -339,7 +342,7 @@ export function chooseGranularity(range: DateRange): Granularity {
   return "month";
 }
 
-export function bucketStart(date: Date, granularity: Granularity): Date {
+function bucketStart(date: Date, granularity: Granularity): Date {
   if (granularity === "week") return startOfWeekUTC(date);
   if (granularity === "month") return startOfMonthUTC(date);
   return date;

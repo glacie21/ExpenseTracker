@@ -84,7 +84,7 @@ export function createSessionToken(
   return signToken({ userId: user.id, email: user.email, name: user.name, sv: user.sessionVersion }, rememberMe);
 }
 
-export interface CurrentSession {
+interface CurrentSession {
   user: SafeUser;
   rememberMe: boolean;
 }

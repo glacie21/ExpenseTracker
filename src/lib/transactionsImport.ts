@@ -33,7 +33,7 @@ async function loadCategoryMap(db: CategoryClient, userId: string): Promise<Map<
   return new Map(categories.map((c) => [categoryKey(c.type, c.name.trim()), c.id]));
 }
 
-export type ParseImportResult =
+type ParseImportResult =
   | { error: string }
   | { error?: undefined; data: ImportPreviewData; validRows: ParsedImportRow[] };
 

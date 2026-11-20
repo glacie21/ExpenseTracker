@@ -11,13 +11,13 @@ interface Bucket {
   resetAt: number;
 }
 
-export interface RateLimitRule {
+interface RateLimitRule {
   /** Maximum hits allowed inside one window. */
   limit: number;
   windowMs: number;
 }
 
-export interface RateLimitStatus {
+interface RateLimitStatus {
   limited: boolean;
   /** Seconds until the window resets (0 when not limited). */
   retryAfter: number;
